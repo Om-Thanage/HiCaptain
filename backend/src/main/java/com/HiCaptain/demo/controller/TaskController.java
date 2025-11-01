@@ -10,7 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/tasks")
+@RequestMapping("/tasks")
+@CrossOrigin(origins = "http://localhost:3000")
 public class TaskController {
 
     private final TaskService svc;
@@ -43,6 +44,27 @@ public class TaskController {
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public ResponseEntity<Task> update(@PathVariable String id, @RequestBody Task t) {
         return ResponseEntity.ok(svc.update(id, t));
+    }
+
+    @GetMapping("/project/{projectId}")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer','Client')")
+    public ResponseEntity<List<Task>> getByProjectId(@PathVariable String projectId) {
+        System.out.println("Getting tasks for project: " + projectId);
+        List<Task> allTasks = svc.getAll();
+        System.out.println("Total tasks in database: " + allTasks.size());
+        
+        List<Task> tasks = allTasks.stream()
+            .filter(task -> {
+                boolean matches = projectId.equals(task.getProjectId());
+                if (matches) {
+                    System.out.println("Found matching task: " + task.getId() + " - " + task.getTitle());
+                }
+                return matches;
+            })
+            .toList();
+            
+        System.out.println("Filtered tasks for project " + projectId + ": " + tasks.size());
+        return ResponseEntity.ok(tasks);
     }
 
     @DeleteMapping("/{id}")

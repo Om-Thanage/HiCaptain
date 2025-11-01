@@ -21,7 +21,16 @@ public class Invoice {
     private double amount;
     private String status;
     private LocalDate dateIssued;
+    private LocalDate issueDate; // For compatibility with analytics
+    private LocalDate dueDate;
 
     private String projectId;
+    private String clientId;
+    private String invoiceNumber;
+    private String description;
+    private double taxAmount;
+    private double totalAmount;
+    private String currency;
+    
     private List<String> paymentIds;
 }

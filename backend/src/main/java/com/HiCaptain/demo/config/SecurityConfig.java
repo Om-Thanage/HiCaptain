@@ -32,6 +32,8 @@ public class SecurityConfig {
                 .csrf(c -> c.disable()) // Disable CSRF for stateless JWT
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll() // Allow registration/login
+                        .requestMatchers("/api/google-calendar/auth/**").permitAll() // Allow Google Calendar OAuth callbacks
+                        .requestMatchers("/api/auth/github/**").permitAll() // Allow GitHub OAuth callbacks
                         .requestMatchers("/client/data").hasAnyAuthority("Admin", "Client") // Client + Admin access
                         .requestMatchers("/admin/data").hasAnyAuthority("Admin")  // Admin access
                         .anyRequest().authenticated() // All other requests need authentication

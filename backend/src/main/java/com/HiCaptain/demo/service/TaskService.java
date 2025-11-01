@@ -26,7 +26,12 @@ public class TaskService {
     }
 
     public List<Task> getAll() {
-        return taskRepo.findAll();
+        List<Task> tasks = taskRepo.findAll();
+        System.out.println("TaskService.getAll() - Found " + tasks.size() + " tasks");
+        for (Task task : tasks) {
+            System.out.println("Task: " + task.getId() + " - " + task.getTitle() + " (Project: " + task.getProjectId() + ")");
+        }
+        return tasks;
     }
 
     public Optional<Task> getById(String id) {
@@ -34,6 +39,10 @@ public class TaskService {
     }
 
     public Task create(Task t) {
+        // Set timestamps
+        t.setCreatedAt(java.time.LocalDateTime.now());
+        t.setUpdatedAt(java.time.LocalDateTime.now());
+        
         Task savedTask = taskRepo.save(t);
 
         // Auto-update Project.developerIds from Task.assignedDeveloperIds (no taskIds maintenance)
@@ -70,20 +79,40 @@ public class TaskService {
         Task existing = taskRepo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
 
-        String oldProjectId = existing.getProjectId();
-        String newProjectId = t.getProjectId();
+        System.out.println("Updating task " + id + " with new data: " + t.getTitle() + " (status: " + t.getStatus() + ")");
+        System.out.println("Existing task: " + existing.getTitle() + " (status: " + existing.getStatus() + ")");
 
-        t.setId(id);
-        Task saved = taskRepo.save(t);
+        // Merge the changes instead of replacing the entire object
+        if (t.getTitle() != null) existing.setTitle(t.getTitle());
+        if (t.getDescription() != null) existing.setDescription(t.getDescription());
+        if (t.getStatus() != null) existing.setStatus(t.getStatus());
+        if (t.getPriority() != null) existing.setPriority(t.getPriority());
+        if (t.getDeadline() != null) existing.setDeadline(t.getDeadline());
+        if (t.getProjectId() != null) existing.setProjectId(t.getProjectId());
+        if (t.getAssignedDeveloperIds() != null) existing.setAssignedDeveloperIds(t.getAssignedDeveloperIds());
+        if (t.getAssigneeId() != null) existing.setAssigneeId(t.getAssigneeId());
+        if (t.getCreatedBy() != null) existing.setCreatedBy(t.getCreatedBy());
+        if (t.getCategory() != null) existing.setCategory(t.getCategory());
+        if (t.getEstimatedHours() > 0) existing.setEstimatedHours(t.getEstimatedHours());
+        if (t.getActualHours() > 0) existing.setActualHours(t.getActualHours());
+        if (t.getProgress() >= 0) existing.setProgress(t.getProgress());
+
+        // Always update the modification timestamp
+        existing.setUpdatedAt(java.time.LocalDateTime.now());
+        
+        System.out.println("Merged task: " + existing.getTitle() + " (status: " + existing.getStatus() + ")");
+        
+        Task saved = taskRepo.save(existing);
+        String newProjectId = existing.getProjectId();
 
         // No Project.taskIds maintenance; only ensure developers are merged into the new project's developerIds
         if (newProjectId != null) {
             projectRepo.findById(newProjectId).ifPresent(project -> {
-                if (t.getAssignedDeveloperIds() != null && !t.getAssignedDeveloperIds().isEmpty()) {
+                if (existing.getAssignedDeveloperIds() != null && !existing.getAssignedDeveloperIds().isEmpty()) {
                     List<String> projectDevs = project.getDeveloperIds();
                     java.util.Set<String> merged = new java.util.HashSet<>();
                     if (projectDevs != null) merged.addAll(projectDevs);
-                    merged.addAll(t.getAssignedDeveloperIds());
+                    merged.addAll(existing.getAssignedDeveloperIds());
                     project.setDeveloperIds(new java.util.ArrayList<>(merged));
                     projectRepo.save(project);
                 }

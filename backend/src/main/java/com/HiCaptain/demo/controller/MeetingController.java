@@ -11,6 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/meetings")
+@CrossOrigin(origins = "http://localhost:3000")
 public class MeetingController {
     private final MeetingService svc;
 
@@ -29,6 +30,30 @@ public class MeetingController {
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
+    @GetMapping("/project/{projectId}")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
+    public ResponseEntity<List<Meeting>> getMeetingsByProject(@PathVariable String projectId) {
+        return ResponseEntity.ok(svc.getMeetingsByProjectId(projectId));
+    }
+
+    @GetMapping("/upcoming")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
+    public ResponseEntity<List<Meeting>> getUpcomingMeetings() {
+        return ResponseEntity.ok(svc.getUpcomingMeetings());
+    }
+
+    @GetMapping("/organizer/{organizerId}")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
+    public ResponseEntity<List<Meeting>> getMeetingsByOrganizer(@PathVariable String organizerId) {
+        return ResponseEntity.ok(svc.getMeetingsByOrganizer(organizerId));
+    }
+
+    @GetMapping("/attendee/{attendeeId}")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
+    public ResponseEntity<List<Meeting>> getMeetingsByAttendee(@PathVariable String attendeeId) {
+        return ResponseEntity.ok(svc.getMeetingsByAttendee(attendeeId));
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<Meeting> create(@RequestBody Meeting m) {
@@ -42,7 +67,7 @@ public class MeetingController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         svc.delete(id);
         return ResponseEntity.noContent().build();

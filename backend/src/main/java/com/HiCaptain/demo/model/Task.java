@@ -7,6 +7,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Document(collection = "tasks")
@@ -25,4 +26,15 @@ public class Task {
     private LocalDate deadline;
     private String projectId;
     private List<String> assignedDeveloperIds;
+    
+    // Additional fields for better task management
+    private String assigneeId; // Primary assignee
+    private String createdBy;
+    private String category;
+    private int estimatedHours;
+    private int actualHours;
+    private double progress; // 0-100
+    
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

@@ -10,14 +10,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/feedback")
+@RequestMapping("/feedback")
 public class FeedbackController {
     private final FeedbackService svc;
 
     public FeedbackController(FeedbackService svc) { this.svc = svc; }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<List<Feedback>> getAll() {
         return ResponseEntity.ok(svc.getAll());
     }
@@ -41,8 +41,17 @@ public class FeedbackController {
         return ResponseEntity.ok(svc.update(id, f));
     }
 
+    @GetMapping("/project/{projectId}")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client')")
+    public ResponseEntity<List<Feedback>> getByProjectId(@PathVariable String projectId) {
+        List<Feedback> feedbacks = svc.getAll().stream()
+            .filter(feedback -> projectId.equals(feedback.getProjectId()))
+            .toList();
+        return ResponseEntity.ok(feedbacks);
+    }
+
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         svc.delete(id);
         return ResponseEntity.noContent().build();

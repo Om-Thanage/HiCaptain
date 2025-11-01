@@ -10,14 +10,15 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/invoices")
+@RequestMapping("/invoices")
+@CrossOrigin(origins = "http://localhost:3000")
 public class InvoiceController {
     private final InvoiceService svc;
 
     public InvoiceController(InvoiceService svc) { this.svc = svc; }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client')")
     public ResponseEntity<List<Invoice>> getAll() {
         return ResponseEntity.ok(svc.getAll());
     }
@@ -29,20 +30,29 @@ public class InvoiceController {
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
+    @GetMapping("/project/{projectId}")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client')")
+    public ResponseEntity<List<Invoice>> getByProjectId(@PathVariable String projectId) {
+        List<Invoice> invoices = svc.getAll().stream()
+            .filter(invoice -> projectId.equals(invoice.getProjectId()))
+            .toList();
+        return ResponseEntity.ok(invoices);
+    }
+
     @PostMapping
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<Invoice> create(@RequestBody Invoice i) {
         return ResponseEntity.status(HttpStatus.CREATED).body(svc.create(i));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<Invoice> update(@PathVariable String id, @RequestBody Invoice i) {
         return ResponseEntity.ok(svc.update(id, i));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         svc.delete(id);
         return ResponseEntity.noContent().build();
