@@ -44,14 +44,9 @@ public class ProjectService {
         if (projectOpt.isEmpty())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");
 
-        Project project = projectOpt.get();
+        // Cascade delete all related tasks by projectId (no reliance on Project.taskIds)
+        taskRepo.deleteByProjectId(id);
 
-        // ✅ Cascade delete all related tasks
-        if (project.getTaskIds() != null && !project.getTaskIds().isEmpty()) {
-            taskRepo.deleteAllById(project.getTaskIds());
-        }
-
-        // Delete the project itself
         projectRepo.deleteById(id);
     }
 }

@@ -36,25 +36,16 @@ public class TaskService {
     public Task create(Task t) {
         Task savedTask = taskRepo.save(t);
 
-        // Auto-update Project
+        // Auto-update Project.developerIds from Task.assignedDeveloperIds (no taskIds maintenance)
         projectRepo.findById(t.getProjectId()).ifPresent(project -> {
-            List<String> taskIds = project.getTaskIds();
-            if (taskIds == null) taskIds = new java.util.ArrayList<>();
-            if (!taskIds.contains(savedTask.getId())) {
-                taskIds.add(savedTask.getId());
-                project.setTaskIds(taskIds);
-            }
-
-            // Auto-update Project.developerIds from Task.assignedDeveloperIds
             if (t.getAssignedDeveloperIds() != null && !t.getAssignedDeveloperIds().isEmpty()) {
                 List<String> projectDevs = project.getDeveloperIds();
                 java.util.Set<String> merged = new java.util.HashSet<>();
                 if (projectDevs != null) merged.addAll(projectDevs);
                 merged.addAll(t.getAssignedDeveloperIds());
                 project.setDeveloperIds(new java.util.ArrayList<>(merged));
+                projectRepo.save(project);
             }
-
-            projectRepo.save(project);
         });
 
         // Auto-update all Developers
@@ -85,33 +76,17 @@ public class TaskService {
         t.setId(id);
         Task saved = taskRepo.save(t);
 
-        // Move task id if project changed
-        if (oldProjectId != null && !oldProjectId.equals(newProjectId)) {
-            projectRepo.findById(oldProjectId).ifPresent(project -> {
-                List<String> ids = project.getTaskIds();
-                if (ids != null && ids.remove(id)) {
-                    project.setTaskIds(ids);
-                    projectRepo.save(project);
-                }
-            });
-        }
+        // No Project.taskIds maintenance; only ensure developers are merged into the new project's developerIds
         if (newProjectId != null) {
             projectRepo.findById(newProjectId).ifPresent(project -> {
-                List<String> ids = project.getTaskIds();
-                if (ids == null) ids = new java.util.ArrayList<>();
-                if (!ids.contains(id)) {
-                    ids.add(id);
-                    project.setTaskIds(ids);
-                }
-                // Merge developers from task into project
                 if (t.getAssignedDeveloperIds() != null && !t.getAssignedDeveloperIds().isEmpty()) {
                     List<String> projectDevs = project.getDeveloperIds();
                     java.util.Set<String> merged = new java.util.HashSet<>();
                     if (projectDevs != null) merged.addAll(projectDevs);
                     merged.addAll(t.getAssignedDeveloperIds());
                     project.setDeveloperIds(new java.util.ArrayList<>(merged));
+                    projectRepo.save(project);
                 }
-                projectRepo.save(project);
             });
         }
 
@@ -126,16 +101,9 @@ public class TaskService {
         Task task = taskOpt.get();
         taskRepo.deleteById(id);
 
-        // ✅ Remove from project
-        projectRepo.findById(task.getProjectId()).ifPresent(project -> {
-            List<String> taskIds = project.getTaskIds();
-            if (taskIds != null && taskIds.remove(task.getId())) {
-                project.setTaskIds(taskIds);
-                projectRepo.save(project);
-            }
-        });
+        // No Project.taskIds maintenance
 
-        // ✅ Remove from each developer
+        // Remove from each developer
         if (task.getAssignedDeveloperIds() != null) {
             for (String devId : task.getAssignedDeveloperIds()) {
                 userRepo.findById(devId).ifPresent(user -> {
