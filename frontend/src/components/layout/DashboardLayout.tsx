@@ -11,23 +11,20 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, isAuthenticated, setUser, setToken } = useAuthStore();
+  const { isAuthenticated, setToken } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
     const token = authService.getToken();
-    const savedUser = authService.getUser();
-
-    if (!token || !savedUser) {
+    if (!token) {
       router.push('/login');
       return;
     }
 
     setToken(token);
-    setUser(savedUser);
-  }, [setUser, setToken, router]);
+  }, [setToken, router]);
 
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-900">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -36,10 +33,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen bg-slate-900">
+    <div className="flex min-h-screen bg-slate-900">
       <Sidebar />
-      <main className="flex-1 ml-16 overflow-auto">
-        <div className="p-6">
+      <main className="flex-1">
+        <div className="p-8">
           {children}
         </div>
       </main>

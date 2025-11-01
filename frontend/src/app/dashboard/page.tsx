@@ -2,14 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { useAuthStore } from '@/store/auth';
 import AdminDashboard from '@/components/dashboard/AdminDashboard';
 import ProjectManagerDashboard from '@/components/dashboard/ProjectManagerDashboard';
 import DeveloperDashboard from '@/components/dashboard/DeveloperDashboard';
 import ClientDashboard from '@/components/dashboard/ClientDashboard';
+import { authService } from '@/services/auth';
+import { User } from '@/types';
 
 export default function DashboardPage() {
-  const { user } = useAuthStore();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const u = authService.getUserFromToken();
+    setUser(u);
+  }, []);
 
   const getDashboardTitle = () => {
     switch (user?.role) {
@@ -44,7 +50,7 @@ export default function DashboardPage() {
   const renderDashboardContent = () => {
     switch (user?.role) {
       case 'Admin':
-        return <AdminDashboard />;
+        return <AdminDashboard user={user} />;
       case 'ProjectManager':
         return <ProjectManagerDashboard />;
       case 'Developer':
@@ -63,14 +69,6 @@ export default function DashboardPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-100">{getDashboardTitle()}</h1>
-          <p className="text-slate-400 mt-2">Welcome back, {user?.name}!</p>
-          <p className="text-slate-500 text-sm mt-1">{getDashboardDescription()}</p>
-        </div>
-
-        {/* Role-based Dashboard Content */}
         {renderDashboardContent()}
       </div>
     </DashboardLayout>

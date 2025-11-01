@@ -1,28 +1,26 @@
 'use client';
 
+import { motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  Home, 
-  FolderKanban, 
-  BarChart3, 
-  FileText, 
-  MessageCircle, 
-  Calendar, 
-  GitBranch, 
-  Bell, 
-  Settings, 
+import {
+  Home,
+  FolderKanban,
+  BarChart3,
+  FileText,
+  MessageCircle,
+  Calendar,
+  GitBranch,
+  Bell,
+  Settings,
   Users,
-  LogOut 
+  LogOut,
 } from 'lucide-react';
-import { useAuthStore } from '@/store/auth';
 import { authService } from '@/services/auth';
 
-// Define navigation items by role
+// Function to define navigation items by role
 const getNavigationByRole = (role: string) => {
-  const baseNavigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
-  ];
+  const baseNavigation = [{ name: 'Dashboard', href: '/dashboard', icon: Home }];
 
   switch (role) {
     case 'Admin':
@@ -38,7 +36,6 @@ const getNavigationByRole = (role: string) => {
         { name: 'Notifications', href: '/notifications', icon: Bell },
         { name: 'Settings', href: '/settings', icon: Settings },
       ];
-    
     case 'ProjectManager':
       return [
         ...baseNavigation,
@@ -51,7 +48,6 @@ const getNavigationByRole = (role: string) => {
         { name: 'Notifications', href: '/notifications', icon: Bell },
         { name: 'Settings', href: '/settings', icon: Settings },
       ];
-    
     case 'Developer':
       return [
         ...baseNavigation,
@@ -61,7 +57,6 @@ const getNavigationByRole = (role: string) => {
         { name: 'Notifications', href: '/notifications', icon: Bell },
         { name: 'Settings', href: '/settings', icon: Settings },
       ];
-    
     case 'Client':
       return [
         ...baseNavigation,
@@ -72,7 +67,6 @@ const getNavigationByRole = (role: string) => {
         { name: 'Notifications', href: '/notifications', icon: Bell },
         { name: 'Settings', href: '/settings', icon: Settings },
       ];
-    
     default:
       return baseNavigation;
   }
@@ -80,69 +74,101 @@ const getNavigationByRole = (role: string) => {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user } = useAuthStore();
+  const user = authService.getUserFromToken();
+  const role = user?.role || '';
+
+  const navigation = getNavigationByRole(role);
 
   const handleLogout = () => {
     authService.logout();
   };
 
-  // Get navigation items based on user role
-  const navigation = getNavigationByRole(user?.role || '');
-
   return (
-    <div className="fixed left-0 top-0 h-full w-16 bg-slate-800 border-r border-slate-700 flex flex-col items-center py-4 z-40">
+    <motion.div
+      initial={{ x: -100, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 80, damping: 15 }}
+      className="
+        relative top-1/2 left-6
+        w-20 h-full 
+        bg-slate-800/70 backdrop-blur-xl 
+        border border-slate-700/40 
+        shadow-xl rounded-3xl 
+        flex flex-col items-center justify-between 
+        py-6 z-50 my-4
+      "
+    >
       {/* Logo */}
-      <div className="mb-8">
-        <img src="/logo.png" alt="HiCaptain logo" width={60} height={60} className="object-contain" />
-      </div>
+      <motion.div
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.2, type: 'spring' }}
+      >
+        <img
+          src="/logo.png"
+          alt="HiCaptain logo"
+          width={50}
+          height={50}
+          className="object-contain shadow-md"
+        />
+      </motion.div>
 
       {/* Navigation */}
-      <nav className="flex-1 flex flex-col space-y-2">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+      <nav className="flex-1 flex flex-col space-y-3 mt-6">
+        {navigation.map((item, i) => {
+          const isActive =
+            pathname === item.href || pathname.startsWith(item.href + '/');
+          const Icon = item.icon;
           return (
-            <Link
+            <motion.div
               key={item.name}
-              href={item.href}
-              className={`
-                flex items-center justify-center w-12 h-12 rounded-lg transition-all duration-200 hover:bg-slate-700 group relative
-                ${isActive ? 'bg-blue-500 text-white hover:bg-blue-600' : 'text-slate-400 hover:text-slate-200'}
-              `}
+              initial={{ scale: 0, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 + i * 0.07, type: 'spring', stiffness: 100 }}
             >
-              <item.icon className="w-5 h-5" />
-              <span className="absolute left-16 bg-slate-900 text-slate-100 px-2 py-1 rounded-md text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 border border-slate-700">
-                {item.name}
-              </span>
-            </Link>
+              <Link
+                href={item.href}
+                className={`
+                  flex items-center justify-center 
+                  w-12 h-12 rounded-full 
+                  transition-all duration-200 
+                  ${isActive
+                    ? 'bg-blue-500 text-white shadow-md shadow-blue-500/40'
+                    : 'bg-slate-700/40 text-slate-300 hover:bg-slate-600/60 hover:text-white'}
+                  group relative
+                `}
+              >
+                <motion.div whileHover={{ scale: 1.2 }}>
+                  <Icon className="w-5 h-5" />
+                </motion.div>
+                <span className="absolute left-16 bg-slate-900 text-slate-100 px-2 py-1 rounded-md text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none border border-slate-700">
+                  {item.name}
+                </span>
+              </Link>
+            </motion.div>
           );
         })}
       </nav>
 
-      {/* User Profile & Logout */}
-      <div className="flex flex-col space-y-2">
-        {user && (
-          <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-slate-700 group relative">
-            <div className="w-8 h-8 bg-linear-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-medium text-sm">
-                {user.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <span className="absolute left-16 bg-slate-900 text-slate-100 px-2 py-1 rounded-md text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 border border-slate-700">
-              {user.name} ({user.role})
-            </span>
-          </div>
-        )}
-        
-        <button
-          onClick={handleLogout}
-          className="flex items-center justify-center w-12 h-12 rounded-lg text-slate-400 transition-all duration-200 hover:bg-red-900/20 hover:text-red-400 group relative"
-        >
-          <LogOut className="w-5 h-5" />
-          <span className="absolute left-16 bg-slate-900 text-slate-100 px-2 py-1 rounded-md text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 border border-slate-700">
-            Logout
-          </span>
-        </button>
-      </div>
-    </div>
+      {/* Logout */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={handleLogout}
+        className="
+          flex items-center justify-center 
+          w-12 h-12 rounded-full 
+          bg-red-900/20 text-red-400 
+          hover:bg-red-900/40 hover:text-red-300 
+          transition-all duration-200 group relative
+          mt-3
+        "
+      >
+        <LogOut className="w-5 h-5" />
+        <span className="absolute left-16 bg-slate-900 text-slate-100 px-2 py-1 rounded-md text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none border border-slate-700">
+          Logout
+        </span>
+      </motion.button>
+    </motion.div>
   );
 }

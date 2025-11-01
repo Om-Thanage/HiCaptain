@@ -28,13 +28,36 @@ export const authService = {
     localStorage.removeItem('user');
   },
 
-  setUser(user: User) {
-    localStorage.setItem('user', JSON.stringify(user));
+  // DERIVED USER (decode from JWT)
+  getUserFromToken(): User | null {
+    const token = this.getToken();
+    if (!token) return null;
+    try {
+      const payload = this.getClaims(token);
+      const user: User = {
+        id: payload.userId || '',
+        name: payload.sub || '',
+        role: payload.role || 'Developer',
+        taskIds: [],
+      };
+      return user;
+    } catch {
+      return null;
+    }
   },
 
-  getUser(): User | null {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+  getClaims<T = any>(token?: string): T {
+    const t = token || this.getToken();
+    if (!t) throw new Error('No token');
+    const base64Url = t.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(json);
   },
 
   logout() {

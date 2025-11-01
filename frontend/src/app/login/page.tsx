@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { setUser, setToken } = useAuthStore();
+  const { setToken } = useAuthStore();
 
   const {
     register,
@@ -25,23 +25,9 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const response = await authService.login(data);
-      
-      // Set token first
       authService.setToken(response.token);
       setToken(response.token);
-      
-      // Create a user object from the login data if not provided in response
-      const user = response.user || {
-        id: Date.now().toString(), // Temporary ID
-        name: data.name,
-        email: data.name + '@example.com', // Placeholder
-        role: 'Developer' as const, // Default role
-        password: '' // Don't store password
-      };
-      
-      authService.setUser(user);
-      setUser(user);
-      
+
       toast.success('Login successful!');
       router.push('/dashboard');
     } catch (error: any) {

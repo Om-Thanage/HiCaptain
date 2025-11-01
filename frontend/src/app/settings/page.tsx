@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { useAuthStore } from '@/store/auth';
+import { authService } from '@/services/auth';
 import { Settings, User, Bell, Shield, Palette, Github, Link, Unlink, Calendar, Slack, Mail, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
+import type { User as AppUser } from '@/types';
 
 export default function SettingsPage() {
-  const { user } = useAuthStore();
+  const [user, setUser] = useState<AppUser | null>(null);
   const [activeTab, setActiveTab] = useState('profile');
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -36,6 +37,8 @@ export default function SettingsPage() {
   ];
 
   useEffect(() => {
+    // Derive user from token on client after mount
+    setUser(authService.getUserFromToken());
     // Load GitHub and Google Calendar connection status from localStorage
     console.log('Settings page loaded, checking demo connections...');
     console.log('Current user:', user);

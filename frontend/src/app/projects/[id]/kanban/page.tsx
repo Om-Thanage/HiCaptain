@@ -40,13 +40,42 @@ export default function ProjectKanbanPage() {
     
     console.log('Transforming backend task:', task);
     
+    // Normalize backend status values to the three Kanban columns
+    const normalizeStatus = (value: string | undefined | null): string => {
+      const raw = String(value || '').trim().toLowerCase();
+      // Common variants -> canonical values used in COLUMNS ids
+      const normalized = raw
+        .replace(/[_\s]+/g, '-') // in_progress -> in-progress, "in progress" -> in-progress
+        .replace(/^to-do$/g, 'todo') // unify to-do
+        .replace(/^inprogress$/g, 'in-progress'); // handle missing separator
+
+      if (normalized === 'todo') return 'pending';
+      if (['in-progress', 'inprogress'].includes(normalized)) return 'in-progress';
+      if (['done', 'complete', 'completed'].includes(normalized)) return 'completed';
+      if (['on-hold', 'paused', 'blocked'].includes(normalized)) return 'pending';
+
+      // If already one of our columns, keep it; else default to pending
+      return ['pending', 'in-progress', 'completed'].includes(normalized)
+        ? normalized
+        : 'pending';
+    };
+
+    // Normalize priority variants (in case backend sends different casing/words)
+    const normalizePriority = (value: string | undefined | null): string => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (['high', 'urgent', 'critical'].includes(raw)) return 'high';
+      if (['medium', 'normal'].includes(raw)) return 'medium';
+      if (['low', 'minor'].includes(raw)) return 'low';
+      return 'medium';
+    };
+    
     const transformed = {
       // Handle MongoDB _id field
       id: task.id || task._id || '',
       title: task.title || 'Untitled Task',
       description: task.description || '',
-      status: task.status || 'pending',
-      priority: task.priority || 'medium',
+  status: normalizeStatus(task.status),
+  priority: normalizePriority(task.priority),
       projectId: task.projectId || projectId,
       // Handle different date formats from backend
       deadline: Array.isArray(task.deadline) 
