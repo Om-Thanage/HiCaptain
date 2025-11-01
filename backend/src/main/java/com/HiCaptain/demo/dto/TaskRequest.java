@@ -12,5 +12,5 @@ public class TaskRequest {
     private String priority;
     private LocalDate deadline;
     private String projectId;
-    private List<String> assignedUserIds;
+    private List<String> assignedDeveloperIds;
 }
