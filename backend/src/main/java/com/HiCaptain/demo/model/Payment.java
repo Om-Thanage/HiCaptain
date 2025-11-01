@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
@@ -22,6 +21,5 @@ public class Payment {
     private String status;
     private LocalDate paymentDate;
 
-    @DBRef
-    private Invoice invoice;
+    private String invoiceId;
 }

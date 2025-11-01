@@ -26,4 +26,12 @@ public class Project {
     private String clientId;
     private List<String> developerIds;
     private List<String> taskIds;
+
+    // ...existing code...
+    // New aggregates maintained automatically by services
+    private List<String> feedbackIds;
+    private List<String> invoiceIds;
+    private List<String> meetingIds;
+    private List<String> paymentIds;
+    private List<String> timeLogIds;
 }

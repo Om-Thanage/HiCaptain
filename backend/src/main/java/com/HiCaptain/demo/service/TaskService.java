@@ -76,11 +76,46 @@ public class TaskService {
     }
 
     public Task update(String id, Task t) {
-        if (!taskRepo.existsById(id))
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found");
+        Task existing = taskRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
+
+        String oldProjectId = existing.getProjectId();
+        String newProjectId = t.getProjectId();
 
         t.setId(id);
-        return taskRepo.save(t);
+        Task saved = taskRepo.save(t);
+
+        // Move task id if project changed
+        if (oldProjectId != null && !oldProjectId.equals(newProjectId)) {
+            projectRepo.findById(oldProjectId).ifPresent(project -> {
+                List<String> ids = project.getTaskIds();
+                if (ids != null && ids.remove(id)) {
+                    project.setTaskIds(ids);
+                    projectRepo.save(project);
+                }
+            });
+        }
+        if (newProjectId != null) {
+            projectRepo.findById(newProjectId).ifPresent(project -> {
+                List<String> ids = project.getTaskIds();
+                if (ids == null) ids = new java.util.ArrayList<>();
+                if (!ids.contains(id)) {
+                    ids.add(id);
+                    project.setTaskIds(ids);
+                }
+                // Merge developers from task into project
+                if (t.getAssignedDeveloperIds() != null && !t.getAssignedDeveloperIds().isEmpty()) {
+                    List<String> projectDevs = project.getDeveloperIds();
+                    java.util.Set<String> merged = new java.util.HashSet<>();
+                    if (projectDevs != null) merged.addAll(projectDevs);
+                    merged.addAll(t.getAssignedDeveloperIds());
+                    project.setDeveloperIds(new java.util.ArrayList<>(merged));
+                }
+                projectRepo.save(project);
+            });
+        }
+
+        return saved;
     }
 
     public void delete(String id) {
