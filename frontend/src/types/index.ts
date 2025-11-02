@@ -6,6 +6,7 @@ export interface User {
   email: string;
   password?: string;
   role: Role;
+  projectIds?: string[];
   taskIds: string[];
 }
 
@@ -27,8 +28,10 @@ export interface Project {
   startDate: string;
   endDate: string;
   clientId: string;
+  projectManagerId?: string;
   developerIds: string[];
   taskIds: string[];
+  createdBy?: string;
   feedbackIds: string[];
   invoiceIds: string[];
   meetingIds: string[];

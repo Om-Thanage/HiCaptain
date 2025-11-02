@@ -46,6 +46,7 @@ public class AnalyticsService {
         analytics.put("totalUsers", userRepository.count());
         analytics.put("totalMeetings", meetingRepository.count());
         
+        
         // Task statistics
         Map<String, Long> taskStats = getTaskStatistics();
         analytics.put("taskStats", taskStats);

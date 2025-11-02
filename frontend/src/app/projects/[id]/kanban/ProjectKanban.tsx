@@ -24,6 +24,12 @@ export default function ProjectKanbanPage() {
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
   const [projectDevelopers, setProjectDevelopers] = useState<User[]>([]);
+  // New: keep all developers for validation
+  const [allDevelopers, setAllDevelopers] = useState<User[]>([]);
+  // New: input state to add a developer by ID
+  const [newDeveloperId, setNewDeveloperId] = useState('');
+  const [addingDeveloper, setAddingDeveloper] = useState(false);
+  const [addDevError, setAddDevError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPriority, setFilterPriority] = useState<string>('');
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -31,7 +37,7 @@ export default function ProjectKanbanPage() {
   const [apiConnected, setApiConnected] = useState<boolean>(true);
   const [lastFetchError, setLastFetchError] = useState<string | null>(null);
 
-  // Helper function to transform backend task data to frontend format
+
   const transformBackendTask = (task: any): Task => {
     if (!task) {
       console.error('transformBackendTask received null/undefined task');
@@ -40,21 +46,19 @@ export default function ProjectKanbanPage() {
     
     console.log('Transforming backend task:', task);
     
-    // Normalize backend status values to the three Kanban columns
+    
     const normalizeStatus = (value: string | undefined | null): string => {
       const raw = String(value || '').trim().toLowerCase();
-      // Common variants -> canonical values used in COLUMNS ids
       const normalized = raw
         .replace(/[_\s]+/g, '-') // in_progress -> in-progress, "in progress" -> in-progress
-        .replace(/^to-do$/g, 'todo') // unify to-do
-        .replace(/^inprogress$/g, 'in-progress'); // handle missing separator
+        .replace(/^to-do$/g, 'todo')
+        .replace(/^inprogress$/g, 'in-progress');
 
       if (normalized === 'todo') return 'pending';
       if (['in-progress', 'inprogress'].includes(normalized)) return 'in-progress';
       if (['done', 'complete', 'completed'].includes(normalized)) return 'completed';
       if (['on-hold', 'paused', 'blocked'].includes(normalized)) return 'pending';
 
-      // If already one of our columns, keep it; else default to pending
       return ['pending', 'in-progress', 'completed'].includes(normalized)
         ? normalized
         : 'pending';
@@ -70,33 +74,26 @@ export default function ProjectKanbanPage() {
     };
     
     const transformed = {
-      // Handle MongoDB _id field
       id: task.id || task._id || '',
       title: task.title || 'Untitled Task',
       description: task.description || '',
-  status: normalizeStatus(task.status),
-  priority: normalizePriority(task.priority),
+      status: normalizeStatus(task.status),
+      priority: normalizePriority(task.priority),
       projectId: task.projectId || projectId,
-      // Handle different date formats from backend
       deadline: Array.isArray(task.deadline) 
         ? `${task.deadline[0]}-${String(task.deadline[1]).padStart(2, '0')}-${String(task.deadline[2]).padStart(2, '0')}`
         : task.deadline || '',
       assignedDeveloperIds: task.assignedDeveloperIds || [],
-      // Additional backend fields
       assigneeId: task.assigneeId || undefined,
       createdBy: task.createdBy || undefined,
       category: task.category || undefined,
       estimatedHours: task.estimatedHours || 0,
       actualHours: task.actualHours || 0,
       progress: task.progress || 0,
-      // Handle createdAt and updatedAt if they exist
       createdAt: task.createdAt ? new Date(task.createdAt).toISOString() : undefined,
       updatedAt: task.updatedAt ? new Date(task.updatedAt).toISOString() : undefined,
     };
     
-    console.log('Transformed task result:', transformed);
-    
-    // Validate the transformed task
     if (!transformed.id) {
       console.error('Transformed task missing ID:', { original: task, transformed });
     }
@@ -107,7 +104,6 @@ export default function ProjectKanbanPage() {
     return transformed;
   };
 
-  // Helper function to get developer names from IDs
   const getDeveloperNames = (developerIds: string[]): string[] => {
     if (!developerIds || developerIds.length === 0) return [];
     return developerIds.map(id => {
@@ -117,7 +113,7 @@ export default function ProjectKanbanPage() {
     });
   };
 
-  // Helper function to validate if a developer can be assigned to this project
+
   const isValidDeveloperForProject = (developerId: string): boolean => {
     if (!developerId || !project?.developerIds) return false;
     return project.developerIds.includes(developerId);
@@ -153,18 +149,27 @@ export default function ProjectKanbanPage() {
         // Fetch developers who are assigned to this project
         if (projectData.developerIds && projectData.developerIds.length > 0) {
           try {
-            const allUsers = await userService.getAll();
-            const developers = allUsers.filter(user => 
-              projectData.developerIds.includes(user.id) && user.role === 'Developer'
+            const devUsers = await userService.getDevelopers();
+            const developers = devUsers.filter(user => 
+              projectData.developerIds.includes(user.id)
             );
             setProjectDevelopers(developers);
-            console.log('Project developers:', developers);
+            // New: store all developers for validation/search
+            setAllDevelopers(devUsers);
           } catch (error) {
             console.error('Error fetching developers:', error);
             setProjectDevelopers([]);
+            setAllDevelopers([]);
           }
         } else {
           setProjectDevelopers([]);
+          // Also cache all developers for ad-hoc additions
+          try {
+            const devUsers = await userService.getDevelopers();
+            setAllDevelopers(devUsers);
+          } catch {
+            setAllDevelopers([]);
+          }
         }
         
         // Transform backend data to match frontend expectations
@@ -227,16 +232,24 @@ export default function ProjectKanbanPage() {
       // Update developers list
       if (projectData.developerIds && projectData.developerIds.length > 0) {
         try {
-          const allUsers = await userService.getAll();
-          const developers = allUsers.filter(user => 
-            projectData.developerIds.includes(user.id) && user.role === 'Developer'
+          const devUsers = await userService.getDevelopers();
+          const developers = devUsers.filter(user => 
+            projectData.developerIds.includes(user.id)
           );
           setProjectDevelopers(developers);
+          // New: refresh all developers cache
+          setAllDevelopers(devUsers);
         } catch (error) {
           console.error('Error refreshing developers:', error);
         }
       } else {
         setProjectDevelopers([]);
+        try {
+          const devUsers = await userService.getDevelopers();
+          setAllDevelopers(devUsers);
+        } catch {
+          setAllDevelopers([]);
+        }
       }
       
       // Transform backend data to match frontend expectations
@@ -253,6 +266,43 @@ export default function ProjectKanbanPage() {
       toast.error('Failed to refresh data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // New: add developer to project and assign to current new task
+  const addDeveloperToProjectAndAssign = async () => {
+    setAddDevError(null);
+    if (!newDeveloperId?.trim()) {
+      setAddDevError('Enter a Developer ID');
+      return;
+    }
+    const dev = allDevelopers.find(d => d.id === newDeveloperId.trim());
+    if (!dev) {
+      setAddDevError('Developer account not found. Create developer account first.');
+      return;
+    }
+    try {
+      setAddingDeveloper(true);
+      await projectService.addDeveloper(projectId, dev.id);
+      // Reflect locally
+      if (!project?.developerIds?.includes(dev.id)) {
+        setProject(prev => prev ? { ...prev, developerIds: [...(prev.developerIds || []), dev.id] } : prev);
+      }
+      if (!projectDevelopers.find(d => d.id === dev.id)) {
+        setProjectDevelopers(prev => [...prev, dev]);
+      }
+      // Also pre-assign to the new task payload
+      setNewTask(prev => ({
+        ...prev,
+        assignedDeveloperIds: Array.from(new Set([...(prev.assignedDeveloperIds || []), dev.id]))
+      }));
+      toast.success('Developer added to project and assigned');
+      setNewDeveloperId('');
+    } catch (e: any) {
+      console.error('Error adding developer to project:', e);
+      setAddDevError(e?.response?.data?.message || 'Failed to add developer');
+    } finally {
+      setAddingDeveloper(false);
     }
   };
 
@@ -506,38 +556,19 @@ export default function ProjectKanbanPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
         </div>
-      </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Link
-              href={`/projects/${projectId}`}
-              className="p-2 rounded-lg text-slate-400 hover:bg-slate-700 transition-colors duration-200"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-slate-100">
-                {project ? `${project.name} - Kanban Board` : 'Kanban Board'}
-              </h1>
-              <p className="text-slate-400 mt-2">
-                {project 
-                  ? `Manage tasks for ${project.name} with ${projectDevelopers.length} developers`
-                  : 'Manage project tasks visually'
-                }
-              </p>
-            </div>
-          </div>
+          <h2 className="text-2xl font-semibold text-slate-100">
+            Tasks overview
+          </h2>
           <div className="flex items-center space-x-3">
             <button 
               onClick={handleRefreshTasks}
@@ -546,13 +577,6 @@ export default function ProjectKanbanPage() {
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Refresh
-            </button>
-            <button 
-              onClick={() => setShowAddTaskModal(true)}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Add Task
             </button>
           </div>
         </div>
@@ -564,12 +588,6 @@ export default function ProjectKanbanPage() {
               <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
               <div>
                 <p className="text-yellow-400 font-medium">No Tasks Found</p>
-                <p className="text-yellow-300 text-sm mt-1">
-                  Backend connection is working, but no tasks were returned for project: {projectId}
-                </p>
-                <p className="text-slate-400 text-xs mt-1">
-                  Check if tasks exist in MongoDB for this project ID, or create a new task to get started.
-                </p>
               </div>
             </div>
           </div>
@@ -598,46 +616,6 @@ export default function ProjectKanbanPage() {
             </div>
           </div>
         )}
-
-        {/* Filters and Search */}
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-slate-800 border border-slate-700 rounded-lg p-4">
-          <div className="flex items-center space-x-4 w-full sm:w-auto">
-            <div className="relative flex-1 sm:flex-initial">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search tasks..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
-              />
-            </div>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-              <select
-                value={filterPriority}
-                onChange={(e) => setFilterPriority(e.target.value)}
-                className="pl-10 pr-8 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Priorities</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-slate-400">
-              {getFilteredTasks().length} tasks
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${apiConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className={`text-xs ${apiConnected ? 'text-green-400' : 'text-red-400'}`}>
-                {apiConnected ? 'Backend Connected' : 'Backend Disconnected'}
-              </span>
-            </div>
-          </div>
-        </div>
 
         {/* Kanban Board */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -758,9 +736,9 @@ export default function ProjectKanbanPage() {
         </div>
 
         {/* Stats */}
-        <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-6">
+        <div>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-100">Task Distribution</h3>
+            <h3 className="text-2xl font-semibold text-slate-100">Task Distribution</h3>
             {project && (
               <div className="text-sm text-slate-400">
                 Project: <span className="text-slate-300">{project.name}</span> | 
@@ -775,7 +753,7 @@ export default function ProjectKanbanPage() {
               const percentage = totalTasks > 0 ? Math.round((columnTasks.length / totalTasks) * 100) : 0;
               
               return (
-                <div key={column.id} className="text-center p-4 bg-slate-700 rounded-lg">
+                <div key={column.id} className="text-center p-4 bg-linear-to-r from-slate-800/70 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 shadow-md hover:shadow-xl transition-all rounded-lg">
                   <div className="text-2xl font-bold text-slate-100">{columnTasks.length}</div>
                   <div className="text-sm text-slate-300">{column.title}</div>
                   <div className="text-xs text-slate-500">{percentage}%</div>
@@ -795,7 +773,7 @@ export default function ProjectKanbanPage() {
           </div>
 
           {/* Additional Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-600">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-900">
             <div className="text-center">
               <div className="text-lg font-bold text-red-400">
                 {getFilteredTasks().filter(task => isOverdue(task?.deadline, task?.status)).length}
@@ -824,7 +802,7 @@ export default function ProjectKanbanPage() {
 
           {/* Project Developers Section */}
           {projectDevelopers.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-slate-600">
+            <div className="mt-6 pt-6 border-t ">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-medium text-slate-300">Project Developers</h4>
                 <span className="text-xs text-slate-500">{projectDevelopers.length} assigned</span>
@@ -838,11 +816,14 @@ export default function ProjectKanbanPage() {
                   return (
                     <div 
                       key={developer.id}
-                      className="flex items-center space-x-2 bg-slate-700 rounded-lg px-3 py-2 text-sm"
+                      className="flex items-center space-x-2 bg-linear-to-r from-slate-800/70 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 shadow-md hover:shadow-xl transition-all rounded-lg px-3 py-2 text-sm"
                     >
                       <UserIcon className="w-4 h-4 text-blue-400" />
                       <span className="text-slate-200">{developer.name}</span>
-                      <span className="text-xs text-slate-400 bg-slate-600 px-2 py-1 rounded">
+                      {developer.email && (
+                        <span className="text-xs text-slate-400">({developer.email})</span>
+                      )}
+                      <span className="text-xs text-slate-100 bg-slate-600 px-2 py-1 rounded">
                         {developerTaskCount} tasks
                       </span>
                     </div>
@@ -950,21 +931,58 @@ export default function ProjectKanbanPage() {
                             }}
                             className="rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
                           />
-                          <UserIcon className="w-4 h-4" />
                           <span>{developer.name}</span>
+                          <span className="text-xs text-slate-400">({developer.id})</span>
                         </label>
                       ))}
                     </div>
                   ) : (
                     <div className="text-sm text-slate-500 p-3 bg-slate-700 rounded-lg">
-                      No developers assigned to this project yet. 
-                      {project && (
-                        <div className="mt-1 text-xs">
-                          Project: {project.name}
-                        </div>
-                      )}
+                      No developers assigned to this project yet.
                     </div>
                   )}
+                </div>
+
+                {/* New: Add developer via dropdown options (username + email) + disclaimer */}
+                <div className="mt-3 p-3 rounded-lg bg-slate-700 border border-slate-600">
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                    Add a developer to this project
+                  </label>
+                  {allDevelopers.length > 0 ? (
+                    <div className="flex gap-2">
+                      <select
+                        value={newDeveloperId}
+                        onChange={(e) => setNewDeveloperId(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select a developer (username · email)</option>
+                        {allDevelopers.map((dev) => (
+                          <option key={dev.id} value={dev.id}>
+                            {dev.name} · {dev.email}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        disabled={addingDeveloper || !newDeveloperId}
+                        onClick={addDeveloperToProjectAndAssign}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {addingDeveloper ? 'Adding...' : 'Add & Assign'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-slate-300">
+                      <p className="mb-2">No developer accounts found.</p>
+                      <p className="text-xs text-slate-400">Create developer account first.</p>
+                    </div>
+                  )}
+                  {addDevError && (
+                    <p className="text-sm text-red-400 mt-2">{addDevError}</p>
+                  )}
+                  <p className="text-xs text-slate-400 mt-2">
+                    Tip: You can assign selected developer(s) to this task immediately.
+                  </p>
                 </div>
               </div>
               
@@ -987,6 +1005,5 @@ export default function ProjectKanbanPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
   );
 }

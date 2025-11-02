@@ -7,6 +7,15 @@ export const userService = {
     return response.data;
   },
 
+  async getByRole(role: 'Admin' | 'ProjectManager' | 'Developer' | 'Client'): Promise<User[]> {
+    const response = await api.get(`/users?role=${encodeURIComponent(role)}`);
+    return response.data;
+  },
+
+  async getDevelopers(): Promise<User[]> {
+    return this.getByRole('Developer');
+  },
+
   async getById(id: string): Promise<User> {
     const response = await api.get(`/users/${id}`);
     return response.data;

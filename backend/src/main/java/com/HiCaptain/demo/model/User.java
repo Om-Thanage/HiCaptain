@@ -23,5 +23,7 @@ public class User {
     private String email;
     private String password;
     private Role role;
+    // Newly added: list of project IDs this user is associated with (client/PM/developer)
+    private List<String> projectIds;
     private List<String> taskIds;
 }

@@ -12,10 +12,10 @@ import { CheckCircle } from 'lucide-react';
 // Extract the search params usage into a child wrapped by Suspense
 function AuthPageContent() {
   const params = useSearchParams();
-  const mode = params.get('mode') || 'login'; // ?mode=register or ?mode=login
+  const mode = params.get('mode');
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-linear-to-br from-slate-900 via-indigo-900 to-slate-800 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col md:flex-row bg-slate-900 relative overflow-hidden">
       {/* Background gloss */}
       <div className="absolute inset-0 bg-white/5 backdrop-blur-3xl z-0" />
       <div className="absolute -top-20 -left-20 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />

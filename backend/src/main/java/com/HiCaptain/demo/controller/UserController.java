@@ -2,6 +2,7 @@ package com.HiCaptain.demo.controller;
 
 import com.HiCaptain.demo.model.User;
 import com.HiCaptain.demo.service.UserService;
+import com.HiCaptain.demo.util.Role;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,9 +19,18 @@ public class UserController {
     public UserController(UserService svc) { this.svc = svc; }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('Admin')")
-    public ResponseEntity<List<User>> getAll() {
-        return ResponseEntity.ok(svc.getAll());
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
+    public ResponseEntity<List<User>> getAll(@RequestParam(value = "role", required = false) String role) {
+        if (role == null || role.isBlank()) {
+            return ResponseEntity.ok(svc.getAll());
+        }
+        try {
+            Role r = Role.valueOf(role);
+            return ResponseEntity.ok(svc.getByRole(r));
+        } catch (IllegalArgumentException ex) {
+            // If invalid role is provided, return 400
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
     }
 
     @GetMapping("/{id}")

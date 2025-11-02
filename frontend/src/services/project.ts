@@ -24,5 +24,10 @@ export const projectService = {
 
   async delete(id: string): Promise<void> {
     await api.delete(`/projects/${id}`);
+  },
+
+  async addDeveloper(projectId: string, developerId: string): Promise<Project> {
+    const response = await api.post(`/projects/${projectId}/developers/${developerId}`);
+    return response.data;
   }
 };

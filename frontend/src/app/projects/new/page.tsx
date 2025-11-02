@@ -6,6 +6,7 @@ import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { projectService } from '@/services/project';
 import { userService } from '@/services/user';
+import { authService } from '@/services/auth';
 import { Project, User } from '@/types';
 import { ArrowLeft, Calendar, Users, AlertCircle, Search, UserCheck, Code } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -17,11 +18,13 @@ interface ProjectFormData {
   endDate: string;
   clientId: string;
   developerIds: string[];
+  projectManagerId?: string;
 }
 
 export default function NewProjectPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [formData, setFormData] = useState<ProjectFormData>({
@@ -30,7 +33,8 @@ export default function NewProjectPage() {
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
     clientId: '',
-    developerIds: []
+    developerIds: [],
+    projectManagerId: undefined
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -38,8 +42,14 @@ export default function NewProjectPage() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
+        const u = authService.getUserFromToken();
+        setCurrentUser(u);
         const allUsers = await userService.getAll();
         setUsers(allUsers);
+        // If current user is a Project Manager, auto-assign as PM
+        if (u?.role === 'ProjectManager') {
+          setFormData(prev => ({ ...prev, projectManagerId: u.id }));
+        }
       } catch (error) {
         console.error('Error fetching users:', error);
         toast.error('Failed to load users');
@@ -62,6 +72,9 @@ export default function NewProjectPage() {
   
   // Get selected developers info
   const selectedDevelopers = developers.filter(dev => formData.developerIds.includes(dev.id));
+
+  // Project Managers list (for Admin to select)
+  const projectManagers = users.filter(user => user.role === 'ProjectManager');
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -88,6 +101,11 @@ export default function NewProjectPage() {
 
     if (!formData.clientId.trim()) {
       newErrors.clientId = 'Client ID is required';
+    }
+
+    // For Admin, project manager selection is required
+    if (currentUser?.role === 'Admin' && !formData.projectManagerId) {
+      newErrors.projectManagerId = 'Project Manager is required';
     }
 
     setErrors(newErrors);
@@ -286,6 +304,44 @@ export default function NewProjectPage() {
                 </p>
               )}
             </div>
+
+            {/* Project Manager Selection (Admin only) */}
+            {currentUser?.role === 'Admin' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <Users className="w-4 h-4 inline mr-2" />
+                  Select Project Manager *
+                </label>
+                {loadingUsers ? (
+                  <div className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
+                    Loading project managers...
+                  </div>
+                ) : projectManagers.length > 0 ? (
+                  <select
+                    value={formData.projectManagerId || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, projectManagerId: e.target.value || undefined }))}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select a project manager</option>
+                    {projectManagers.map((pm) => (
+                      <option key={pm.id} value={pm.id}>
+                        {pm.name} (ID: {pm.id})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
+                    No project managers found. Please register a project manager first.
+                  </div>
+                )}
+                {errors.projectManagerId && (
+                  <p className="mt-1 text-sm text-red-400 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    {errors.projectManagerId}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Developer Selection */}
             <div>

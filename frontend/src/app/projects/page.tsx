@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { projectService } from '@/services/project';
 import { Project } from '@/types';
@@ -31,15 +32,15 @@ export default function ProjectsPage() {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed':
-        return 'text-green-300 bg-green-900/20 border border-green-800';
+        return 'text-green-300 bg-green-900/30 border border-green-800 shadow-[0_0_10px_rgba(34,197,94,0.3)]';
       case 'in-progress':
-        return 'text-blue-300 bg-blue-900/20 border border-blue-800';
+        return 'text-blue-300 bg-blue-900/30 border border-blue-800 shadow-[0_0_10px_rgba(59,130,246,0.3)]';
       case 'pending':
-        return 'text-yellow-300 bg-yellow-900/20 border border-yellow-800';
+        return 'text-yellow-300 bg-yellow-900/30 border border-yellow-800 shadow-[0_0_10px_rgba(234,179,8,0.3)]';
       case 'on-hold':
-        return 'text-slate-300 bg-slate-800 border border-slate-700';
+        return 'text-slate-300 bg-slate-900/30 border border-slate-700 shadow-[0_0_8px_rgba(148,163,184,0.25)]';
       default:
-        return 'text-slate-300 bg-slate-800 border border-slate-700';
+        return 'text-slate-300 bg-slate-900/30 border border-slate-700 shadow-[0_0_8px_rgba(148,163,184,0.25)]';
     }
   };
 
@@ -59,7 +60,7 @@ export default function ProjectsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-8 pl-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -68,43 +69,68 @@ export default function ProjectsPage() {
           </div>
           <Link
             href="/projects/new"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+            className="inline-flex items-center px-4 py-2 bg-slate-900 border-2 text-white rounded-lg transition-all duration-200 shadow-lg shadow-slate-950"
           >
-            <Plus className="w-5 h-5 mr-2" />
-            New Project
+            
+            New Project <Plus className="w-5 h-5 ml-2" />
           </Link>
         </div>
 
         {/* Projects Grid */}
         {projects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              visible: {
+                opacity: 1,
+                y: 0,
+                transition: { staggerChildren: 0.1 },
+              },
+            }}
+          >
             {projects.map((project) => (
-              <div key={project.id} className="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-6 hover:bg-slate-750 transition-colors duration-200">
+              <motion.div
+                key={project.id}
+                className="backdrop-blur-xl bg-linear-to-br from-slate-800/80 to-slate-900/70 rounded-2xl border border-slate-700/60 p-6 shadow-lg hover:shadow-blue-900/20 transition-all duration-300"
+                whileHover={{ scale: 1.03 }}
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+              >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center">
-                    <FolderKanban className="w-8 h-8 text-blue-400 mr-3" />
                     <div>
                       <h3 className="text-lg font-semibold text-slate-100">{project.name}</h3>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 transition-all duration-300 ${getStatusColor(
+                          project.status
+                        )}`}
+                      >
                         {project.status}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <p className="text-slate-400 mb-4 line-clamp-3">{project.description}</p>
+                <p className="text-slate-400 mb-5 line-clamp-3 text-sm">
+                  {project.description || 'No description provided.'}
+                </p>
 
-                <div className="space-y-2 text-sm text-slate-400">
+                <div className="space-y-2 text-sm text-slate-400/90">
                   <div className="flex items-center">
-                    <Calendar className="w-4 h-4 mr-2" />
+                    <Calendar className="w-4 h-4 mr-2 text-slate-500" />
                     <span>Start: {formatDate(project.startDate)}</span>
                   </div>
                   <div className="flex items-center">
-                    <Calendar className="w-4 h-4 mr-2" />
+                    <Calendar className="w-4 h-4 mr-2 text-slate-500" />
                     <span>End: {formatDate(project.endDate)}</span>
                   </div>
                   <div className="flex items-center">
-                    <Users className="w-4 h-4 mr-2" />
+                    <Users className="w-4 h-4 mr-2 text-slate-500" />
                     <span>{project.developerIds.length} developers</span>
                   </div>
                 </div>
@@ -112,32 +138,28 @@ export default function ProjectsPage() {
                 <div className="mt-6 flex space-x-2">
                   <Link
                     href={`/projects/${project.id}`}
-                    className="flex-1 text-center px-3 py-2 bg-blue-900/20 text-blue-300 rounded-md hover:bg-blue-900/30 transition-colors duration-200 border border-blue-800"
+                    className="flex-1 text-center px-3 py-2 rounded-lg bg-slate-900 border-2 shadow-slate-950 shadow-lg text-white transition-all duration-200"
                   >
                     View Details
                   </Link>
-                  <Link
-                    href={`/projects/${project.id}/kanban`}
-                    className="flex-1 text-center px-3 py-2 bg-slate-700 text-slate-300 rounded-md hover:bg-slate-600 transition-colors duration-200 border border-slate-600"
-                  >
-                    Kanban
-                  </Link>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         ) : (
-          <div className="text-center py-12">
-            <FolderKanban className="mx-auto h-12 w-12 text-slate-400" />
-            <h3 className="mt-2 text-sm font-medium text-slate-200">No projects</h3>
-            <p className="mt-1 text-sm text-slate-400">Get started by creating a new project.</p>
+          <div className="text-center py-16">
+            <FolderKanban className="mx-auto h-12 w-12 text-slate-500" />
+            <h3 className="mt-3 text-lg font-medium text-slate-100">No projects yet</h3>
+            <p className="mt-1 text-sm text-slate-400">
+              Start by creating your first project to begin tracking progress.
+            </p>
             <div className="mt-6">
               <Link
                 href="/projects/new"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md"
               >
-                <Plus className="w-5 h-5 mr-2" />
-                New Project
+                
+                New Project <Plus className="w-5 h-5 mr-2" />
               </Link>
             </div>
           </div>

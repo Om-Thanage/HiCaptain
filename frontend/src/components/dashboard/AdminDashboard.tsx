@@ -1,17 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   Users,
   FolderKanban,
   DollarSign,
-  TrendingUp,
-  AlertCircle,
   CheckCircle2,
   Clock,
-  UserCheck,
 } from 'lucide-react';
 import { dashboardService, DashboardData } from '@/services/dashboard';
 
@@ -22,10 +18,13 @@ interface AdminStats {
   activeProjects: number;
   completedProjects: number;
   pendingInvoices: number;
-  systemAlerts: number;
 }
 
-export default function AdminDashboard({user}: {user: {id: string; name: string; role: string}}) {
+export default function AdminDashboard({
+  user,
+}: {
+  user: { id: string; name: string; role: string };
+}) {
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
     totalProjects: 0,
@@ -33,9 +32,10 @@ export default function AdminDashboard({user}: {user: {id: string; name: string;
     activeProjects: 0,
     completedProjects: 0,
     pendingInvoices: 0,
-    systemAlerts: 0,
   });
-  const [recentActivity, setRecentActivity] = useState<DashboardData['recentActivity']>([]);
+
+  const [recentActivity, setRecentActivity] =
+    useState<DashboardData['recentActivity']>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,8 +49,9 @@ export default function AdminDashboard({user}: {user: {id: string; name: string;
           totalRevenue: dashboardData.stats.totalRevenue || 0,
           activeProjects: dashboardData.stats.activeProjects || 0,
           completedProjects: dashboardData.stats.completedProjects || 0,
-          pendingInvoices: Math.floor(dashboardData.stats.pendingInvoices || 0),
-          systemAlerts: dashboardData.stats.systemAlerts || 0,
+          pendingInvoices: Math.floor(
+            dashboardData.stats.pendingInvoices || 0
+          ),
         });
         setRecentActivity(dashboardData.recentActivity.slice(0, 3));
       } catch (error) {
@@ -74,27 +75,43 @@ export default function AdminDashboard({user}: {user: {id: string; name: string;
     );
   }
 
-  const quickLinks = [
-    { href: '/users', label: 'Manage Users', icon: Users, color: 'text-blue-400' },
-    { href: '/analytics', label: 'System Analytics', icon: TrendingUp, color: 'text-green-400' },
-    { href: '/projects', label: 'All Projects', icon: FolderKanban, color: 'text-purple-400' },
-    { href: '/invoices', label: 'Revenue & Invoices', icon: DollarSign, color: 'text-yellow-400' },
+  const overviewStats = [
+    {
+      title: 'Active Projects',
+      value: stats.activeProjects,
+      icon: <FolderKanban className="w-5 h-5 text-blue-400" />,
+    },
+    {
+      title: 'Completed Projects',
+      value: stats.completedProjects,
+      icon: <CheckCircle2 className="w-5 h-5 text-green-400" />,
+    },
+    {
+      title: 'Monthly Revenue',
+      value: `₹${stats.totalRevenue}`,
+      icon: <DollarSign className="w-5 h-5 text-emerald-400" />,
+    },
+    {
+      title: 'Pending Invoices',
+      value: stats.pendingInvoices,
+      icon: <Clock className="w-5 h-5 text-yellow-400" />,
+    },
   ];
 
   return (
     <motion.div
-      className="space-y-8"
+      className="space-y-8 pl-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
       {/* Header */}
       <motion.div
-        className="space-y-4"
+        className="space-y-5"
         initial="hidden"
         animate="visible"
         variants={{
-          hidden: { opacity: 0, y: -20 },
+          hidden: { opacity: 0, y: -25 },
           visible: {
             opacity: 1,
             y: 0,
@@ -102,145 +119,118 @@ export default function AdminDashboard({user}: {user: {id: string; name: string;
           },
         }}
       >
-        <motion.h1
-          className="text-4xl sm:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400"
-          variants={{
-            hidden: { opacity: 0, y: -10 },
-            visible: { opacity: 1, y: 0 },
-          }}
-        >
-          Welcome back, {user.name.split(' ')[0]}
-        </motion.h1>
-
-        {/* Role Badge */}
         <motion.div
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-800/70 border border-slate-700/60 backdrop-blur-md"
+          className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
           variants={{
             hidden: { opacity: 0, y: -10 },
             visible: { opacity: 1, y: 0 },
           }}
-          transition={{ type: 'spring', stiffness: 200 }}
         >
+          <div>
+            <h1 className="text-4xl sm:text-5xl font-extrabold drop-shadow-md">
+              <span className="text-white/90">{user.name.split(" ")[0]}</span>
+            </h1>
+            <p className="text-slate-400 text-sm sm:text-base mt-1">
+              Here's a quick summary of your organization’s progress today.
+            </p>
+          </div>
+
+          {/* Role Badge */}
           <motion.div
-            className="w-2.5 h-2.5 rounded-full bg-green-400"
-            animate={{
-              scale: [1, 1.4, 1],
-              opacity: [0.6, 1, 0.6],
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/70 border border-slate-700/60 backdrop-blur-md shadow-sm hover:shadow-lg transition-all"
+            variants={{
+              hidden: { opacity: 0, y: -10 },
+              visible: { opacity: 1, y: 0 },
             }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-          />
-          <span className="text-slate-100 text-sm font-medium uppercase tracking-wide">
-            {user.role}
-          </span>
+          >
+            <motion.div
+              className="w-2.5 h-2.5 rounded-full bg-green-400"
+              animate={{ scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <span className="text-slate-100 text-sm font-medium uppercase tracking-wide">
+              {user.role}
+            </span>
+          </motion.div>
         </motion.div>
       </motion.div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {quickLinks.map(({ href, label, icon: Icon, color }) => (
-          <motion.div
-            key={href}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.97 }}
-          >
-            <Link
-              href={href}
-              className="relative block overflow-hidden rounded-2xl p-5 bg-gradient-to-br from-slate-800/60 to-slate-900/40 border border-slate-700/60 backdrop-blur-md group hover:shadow-[0_0_20px_-5px_rgba(59,130,246,0.3)] transition-all duration-300"
-            >
-              <div className="flex items-center space-x-3">
-                <Icon className={`h-6 w-6 ${color} group-hover:scale-110 transition-transform`} />
-                <span className="text-slate-200 font-medium">{label}</span>
-              </div>
-            </Link>
-          </motion.div>
-        ))}
-      </div>
 
-      {/* Animated Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'text-blue-400' },
-          { label: 'Total Projects', value: stats.totalProjects, icon: FolderKanban, color: 'text-purple-400' },
-          { label: 'Revenue', value: `$${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-green-400' },
-          { label: 'Alerts', value: stats.systemAlerts, icon: AlertCircle, color: 'text-red-400' },
-        ].map(({ label, value, icon: Icon, color }, i) => (
+      {/* Main Stats Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Side */}
+        <div className="flex flex-col gap-6 relative z-10">
+          {/* Total Users Card */}
           <motion.div
-            key={label}
-            className="rounded-2xl p-6 border border-slate-700/60 bg-gradient-to-br from-slate-800/60 to-slate-900/40 backdrop-blur-md shadow-lg"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
+            transition={{ duration: 0.4 }}
+            className="bg-linear-to-r from-blue-600/90 to-indigo-600/90 text-white p-6 rounded-2xl shadow-lg"
           >
-            <div className="flex items-center space-x-4">
-              <Icon className={`h-8 w-8 ${color}`} />
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 p-3 rounded-xl">
+                <Users className="w-7 h-7" />
+              </div>
               <div>
-                <p className="text-slate-400 text-sm">{label}</p>
-                <motion.p
-                  className="text-2xl font-semibold text-slate-100"
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.3 }}
-                >
-                  {value}
-                </motion.p>
+                <p className="text-lg font-medium">Total Users</p>
+                <p className="text-3xl font-bold mt-1">{stats.totalUsers}</p>
+                <p className="text-sm opacity-80">(including you)</p>
               </div>
             </div>
           </motion.div>
-        ))}
-      </div>
 
-      {/* Project + Finance + Health */}
-      <motion.div
-        className="grid grid-cols-1 lg:grid-cols-3 gap-6"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        {[
-          {
-            title: 'Project Overview',
-            items: [
-              { label: 'Active Projects', value: stats.activeProjects, icon: Clock, color: 'text-yellow-400' },
-              { label: 'Completed Projects', value: stats.completedProjects, icon: CheckCircle2, color: 'text-green-400' },
-            ],
-          },
-          {
-            title: 'Financial Overview',
-            items: [
-              { label: 'Monthly Revenue', value: `$${(stats.totalRevenue / 12).toFixed(0)}K`, icon: DollarSign, color: 'text-green-400' },
-              { label: 'Pending Invoices', value: stats.pendingInvoices, icon: Clock, color: 'text-yellow-400' },
-            ],
-          },
-          {
-            title: 'System Health',
-            items: [
-              { label: 'Active Users', value: Math.floor(stats.totalUsers * 0.8), icon: UserCheck, color: 'text-blue-400' },
-              { label: 'Critical Alerts', value: stats.systemAlerts, icon: AlertCircle, color: 'text-red-400' },
-            ],
-          },
-        ].map(({ title, items }) => (
-          <div
-            key={title}
-            className="rounded-2xl p-6 border border-slate-700/60 bg-gradient-to-br from-slate-800/60 to-slate-900/40 backdrop-blur-md shadow-lg"
+          {/* Revenue Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="bg-linear-to-r from-emerald-600/90 to-teal-600/90 text-white p-6 rounded-2xl shadow-lg"
           >
-            <h3 className="text-lg font-semibold text-slate-100 mb-4">{title}</h3>
-            <div className="space-y-4">
-              {items.map(({ label, value, icon: Icon, color }) => (
-                <div key={label} className="flex justify-between items-center">
-                  <div className="flex items-center space-x-2">
-                    <Icon className={`h-5 w-5 ${color}`} />
-                    <span className="text-slate-300">{label}</span>
-                  </div>
-                  <span className="text-slate-100 font-semibold">{value}</span>
-                </div>
-              ))}
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 p-3 rounded-xl">
+                <DollarSign className="w-7 h-7" />
+              </div>
+              <div>
+                <p className="text-lg font-medium">Total Revenue</p>
+                <p className="text-3xl font-bold mt-1">${stats.totalRevenue}</p>
+              </div>
             </div>
+          </motion.div>
+        </div>
+
+        {/* Right Side - Stats Card */}
+        <motion.div
+          initial={{ opacity: 0, x: 15 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-slate-900/10 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20"
+        >
+          <h2 className="text-xl font-semibold text-slate-100 mb-4">
+            Overview
+          </h2>
+          <div className="grid grid-cols-2 gap-6">
+            {overviewStats.map((item, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-4 bg-slate-900/10 p-4 border-white/10 border-2 rounded-xl hover:bg-white/20 transition-all"
+              >
+                <div className="p-2 rounded-lg">{item.icon}</div>
+                <div>
+                  <p className="text-sm text-slate-200">{item.title}</p>
+                  <p className="text-lg font-bold text-white">{item.value}</p>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </motion.div>
+        </motion.div>
+      </div>
 
       {/* Recent Activity */}
-      <div className="rounded-2xl border border-slate-700/60 bg-gradient-to-br from-slate-800/60 to-slate-900/40 backdrop-blur-md">
+      <div className="rounded-2xl border border-slate-700/60 bg-linear-to-br from-slate-800/60 to-slate-900/40 backdrop-blur-md">
         <div className="px-6 py-4 border-b border-slate-700/50">
-          <h3 className="text-lg font-semibold text-slate-100">Recent System Activity</h3>
+          <h3 className="text-lg font-semibold text-slate-100">
+            Recent System Activity
+          </h3>
         </div>
         <div className="p-6 space-y-3">
           {recentActivity.length > 0 ? (
@@ -251,17 +241,15 @@ export default function AdminDashboard({user}: {user: {id: string; name: string;
                 whileHover={{ scale: 1.02 }}
               >
                 <div>
-                  {activity.type === 'task' && <CheckCircle2 className="h-5 w-5 text-blue-400" />}
-                  {activity.type === 'commit' && <FolderKanban className="h-5 w-5 text-purple-400" />}
-                  {activity.type === 'project' && <FolderKanban className="h-5 w-5 text-green-400" />}
-                  {activity.type === 'payment' && <DollarSign className="h-5 w-5 text-yellow-400" />}
-                  {!['task', 'commit', 'project', 'payment'].includes(activity.type) && (
-                    <AlertCircle className="h-5 w-5 text-red-400" />
-                  )}
+                  <FolderKanban className="h-5 w-5 text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-slate-100 font-medium">{activity.title}</p>
-                  <p className="text-slate-400 text-sm">{activity.description}</p>
+                  <p className="text-slate-100 font-medium">
+                    {activity.title}
+                  </p>
+                  <p className="text-slate-400 text-sm">
+                    {activity.description}
+                  </p>
                 </div>
                 <span className="ml-auto text-slate-500 text-sm">
                   {new Date(activity.timestamp).toLocaleString()}
@@ -269,7 +257,9 @@ export default function AdminDashboard({user}: {user: {id: string; name: string;
               </motion.div>
             ))
           ) : (
-            <div className="text-center text-slate-400 py-6">No recent activity</div>
+            <div className="text-center text-slate-400 py-6">
+              No recent activity
+            </div>
           )}
         </div>
       </div>

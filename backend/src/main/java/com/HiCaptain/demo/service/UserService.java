@@ -1,6 +1,7 @@
 package com.HiCaptain.demo.service;
 
 import com.HiCaptain.demo.model.User;
+import com.HiCaptain.demo.util.Role;
 import com.HiCaptain.demo.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -46,8 +47,14 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    public List<User> getByRole(Role role) {
+        if (role == null) return getAll();
+        return userRepository.findByRole(role);
+    }
+
     public User update(String id, User payload) {
-        User user = userRepository.findById(id)
+        // Ensure the user exists before updating
+        userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         payload.setId(id);
         return userRepository.save(payload);

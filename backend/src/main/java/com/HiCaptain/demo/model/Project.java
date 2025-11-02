@@ -24,6 +24,10 @@ public class Project {
     private LocalDate startDate;
     private LocalDate endDate;
     private String clientId;
+    // Newly added: optional project manager assignment for the project
+    private String projectManagerId;
+    // Newly added: stores who created the project in format "<Role> : <username>"
+    private String createdBy;
     private List<String> developerIds;
     private List<String> taskIds;
 
