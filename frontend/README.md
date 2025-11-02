@@ -107,6 +107,8 @@ The frontend communicates with the Spring Boot backend through RESTful APIs:
 2. **Dashboard**: View role-specific dashboard with key metrics
 3. **Projects**: Create and manage projects, view details and kanban boards
 4. **Tasks**: Assign tasks, set priorities and deadlines
+	- Edit a task via the pencil icon on a card or by double-clicking the task card on the Kanban board
+	- Drag and drop between columns to change status
 5. **Analytics**: View project insights and performance metrics
 6. **Invoices**: Track billing and payment status
 7. **Feedback**: View and manage client feedback

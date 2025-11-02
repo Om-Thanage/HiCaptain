@@ -34,6 +34,7 @@ export default function ProjectKanbanPage() {
   const [filterPriority, setFilterPriority] = useState<string>('');
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editTaskData, setEditTaskData] = useState<TaskRequest | null>(null);
   const [apiConnected, setApiConnected] = useState<boolean>(true);
   const [lastFetchError, setLastFetchError] = useState<string | null>(null);
 
@@ -214,6 +215,24 @@ export default function ProjectKanbanPage() {
       fetchData();
     }
   }, [projectId]);
+
+  // Prepare edit form data when an editing task is selected
+  useEffect(() => {
+    if (editingTask) {
+      setEditTaskData({
+        title: editingTask.title || '',
+        description: editingTask.description || '',
+        status: editingTask.status || 'pending',
+        priority: editingTask.priority || 'medium',
+        // ensure date input format yyyy-mm-dd
+        deadline: editingTask.deadline ? new Date(editingTask.deadline).toISOString().slice(0, 10) : '',
+        projectId: projectId,
+        assignedDeveloperIds: editingTask.assignedDeveloperIds || [],
+      });
+    } else {
+      setEditTaskData(null);
+    }
+  }, [editingTask, projectId]);
 
   const handleRefreshTasks = async () => {
     if (!projectId) return;
@@ -534,6 +553,77 @@ export default function ProjectKanbanPage() {
     }
   };
 
+  const handleSaveEditedTask = async () => {
+    if (!editingTask || !editTaskData) return;
+
+    try {
+      // Validate required fields
+      if (!editTaskData.title?.trim()) {
+        toast.error('Task title is required');
+        return;
+      }
+
+      // Validate assigned developers belong to project
+      if (editTaskData.assignedDeveloperIds && editTaskData.assignedDeveloperIds.length > 0) {
+        const invalidDevelopers = editTaskData.assignedDeveloperIds.filter(
+          (devId) => devId && !isValidDeveloperForProject(devId)
+        );
+        if (invalidDevelopers.length > 0) {
+          toast.error('Cannot assign task to developers not working on this project');
+          return;
+        }
+      }
+
+      // Compose payload. Send only changed fields to be safe.
+      const payload: Partial<TaskRequest> = {};
+      if (editTaskData.title !== editingTask.title) payload.title = editTaskData.title;
+      if (editTaskData.description !== editingTask.description) payload.description = editTaskData.description;
+      if (editTaskData.status !== editingTask.status) payload.status = editTaskData.status;
+      if (editTaskData.priority !== editingTask.priority) payload.priority = editTaskData.priority;
+      // Normalize deadline to yyyy-mm-dd
+      const currentDeadline = editingTask.deadline ? new Date(editingTask.deadline).toISOString().slice(0, 10) : '';
+      if ((editTaskData.deadline || '') !== currentDeadline) payload.deadline = editTaskData.deadline || '';
+      if (
+        JSON.stringify(editTaskData.assignedDeveloperIds || []) !==
+        JSON.stringify(editingTask.assignedDeveloperIds || [])
+      ) {
+        payload.assignedDeveloperIds = editTaskData.assignedDeveloperIds || [];
+      }
+
+      // If nothing changed, just close.
+      if (Object.keys(payload).length === 0) {
+        setEditingTask(null);
+        setEditTaskData(null);
+        toast('No changes to save');
+        return;
+      }
+
+      const updated = await taskService.update(editingTask.id, payload);
+      const transformed = transformBackendTask(updated);
+
+      setTasks((prev) =>
+        prev.map((t) => (t.id === editingTask.id ? { ...t, ...transformed, id: t.id || transformed.id } : t))
+      );
+
+      setEditingTask(null);
+      setEditTaskData(null);
+      toast.success('Task updated successfully');
+    } catch (error: any) {
+      console.error('Error updating task:', error);
+      if (error.response?.status === 401) {
+        toast.error('Authentication required. Please log in again.');
+      } else if (error.response?.status === 403) {
+        toast.error('You do not have permission to update tasks.');
+      } else if (error.response?.status === 404) {
+        toast.error('Task not found.');
+      } else if (error.response?.data?.message) {
+        toast.error(`Failed to update task: ${error.response.data.message}`);
+      } else {
+        toast.error('Failed to update task. Please try again.');
+      }
+    }
+  };
+
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     console.log('Drag started for task:', taskId);
     e.dataTransfer.setData('text/plain', taskId);
@@ -642,6 +732,7 @@ export default function ProjectKanbanPage() {
                       key={task.id}
                       draggable
                       onDragStart={(e) => handleDragStart(e, task.id)}
+                      onDoubleClick={() => setEditingTask(task)}
                       className={`bg-slate-800 rounded-lg shadow-sm border border-slate-600 p-4 hover:shadow-md hover:border-slate-500 transition-all duration-200 cursor-move ${getPriorityColor(task.priority)} group`}
                     >
                       <div className="flex items-start justify-between mb-2">
@@ -999,6 +1090,138 @@ export default function ProjectKanbanPage() {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                 >
                   Add Task
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Task Modal */}
+        {editingTask && editTaskData && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold text-slate-100 mb-4">Edit Task</h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Title</label>
+                  <input
+                    type="text"
+                    value={editTaskData.title}
+                    onChange={(e) => setEditTaskData({ ...editTaskData, title: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter task title"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Description</label>
+                  <textarea
+                    value={editTaskData.description}
+                    onChange={(e) => setEditTaskData({ ...editTaskData, description: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    placeholder="Enter task description"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Priority</label>
+                    <select
+                      value={editTaskData.priority}
+                      onChange={(e) => setEditTaskData({ ...editTaskData, priority: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Status</label>
+                    <select
+                      value={editTaskData.status}
+                      onChange={(e) => setEditTaskData({ ...editTaskData, status: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="pending">To Do</option>
+                      <option value="in-progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Deadline</label>
+                  <input
+                    type="date"
+                    value={editTaskData.deadline}
+                    onChange={(e) => setEditTaskData({ ...editTaskData, deadline: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Assign Developers ({projectDevelopers.length} available)
+                  </label>
+                  {projectDevelopers.length > 0 ? (
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {projectDevelopers.map((developer) => (
+                        <label
+                          key={developer.id}
+                          className="flex items-center space-x-2 text-sm text-slate-300 hover:bg-slate-600 p-2 rounded cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={editTaskData.assignedDeveloperIds.includes(developer.id)}
+                            onChange={(e) => {
+                              const devIds = editTaskData.assignedDeveloperIds;
+                              if (e.target.checked) {
+                                setEditTaskData({
+                                  ...editTaskData,
+                                  assignedDeveloperIds: [...devIds, developer.id],
+                                });
+                              } else {
+                                setEditTaskData({
+                                  ...editTaskData,
+                                  assignedDeveloperIds: devIds.filter((id) => id !== developer.id),
+                                });
+                              }
+                            }}
+                            className="rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span>{developer.name}</span>
+                          <span className="text-xs text-slate-400">({developer.id})</span>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-slate-500 p-3 bg-slate-700 rounded-lg">
+                      No developers assigned to this project yet.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => {
+                    setEditingTask(null);
+                    setEditTaskData(null);
+                  }}
+                  className="px-4 py-2 text-slate-400 hover:text-slate-200 transition-colors duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEditedTask}
+                  disabled={!editTaskData.title}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                >
+                  Save Changes
                 </button>
               </div>
             </div>
