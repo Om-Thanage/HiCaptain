@@ -3,13 +3,14 @@ export type Role = 'Admin' | 'ProjectManager' | 'Developer' | 'Client';
 export interface User {
   id: string;
   name: string;
+  email: string;
   password?: string;
   role: Role;
   taskIds: string[];
 }
 
 export interface AuthRequest {
-  name: string;
+  email: string;
   password: string;
 }
 

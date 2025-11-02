@@ -26,6 +26,9 @@ public class AuthController {
         if (user.getName() == null || user.getName().isBlank()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("'name' is required");
         }
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("'email' is required");
+        }
         if (user.getPassword() == null || user.getPassword().isBlank()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("'password' is required");
         }
@@ -34,7 +37,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest request) {
-        Optional<User> user = userService.findByName(request.getName());
+        Optional<User> user = userService.findByEmail(request.getEmail());
         if (user.isPresent() && passwordEncoder.matches(request.getPassword(), user.get().getPassword())) {
             String token = jwtService.generateToken(user.get());
             return ResponseEntity.ok(new AuthResponse(token));

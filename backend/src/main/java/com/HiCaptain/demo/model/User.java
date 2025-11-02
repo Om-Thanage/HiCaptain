@@ -20,6 +20,7 @@ public class User {
     private String id;
     @Field("username")
     private String name;
+    private String email;
     private String password;
     private Role role;
     private List<String> taskIds;

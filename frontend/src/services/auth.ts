@@ -38,6 +38,7 @@ export const authService = {
         id: payload.userId || '',
         name: payload.sub || '',
         role: payload.role || 'Developer',
+        email: payload.email || '',
         taskIds: [],
       };
       return user;
@@ -62,6 +63,6 @@ export const authService = {
 
   logout() {
     this.clearToken();
-    window.location.href = '/login';
+    window.location.href = '/auth?mode=login';
   }
 };

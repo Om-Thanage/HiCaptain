@@ -17,7 +17,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   useEffect(() => {
     const token = authService.getToken();
     if (!token) {
-      router.push('/login');
+      router.push('/auth?mode=login');
       return;
     }
 
