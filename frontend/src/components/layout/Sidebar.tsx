@@ -95,7 +95,7 @@ export default function Sidebar() {
         border border-slate-700/40 
         shadow-xl rounded-3xl 
         flex flex-col items-center justify-between 
-        py-6 z-50 my-4
+        py-6 z-10 my-4
       "
     >
       {/* Logo */}

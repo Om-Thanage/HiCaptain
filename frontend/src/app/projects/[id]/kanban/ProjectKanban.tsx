@@ -927,28 +927,28 @@ export default function ProjectKanbanPage() {
 
         {/* Add Task Modal */}
         {showAddTaskModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-slate-100 mb-4">Add New Task</h3>
+          <div className="absolute min-h-screen inset-0 bg-slate-900/80 backdrop-blur-sm flex items-start justify-center p-4 z-50 -ml-24">
+            <div className="w-full max-w-md rounded-2xl border border-white/10 bg-linear-to-br from-slate-800/60 to-slate-900/40 backdrop-blur-md shadow-xl p-6">
+              <h3 className="text-xl font-semibold text-slate-100 mb-4">Add New Task</h3>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Title</label>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">Title</label>
                   <input
                     type="text"
                     value={newTask.title}
                     onChange={(e) => setNewTask({...newTask, title: e.target.value})}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-900/30 border border-white/10 rounded-lg text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/40"
                     placeholder="Enter task title"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Description</label>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">Description</label>
                   <textarea
                     value={newTask.description}
                     onChange={(e) => setNewTask({...newTask, description: e.target.value})}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-900/30 border border-white/10 rounded-lg text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/40"
                     rows={3}
                     placeholder="Enter task description"
                   />
@@ -956,11 +956,11 @@ export default function ProjectKanbanPage() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Priority</label>
+                    <label className="block text-sm font-medium text-slate-200 mb-2">Priority</label>
                     <select
                       value={newTask.priority}
                       onChange={(e) => setNewTask({...newTask, priority: e.target.value})}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-slate-900/30 border border-white/10 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/40"
                     >
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
@@ -969,11 +969,11 @@ export default function ProjectKanbanPage() {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Status</label>
+                    <label className="block text-sm font-medium text-slate-200 mb-2">Status</label>
                     <select
                       value={newTask.status}
                       onChange={(e) => setNewTask({...newTask, status: e.target.value})}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-slate-900/30 border border-white/10 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/40"
                     >
                       <option value="pending">To Do</option>
                       <option value="in-progress">In Progress</option>
@@ -983,17 +983,17 @@ export default function ProjectKanbanPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Deadline</label>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">Deadline</label>
                   <input
                     type="date"
                     value={newTask.deadline}
                     onChange={(e) => setNewTask({...newTask, deadline: e.target.value})}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-900/30 border border-white/10 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/40"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
                     Assign Developers ({projectDevelopers.length} available)
                   </label>
                   {projectDevelopers.length > 0 ? (
@@ -1001,7 +1001,7 @@ export default function ProjectKanbanPage() {
                       {projectDevelopers.map((developer) => (
                         <label 
                           key={developer.id} 
-                          className="flex items-center space-x-2 text-sm text-slate-300 hover:bg-slate-600 p-2 rounded cursor-pointer"
+                          className="flex items-center space-x-2 text-sm text-slate-200 hover:bg-white/10 p-2 rounded-lg cursor-pointer transition-colors"
                         >
                           <input
                             type="checkbox"
@@ -1020,7 +1020,7 @@ export default function ProjectKanbanPage() {
                                 });
                               }
                             }}
-                            className="rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
+                            className="rounded border-white/10 bg-slate-900/40 text-blue-500 focus:ring-blue-500/60"
                           />
                           <span>{developer.name}</span>
                           <span className="text-xs text-slate-400">({developer.id})</span>
@@ -1028,23 +1028,23 @@ export default function ProjectKanbanPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-sm text-slate-500 p-3 bg-slate-700 rounded-lg">
+                    <div className="text-sm text-slate-400 p-3 bg-slate-900/30 border border-white/10 rounded-lg">
                       No developers assigned to this project yet.
                     </div>
                   )}
                 </div>
 
                 {/* New: Add developer via dropdown options (username + email) + disclaimer */}
-                <div className="mt-3 p-3 rounded-lg bg-slate-700 border border-slate-600">
-                  <label className="block text-sm font-medium text-slate-200 mb-2">
+                <div className="mt-3 p-3 rounded-xl bg-slate-900/30 border border-white/10">
+                  <label className="flex flex-col text-sm font-medium text-slate-100 mb-2">
                     Add a developer to this project
                   </label>
                   {allDevelopers.length > 0 ? (
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2">
                       <select
                         value={newDeveloperId}
                         onChange={(e) => setNewDeveloperId(e.target.value)}
-                        className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 px-3 py-2 bg-slate-900/30 border border-white/10 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/40"
                       >
                         <option value="">Select a developer (username · email)</option>
                         {allDevelopers.map((dev) => (
@@ -1057,7 +1057,7 @@ export default function ProjectKanbanPage() {
                         type="button"
                         disabled={addingDeveloper || !newDeveloperId}
                         onClick={addDeveloperToProjectAndAssign}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        className="px-4 py-2 rounded-lg text-white bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {addingDeveloper ? 'Adding...' : 'Add & Assign'}
                       </button>
@@ -1080,14 +1080,14 @@ export default function ProjectKanbanPage() {
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setShowAddTaskModal(false)}
-                  className="px-4 py-2 text-slate-400 hover:text-slate-200 transition-colors duration-200"
+                  className="px-4 py-2 text-slate-300 hover:text-slate-100 transition-colors duration-200"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAddTask}
                   disabled={!newTask.title}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                  className="px-4 py-2 rounded-lg text-white bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                 >
                   Add Task
                 </button>
@@ -1098,28 +1098,28 @@ export default function ProjectKanbanPage() {
 
         {/* Edit Task Modal */}
         {editingTask && editTaskData && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-slate-100 mb-4">Edit Task</h3>
+          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="w-full max-w-md rounded-2xl border border-white/10 bg-linear-to-br from-slate-800/60 to-slate-900/40 backdrop-blur-md shadow-xl p-6">
+              <h3 className="text-xl font-semibold text-slate-100 mb-4">Edit Task</h3>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Title</label>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">Title</label>
                   <input
                     type="text"
                     value={editTaskData.title}
                     onChange={(e) => setEditTaskData({ ...editTaskData, title: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-900/30 border border-white/10 rounded-lg text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/40"
                     placeholder="Enter task title"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Description</label>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">Description</label>
                   <textarea
                     value={editTaskData.description}
                     onChange={(e) => setEditTaskData({ ...editTaskData, description: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-900/30 border border-white/10 rounded-lg text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/40"
                     rows={3}
                     placeholder="Enter task description"
                   />
@@ -1127,11 +1127,11 @@ export default function ProjectKanbanPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Priority</label>
+                    <label className="block text-sm font-medium text-slate-200 mb-2">Priority</label>
                     <select
                       value={editTaskData.priority}
                       onChange={(e) => setEditTaskData({ ...editTaskData, priority: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-slate-900/30 border border-white/10 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/40"
                     >
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
@@ -1140,11 +1140,11 @@ export default function ProjectKanbanPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Status</label>
+                    <label className="block text-sm font-medium text-slate-200 mb-2">Status</label>
                     <select
                       value={editTaskData.status}
                       onChange={(e) => setEditTaskData({ ...editTaskData, status: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-slate-900/30 border border-white/10 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/40"
                     >
                       <option value="pending">To Do</option>
                       <option value="in-progress">In Progress</option>
@@ -1154,17 +1154,17 @@ export default function ProjectKanbanPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Deadline</label>
+                  <label className="block text-sm font-medium text-slate-200 mb-2">Deadline</label>
                   <input
                     type="date"
                     value={editTaskData.deadline}
                     onChange={(e) => setEditTaskData({ ...editTaskData, deadline: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-slate-900/30 border border-white/10 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500/40"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-200 mb-2">
                     Assign Developers ({projectDevelopers.length} available)
                   </label>
                   {projectDevelopers.length > 0 ? (
@@ -1172,7 +1172,7 @@ export default function ProjectKanbanPage() {
                       {projectDevelopers.map((developer) => (
                         <label
                           key={developer.id}
-                          className="flex items-center space-x-2 text-sm text-slate-300 hover:bg-slate-600 p-2 rounded cursor-pointer"
+                          className="flex items-center space-x-2 text-sm text-slate-200 hover:bg-white/10 p-2 rounded-lg cursor-pointer transition-colors"
                         >
                           <input
                             type="checkbox"
@@ -1191,7 +1191,7 @@ export default function ProjectKanbanPage() {
                                 });
                               }
                             }}
-                            className="rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
+                            className="rounded border-white/10 bg-slate-900/40 text-blue-500 focus:ring-blue-500/60"
                           />
                           <span>{developer.name}</span>
                           <span className="text-xs text-slate-400">({developer.id})</span>
@@ -1199,7 +1199,7 @@ export default function ProjectKanbanPage() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-sm text-slate-500 p-3 bg-slate-700 rounded-lg">
+                    <div className="text-sm text-slate-400 p-3 bg-slate-900/30 border border-white/10 rounded-lg">
                       No developers assigned to this project yet.
                     </div>
                   )}
@@ -1212,14 +1212,14 @@ export default function ProjectKanbanPage() {
                     setEditingTask(null);
                     setEditTaskData(null);
                   }}
-                  className="px-4 py-2 text-slate-400 hover:text-slate-200 transition-colors duration-200"
+                  className="px-4 py-2 text-slate-300 hover:text-slate-100 transition-colors duration-200"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveEditedTask}
                   disabled={!editTaskData.title}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                  className="px-4 py-2 rounded-lg text-white bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                 >
                   Save Changes
                 </button>
