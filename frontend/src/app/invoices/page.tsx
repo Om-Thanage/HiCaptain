@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { invoiceService } from '@/services/invoice';
 import { Invoice } from '@/types';
-import { FileText, DollarSign, Calendar, AlertCircle } from 'lucide-react';
+import { FileText, IndianRupee, Calendar, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function InvoicesPage() {
@@ -85,7 +85,7 @@ export default function InvoicesPage() {
           <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-6">
             <div className="flex items-center">
               <div className="shrink-0">
-                <DollarSign className="h-8 w-8 text-blue-400" />
+                <IndianRupee className="h-8 w-8 text-blue-400" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-slate-400">Total Amount</p>
@@ -97,7 +97,7 @@ export default function InvoicesPage() {
           <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-6">
             <div className="flex items-center">
               <div className="shrink-0">
-                <DollarSign className="h-8 w-8 text-green-400" />
+                <IndianRupee className="h-8 w-8 text-green-400" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-slate-400">Paid Amount</p>

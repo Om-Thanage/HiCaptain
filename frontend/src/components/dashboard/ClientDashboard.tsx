@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { 
   FolderKanban, 
-  DollarSign, 
+  IndianRupee, 
   MessageCircle, 
   TrendingUp,
   CheckCircle2,
@@ -99,7 +99,7 @@ export default function ClientDashboard() {
         
         <Link href="/invoices" className="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:bg-slate-700 transition-colors duration-200 group">
           <div className="flex items-center space-x-3">
-            <DollarSign className="h-6 w-6 text-green-400 group-hover:text-green-300" />
+            <IndianRupee className="h-6 w-6 text-green-400 group-hover:text-green-300" />
             <span className="text-slate-200 group-hover:text-slate-100 font-medium">
               Invoices & Payments
             </span>
@@ -142,7 +142,7 @@ export default function ClientDashboard() {
         <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-6">
           <div className="flex items-center">
             <div className="shrink-0">
-              <DollarSign className="h-8 w-8 text-green-400" />
+              <IndianRupee className="h-8 w-8 text-green-400" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-slate-400">Total Investment</p>
@@ -274,7 +274,7 @@ export default function ClientDashboard() {
                   <div key={index} className="flex items-center space-x-3 p-3 bg-slate-700 rounded-lg">
                     {activity.type === 'task' && <CheckCircle2 className="h-5 w-5 text-green-400" />}
                     {activity.type === 'commit' && <FolderKanban className="h-5 w-5 text-blue-400" />}
-                    {activity.type === 'payment' && <DollarSign className="h-5 w-5 text-green-400" />}
+                    {activity.type === 'payment' && <IndianRupee className="h-5 w-5 text-green-400" />}
                     {activity.type === 'meeting' && <Calendar className="h-5 w-5 text-yellow-400" />}
                     {!['task', 'commit', 'payment', 'meeting'].includes(activity.type) && <MessageCircle className="h-5 w-5 text-purple-400" />}
                     <div>

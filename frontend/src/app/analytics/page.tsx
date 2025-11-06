@@ -24,7 +24,7 @@ import {
   Users, 
   CheckCircle, 
   Clock, 
-  DollarSign, 
+  IndianRupee, 
   Activity,
   Calendar,
   Target,
@@ -167,7 +167,7 @@ export default function AnalyticsPage() {
                 </p>
               </div>
               <div className="p-3 bg-green-500/20 rounded-lg">
-                <DollarSign className="h-6 w-6 text-green-400" />
+                <IndianRupee className="h-6 w-6 text-green-400" />
               </div>
             </div>
           </div>

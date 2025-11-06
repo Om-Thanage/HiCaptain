@@ -12,7 +12,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Target,
-  DollarSign
+  IndianRupee
 } from 'lucide-react';
 import { dashboardService, DashboardData } from '@/services/dashboard';
 import { projectService } from '@/services/project';

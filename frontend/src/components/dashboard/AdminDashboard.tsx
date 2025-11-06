@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import {
   Users,
   FolderKanban,
-  DollarSign,
+  IndianRupee,
   CheckCircle2,
   Clock,
 } from 'lucide-react';
@@ -47,7 +47,7 @@ export default function AdminDashboard({
           totalUsers: dashboardData.stats.totalUsers || 0,
           totalProjects: dashboardData.stats.totalProjects || 0,
           totalRevenue: dashboardData.stats.totalRevenue || 0,
-          activeProjects: dashboardData.stats.activeProjects || 0,
+          activeProjects: dashboardData.stats.totalProjects || 0,
           completedProjects: dashboardData.stats.completedProjects || 0,
           pendingInvoices: Math.floor(
             dashboardData.stats.pendingInvoices || 0
@@ -89,7 +89,7 @@ export default function AdminDashboard({
     {
       title: 'Monthly Revenue',
       value: `₹${stats.totalRevenue}`,
-      icon: <DollarSign className="w-5 h-5 text-emerald-400" />,
+      icon: <IndianRupee className="w-5 h-5 text-emerald-400" />,
     },
     {
       title: 'Pending Invoices',
@@ -188,11 +188,11 @@ export default function AdminDashboard({
           >
             <div className="flex items-center gap-4">
               <div className="bg-white/20 p-3 rounded-xl">
-                <DollarSign className="w-7 h-7" />
+                <IndianRupee className="w-7 h-7" />
               </div>
               <div>
                 <p className="text-lg font-medium">Total Revenue</p>
-                <p className="text-3xl font-bold mt-1">${stats.totalRevenue}</p>
+                <p className="text-3xl font-bold mt-1">₹{stats.totalRevenue}</p>
               </div>
             </div>
           </motion.div>
