@@ -1,37 +1,49 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { analyticsService, AnalyticsData } from '@/services/analytics';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   Area,
-  AreaChart
+  AreaChart,
 } from 'recharts';
-import { 
-  TrendingUp, 
-  Users, 
-  CheckCircle, 
-  Clock, 
-  IndianRupee, 
+import {
+  TrendingUp,
+  Users,
+  Clock,
+  IndianRupee,
   Activity,
-  Calendar,
   Target,
   Award,
-  Briefcase
+  Briefcase,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// Lightweight chart card wrapper for consistent UI
+function ChartCard({ title, children, delay = 0 }: { title: string; children: React.ReactNode; delay?: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay }}
+      className="bg-slate-900/10 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20"
+    >
+      <h3 className="text-lg font-semibold text-slate-100 mb-4">{title}</h3>
+      {children}
+    </motion.div>
+  );
+}
 
 export default function AnalyticsPage() {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
@@ -84,249 +96,286 @@ export default function AnalyticsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-slate-100">Analytics</h1>
-          <div className="flex items-center space-x-2 text-sm text-slate-400">
-            <Activity className="h-4 w-4" />
-            <span>Real-time data</span>
+      <div className="space-y-6 pl-6">
+        {/* Header */}
+        <motion.div
+          className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div>
+            <h1 className="text-4xl sm:text-5xl font-extrabold drop-shadow-md">
+              <span className="text-white/90">Analytics</span>
+            </h1>
+            <p className="text-slate-400 text-sm sm:text-base mt-1 flex items-center gap-2">
+              <Activity className="h-4 w-4" /> Real-time insights for your workspace
+            </p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="bg-linear-to-r from-blue-600/90 to-indigo-600/90 text-white p-6 rounded-2xl shadow-lg"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-400">Total Projects</p>
-                <p className="text-2xl font-bold text-slate-100">{analyticsData.totalProjects || 0}</p>
+                <p className="text-sm font-medium">Total Projects</p>
+                <p className="text-3xl font-bold mt-1">{analyticsData.totalProjects || 0}</p>
               </div>
-              <div className="p-3 bg-blue-500/20 rounded-lg">
-                <Briefcase className="h-6 w-6 text-blue-400" />
+              <div className="bg-white/20 p-3 rounded-xl">
+                <Briefcase className="h-6 w-6" />
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="bg-linear-to-r from-emerald-600/90 to-teal-600/90 text-white p-6 rounded-2xl shadow-lg"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-400">Total Tasks</p>
-                <p className="text-2xl font-bold text-slate-100">{analyticsData.totalTasks || 0}</p>
+                <p className="text-sm font-medium">Total Tasks</p>
+                <p className="text-3xl font-bold mt-1">{analyticsData.totalTasks || 0}</p>
               </div>
-              <div className="p-3 bg-green-500/20 rounded-lg">
-                <Target className="h-6 w-6 text-green-400" />
+              <div className="bg-white/20 p-3 rounded-xl">
+                <Target className="h-6 w-6" />
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="bg-linear-to-r from-purple-600/90 to-fuchsia-600/90 text-white p-6 rounded-2xl shadow-lg"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-400">Team Members</p>
-                <p className="text-2xl font-bold text-slate-100">{analyticsData.totalUsers || 0}</p>
+                <p className="text-sm font-medium">Team Members</p>
+                <p className="text-3xl font-bold mt-1">{analyticsData.totalUsers || 0}</p>
               </div>
-              <div className="p-3 bg-purple-500/20 rounded-lg">
-                <Users className="h-6 w-6 text-purple-400" />
+              <div className="bg-white/20 p-3 rounded-xl">
+                <Users className="h-6 w-6" />
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55 }}
+            className="bg-linear-to-r from-amber-500/90 to-yellow-600/90 text-white p-6 rounded-2xl shadow-lg"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-400">Completion Rate</p>
-                <p className="text-2xl font-bold text-slate-100">{completionRate}%</p>
+                <p className="text-sm font-medium">Completion Rate</p>
+                <p className="text-3xl font-bold mt-1">{completionRate}%</p>
               </div>
-              <div className="p-3 bg-yellow-500/20 rounded-lg">
-                <Award className="h-6 w-6 text-yellow-400" />
+              <div className="bg-white/20 p-3 rounded-xl">
+                <Award className="h-6 w-6" />
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* Additional Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="bg-slate-900/10 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-400">Hours Worked</p>
-                <p className="text-2xl font-bold text-slate-100">{analyticsData.totalHoursWorked || 0}h</p>
+                <p className="text-sm font-medium text-slate-300">Hours Worked</p>
+                <p className="text-3xl font-bold text-white mt-1">{analyticsData.totalHoursWorked || 0}h</p>
               </div>
-              <div className="p-3 bg-orange-500/20 rounded-lg">
+              <div className="p-3 rounded-xl bg-orange-500/20">
                 <Clock className="h-6 w-6 text-orange-400" />
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="bg-slate-900/10 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-400">Total Revenue</p>
-                <p className="text-2xl font-bold text-slate-100">
-                  ${(analyticsData.totalRevenue || 0).toLocaleString()}
-                </p>
+                <p className="text-sm font-medium text-slate-300">Total Revenue</p>
+                <p className="text-3xl font-bold text-white mt-1">₹{(analyticsData.totalRevenue || 0).toLocaleString()}</p>
               </div>
-              <div className="p-3 bg-green-500/20 rounded-lg">
-                <IndianRupee className="h-6 w-6 text-green-400" />
+              <div className="p-3 rounded-xl bg-emerald-500/20">
+                <IndianRupee className="h-6 w-6 text-emerald-400" />
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="bg-slate-900/10 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-400">Avg. Task Time</p>
-                <p className="text-2xl font-bold text-slate-100">
-                  {(analyticsData.averageTaskCompletionTime || 0).toFixed(1)}h
-                </p>
+                <p className="text-sm font-medium text-slate-300">Avg. Task Time</p>
+                <p className="text-3xl font-bold text-white mt-1">{(analyticsData.averageTaskCompletionTime || 0).toFixed(1)}h</p>
               </div>
-              <div className="p-3 bg-cyan-500/20 rounded-lg">
+              <div className="p-3 rounded-xl bg-cyan-500/20">
                 <TrendingUp className="h-6 w-6 text-cyan-400" />
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Task Status Distribution */}
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-            <h3 className="text-lg font-semibold text-slate-100 mb-4">Tasks by Status</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={analyticsData.tasksByStatus || []}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }) => `${name}: ${value}`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {(analyticsData.tasksByStatus || []).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          <ChartCard title="Tasks by Status" delay={0.05}>
+            {!(analyticsData.tasksByStatus || []).length ? (
+              <div className="text-sm text-slate-400">No task status data</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={analyticsData.tasksByStatus || []}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="count"
+                    nameKey="status"
+                  >
+                    {(analyticsData.tasksByStatus || []).map((entry, index) => (
+                      <Cell key={`cell-ts-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
 
-          {/* Project Status Distribution */}
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-            <h3 className="text-lg font-semibold text-slate-100 mb-4">Projects by Status</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={analyticsData.projectsByStatus || []}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }) => `${name}: ${value}`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {(analyticsData.projectsByStatus || []).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          <ChartCard title="Projects by Status" delay={0.1}>
+            {!(analyticsData.projectsByStatus || []).length ? (
+              <div className="text-sm text-slate-400">No project status data</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={analyticsData.projectsByStatus || []}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="count"
+                    nameKey="status"
+                  >
+                    {(analyticsData.projectsByStatus || []).map((entry, index) => (
+                      <Cell key={`cell-ps-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
         </div>
 
-        {/* Revenue Trends */}
-        <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-          <h3 className="text-lg font-semibold text-slate-100 mb-4">Monthly Revenue</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={analyticsData.monthlyRevenue || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="month" stroke="#9CA3AF" />
-              <YAxis stroke="#9CA3AF" />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#1F2937', 
-                  border: '1px solid #374151',
-                  borderRadius: '8px'
-                }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="amount" 
-                stroke="#10B981" 
-                fill="#10B981" 
-                fillOpacity={0.3}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+        <ChartCard title="Monthly Revenue" delay={0.15}>
+          {!(analyticsData.monthlyRevenue || []).length ? (
+            <div className="text-sm text-slate-400">No revenue trend data</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={analyticsData.monthlyRevenue || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="month" stroke="#9CA3AF" />
+                <YAxis stroke="#9CA3AF" />
+                <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                <Area type="monotone" dataKey="amount" stroke="#10B981" fill="#10B981" fillOpacity={0.3} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
 
         {/* Team Performance */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Hours Worked by User */}
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-            <h3 className="text-lg font-semibold text-slate-100 mb-4">Hours Worked by Team Member</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={analyticsData.hoursWorkedByUser || []} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis type="number" stroke="#9CA3AF" />
-                <YAxis dataKey="username" type="category" stroke="#9CA3AF" width={80} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#1F2937', 
-                    border: '1px solid #374151',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Bar dataKey="hours" fill="#3B82F6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <ChartCard title="Hours Worked by Team Member" delay={0.2}>
+            {!(analyticsData.hoursWorkedByUser || []).length ? (
+              <div className="text-sm text-slate-400">No per-user hours data</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={analyticsData.hoursWorkedByUser || []} layout="horizontal">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis type="number" stroke="#9CA3AF" />
+                  <YAxis dataKey="username" type="category" stroke="#9CA3AF" width={80} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                  <Bar dataKey="hours" fill="#3B82F6" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
 
-          {/* Tasks Completed by User */}
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-            <h3 className="text-lg font-semibold text-slate-100 mb-4">Tasks Completed by Team Member</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={analyticsData.tasksCompletedByUser || []} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis type="number" stroke="#9CA3AF" />
-                <YAxis dataKey="username" type="category" stroke="#9CA3AF" width={80} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#1F2937', 
-                    border: '1px solid #374151',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Bar dataKey="count" fill="#10B981" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <ChartCard title="Tasks Completed by Team Member" delay={0.25}>
+            {!(analyticsData.tasksCompletedByUser || []).length ? (
+              <div className="text-sm text-slate-400">No per-user completion data</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={analyticsData.tasksCompletedByUser || []} layout="horizontal">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis type="number" stroke="#9CA3AF" />
+                  <YAxis dataKey="username" type="category" stroke="#9CA3AF" width={80} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                  <Bar dataKey="count" fill="#10B981" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ChartCard>
         </div>
 
         {/* Recent Activities */}
-        <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-          <h3 className="text-lg font-semibold text-slate-100 mb-4">Recent Activities</h3>
-          <div className="space-y-4">
+        <div className="rounded-2xl border border-slate-700/60 bg-linear-to-br from-slate-800/60 to-slate-900/40 backdrop-blur-md">
+          <div className="px-6 py-4 border-b border-slate-700/50">
+            <h3 className="text-lg font-semibold text-slate-100">Recent Activities</h3>
+          </div>
+          <div className="p-6 space-y-3">
             {(analyticsData.recentActivities || []).map((activity) => (
-              <div key={activity.id} className="flex items-center space-x-4 p-4 bg-slate-700/50 rounded-lg">
+              <motion.div
+                key={activity.id}
+                className="flex items-center space-x-3 p-3 rounded-xl bg-slate-700/50 hover:bg-slate-700/70 transition-all"
+                whileHover={{ scale: 1.02 }}
+              >
                 <div className="p-2 bg-purple-500/20 rounded-lg">
                   <Activity className="h-4 w-4 text-purple-400" />
                 </div>
                 <div className="flex-1">
                   <p className="text-slate-200">{activity.description}</p>
                   <p className="text-sm text-slate-400">
-                    by {activity.username} • {new Date(activity.timestamp).toLocaleDateString()}
+                    by {activity.username || activity.userId} • {new Date(activity.timestamp).toLocaleString()}
                   </p>
                 </div>
-                <span className="text-xs px-2 py-1 bg-slate-600 rounded-full text-slate-300">
+                <span className="ml-auto text-xs px-2 py-1 bg-slate-600 rounded-full text-slate-300">
                   {activity.type}
                 </span>
-              </div>
+              </motion.div>
             ))}
+            {!(analyticsData.recentActivities || []).length && (
+              <div className="text-center text-slate-400 py-6">No recent activity</div>
+            )}
           </div>
         </div>
       </div>

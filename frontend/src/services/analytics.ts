@@ -25,35 +25,127 @@ export interface AnalyticsData {
   }[];
 }
 
+// Transform raw backend analytics into AnalyticsData expected by UI
+function transformToAnalyticsData(raw: any): AnalyticsData {
+  const taskStats = raw?.taskStats || {};
+  const projectStats = Array.isArray(raw?.projectStats) ? raw.projectStats : [];
+  const timeStats = raw?.timeStats || {};
+  const revenueStats = raw?.revenueStats || {};
+  const recentActivity = Array.isArray(raw?.recentActivity) ? raw.recentActivity : [];
+
+  const projectsByStatusMap: Record<string, number> = projectStats.reduce((acc: Record<string, number>, p: any) => {
+    const s = (p?.status || 'unknown').toString();
+    acc[s] = (acc[s] || 0) + 1;
+    return acc;
+  }, {});
+
+  const projectsByStatus = Object.entries(projectsByStatusMap).map(([status, count]) => ({
+    status,
+    count: Number(count),
+  }));
+
+  const tasksByStatus = [
+    { status: 'completed', count: Number(taskStats.completed || 0) },
+    { status: 'in-progress', count: Number(taskStats.inProgress || 0) },
+    { status: 'todo', count: Number(taskStats.todo || 0) },
+    { status: 'blocked', count: Number(taskStats.blocked || 0) },
+  ].filter(item => item.count > 0);
+
+  // Normalize monthlyRevenue (supports Map-like object or array)
+  let monthlyRevenue: { month: string; amount: number }[] = [];
+  const rawMonthly = revenueStats?.monthlyRevenue;
+  if (Array.isArray(rawMonthly)) {
+    // Already [{month, amount}]
+    monthlyRevenue = rawMonthly.map((r: any) => ({
+      month: String(r.month ?? ''),
+      amount: Number(r.amount ?? 0),
+    }));
+  } else if (rawMonthly && typeof rawMonthly === 'object') {
+    monthlyRevenue = Object.entries(rawMonthly).map(([month, amount]) => ({
+      month,
+      amount: Number(amount as any),
+    }));
+  }
+
+  // Normalize recent activities
+  const recentActivities = recentActivity.map((a: any, idx: number) => ({
+    id: String(a.id ?? idx),
+    type: String(a.type ?? 'activity'),
+    description: String(a.description ?? a.title ?? ''),
+    timestamp: String(a.timestamp ?? ''),
+    userId: String(a.userId ?? ''),
+    username: String(a.username ?? a.userId ?? ''),
+  }));
+
+  // Optional arrays: fill with [] if not provided
+  const hoursWorkedByUser =
+    Array.isArray(raw?.hoursWorkedByUser) ? raw.hoursWorkedByUser : (timeStats.hoursByUser || []);
+  const tasksCompletedByUser =
+    Array.isArray(raw?.tasksCompletedByUser) ? raw.tasksCompletedByUser : [];
+
+  return {
+    totalProjects: Number(raw?.totalProjects ?? projectStats.length ?? 0),
+    totalTasks: Number(raw?.totalTasks ?? taskStats.total ?? 0),
+    totalUsers: Number(raw?.totalUsers ?? 0),
+
+    completedTasks: Number(taskStats.completed ?? 0),
+    pendingTasks: Number(taskStats.todo ?? 0),
+    inProgressTasks: Number(taskStats.inProgress ?? 0),
+
+    totalHoursWorked: Number(raw?.totalHours ?? timeStats.weeklyHours ?? 0),
+    averageTaskCompletionTime: Number(timeStats.avgTaskCompletionTime ?? 0),
+
+    totalRevenue: Number(raw?.totalRevenue ?? revenueStats.totalRevenue ?? 0),
+    monthlyRevenue,
+
+    tasksByStatus,
+    projectsByStatus,
+
+    hoursWorkedByUser: (hoursWorkedByUser || []).map((r: any) => ({
+      userId: String(r.userId ?? ''),
+      username: String(r.username ?? r.userId ?? ''),
+      hours: Number(r.hours ?? r.totalHours ?? 0),
+    })),
+    tasksCompletedByUser: (tasksCompletedByUser || []).map((r: any) => ({
+      userId: String(r.userId ?? ''),
+      username: String(r.username ?? r.userId ?? ''),
+      count: Number(r.count ?? r.completed ?? 0),
+    })),
+
+    recentActivities,
+  };
+}
+
 export const analyticsService = {
   // Get comprehensive analytics data
   getAnalytics: async (): Promise<AnalyticsData> => {
     const response = await api.get('/api/analytics');
-    return response.data;
+    return transformToAnalyticsData(response.data);
   },
 
   // Get analytics for a specific project
   getProjectAnalytics: async (projectId: string): Promise<AnalyticsData> => {
     const response = await api.get(`/api/analytics/project/${projectId}`);
-    return response.data;
+    return transformToAnalyticsData(response.data);
   },
 
   // Get analytics for a specific user
   getUserAnalytics: async (userId: string): Promise<AnalyticsData> => {
     const response = await api.get(`/api/analytics/user/${userId}`);
-    return response.data;
+    return transformToAnalyticsData(response.data);
   },
 
   // Get analytics for a date range
   getAnalyticsByDateRange: async (startDate: string, endDate: string): Promise<AnalyticsData> => {
     const response = await api.get(`/api/analytics/date-range?startDate=${startDate}&endDate=${endDate}`);
-    return response.data;
+    return transformToAnalyticsData(response.data);
   },
 
   // Get recent activities
   getRecentActivities: async (limit: number = 10): Promise<AnalyticsData['recentActivities']> => {
     const response = await api.get(`/api/analytics/activities?limit=${limit}`);
-    return response.data;
+    const wrapped = transformToAnalyticsData({ recentActivity: response.data });
+    return wrapped.recentActivities;
   },
 
   // Get task completion trends
@@ -73,12 +165,4 @@ export const analyticsService = {
     const response = await api.get(`/api/analytics/trends/revenue?months=${months}`);
     return response.data;
   },
-
-  // Export analytics data
-  exportAnalytics: async (format: 'csv' | 'pdf' = 'csv'): Promise<Blob> => {
-    const response = await api.get(`/api/analytics/export?format=${format}`, {
-      responseType: 'blob'
-    });
-    return response.data;
-  }
 };
