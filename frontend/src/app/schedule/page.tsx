@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Calendar, Plus, Clock, Users, Video, MapPin, ChevronLeft, ChevronRight, Edit, Trash2, ExternalLink, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
 import { calendarService, Meeting, CalendarEvent } from '@/services/calendar';
@@ -287,23 +288,12 @@ export default function SchedulePage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="space-y-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-slate-700 rounded w-64 mb-2"></div>
-            <div className="h-4 bg-slate-700 rounded w-96"></div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="animate-pulse bg-slate-800 rounded-lg p-6">
-                <div className="h-6 bg-slate-700 rounded mb-2"></div>
-                <div className="h-8 bg-slate-700 rounded"></div>
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 animate-pulse bg-slate-800 rounded-lg h-96"></div>
-            <div className="animate-pulse bg-slate-800 rounded-lg h-96"></div>
-          </div>
+        <div className="flex items-center justify-center h-80">
+          <motion.div
+            className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 0.9, ease: 'linear' }}
+          />
         </div>
       </DashboardLayout>
     );
@@ -311,104 +301,178 @@ export default function SchedulePage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <motion.div
+        className="space-y-8 pl-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-100">Schedule</h1>
-            <div className="flex items-center space-x-4 mt-2">
-              <p className="text-slate-400">Manage meetings, deadlines, and events</p>
-              {googleCalendarConnected && (
-                <div className="flex items-center space-x-2 px-3 py-1 bg-green-900/20 text-green-300 rounded-full border border-green-800">
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="text-sm">Google Calendar Connected</span>
-                </div>
-              )}
+        <motion.div
+          className="space-y-5"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0, y: -25 },
+            visible: {
+              opacity: 1,
+              y: 0,
+              transition: { staggerChildren: 0.15 },
+            },
+          }}
+        >
+          <motion.div
+            className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
+            variants={{
+              hidden: { opacity: 0, y: -10 },
+              visible: { opacity: 1, y: 0 },
+            }}
+          >
+            <div>
+              <h1 className="text-4xl sm:text-5xl font-extrabold drop-shadow-md">
+                <span className="text-white/90">Schedule</span>
+              </h1>
+              <div className="flex items-center space-x-4 mt-2">
+                <p className="text-slate-400 text-sm sm:text-base mt-1">
+                  Manage meetings, deadlines, and events
+                </p>
+                {googleCalendarConnected && (
+                  <motion.div
+                    className="flex items-center space-x-2 px-3 py-1 bg-green-900/20 text-green-300 rounded-full border border-green-800"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    <span className="text-sm">Google Calendar Connected</span>
+                  </motion.div>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={syncWithGoogleCalendar}
-              disabled={syncing}
-              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 disabled:opacity-50"
+            <motion.div
+              className="flex items-center space-x-3"
+              variants={{
+                hidden: { opacity: 0, y: -10 },
+                visible: { opacity: 1, y: 0 },
+              }}
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Syncing...' : 'Sync Calendar'}
-            </button>
-            <button 
-              onClick={() => setShowEventModal(true)}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              New Event
-            </button>
-          </div>
-        </div>
+              <button
+                onClick={syncWithGoogleCalendar}
+                disabled={syncing}
+                className="inline-flex items-center px-4 py-2 bg-slate-900/70 border border-slate-700/60 backdrop-blur-md shadow-sm hover:shadow-lg text-slate-200 rounded-xl hover:bg-slate-700/50 transition-all disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Syncing...' : 'Sync Calendar'}
+              </button>
+              <button 
+                onClick={() => setShowEventModal(true)}
+                className="inline-flex items-center px-4 py-2 bg-linear-to-r from-blue-600/90 to-indigo-600/90 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                New Event
+              </button>
+            </motion.div>
+          </motion.div>
+        </motion.div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-6">
-            <div className="flex items-center">
-              <Calendar className="h-8 w-8 text-blue-400" />
-              <div className="ml-4">
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-4 gap-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
+          <motion.div
+            className="bg-slate-900/10 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20"
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-500/20 p-3 rounded-xl">
+                <Calendar className="h-8 w-8 text-blue-400" />
+              </div>
+              <div>
                 <p className="text-sm font-medium text-slate-400">Today's Events</p>
                 <p className="text-2xl font-bold text-slate-100">
                   {getEventsForDate(new Date().toISOString().split('T')[0]).length}
                 </p>
               </div>
             </div>
-          </div>
-          <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-6">
-            <div className="flex items-center">
-              <Users className="h-8 w-8 text-green-400" />
-              <div className="ml-4">
+          </motion.div>
+          <motion.div
+            className="bg-slate-900/10 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20"
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-green-500/20 p-3 rounded-xl">
+                <Users className="h-8 w-8 text-green-400" />
+              </div>
+              <div>
                 <p className="text-sm font-medium text-slate-400">This Week</p>
                 <p className="text-2xl font-bold text-slate-100">
                   {events.length}
                 </p>
               </div>
             </div>
-          </div>
-          <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-6">
-            <div className="flex items-center">
-              <Clock className="h-8 w-8 text-yellow-400" />
-              <div className="ml-4">
+          </motion.div>
+          <motion.div
+            className="bg-slate-900/10 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20"
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-yellow-500/20 p-3 rounded-xl">
+                <Clock className="h-8 w-8 text-yellow-400" />
+              </div>
+              <div>
                 <p className="text-sm font-medium text-slate-400">Deadlines</p>
                 <p className="text-2xl font-bold text-slate-100">
                   {events.filter(e => e.type === 'deadline').length}
                 </p>
               </div>
             </div>
-          </div>
-          <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-6">
-            <div className="flex items-center">
-              <Video className="h-8 w-8 text-purple-400" />
-              <div className="ml-4">
+          </motion.div>
+          <motion.div
+            className="bg-slate-900/10 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20"
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-purple-500/20 p-3 rounded-xl">
+                <Video className="h-8 w-8 text-purple-400" />
+              </div>
+              <div>
                 <p className="text-sm font-medium text-slate-400">Virtual Meetings</p>
                 <p className="text-2xl font-bold text-slate-100">
                   {events.filter(e => e.isVirtual).length}
                 </p>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Calendar */}
-          <div className="lg:col-span-2 bg-slate-800 rounded-lg shadow-sm border border-slate-700">
-            <div className="px-6 py-4 border-b border-slate-700">
+          <motion.div
+            className="lg:col-span-2 rounded-2xl border border-slate-700/60 bg-linear-to-br from-slate-800/60 to-slate-900/40 backdrop-blur-md"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <div className="px-6 py-4 border-b border-slate-700/50">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-slate-100">{formatDate(currentDate)}</h3>
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={getPreviousMonth}
-                    className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                    className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
                   >
                     <ChevronLeft className="w-5 h-5 text-slate-400" />
                   </button>
                   <button
                     onClick={getNextMonth}
-                    className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                    className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
                   >
                     <ChevronRight className="w-5 h-5 text-slate-400" />
                   </button>
@@ -429,11 +493,16 @@ export default function SchedulePage() {
                 {renderCalendar()}
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Selected Date Events */}
-          <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-700">
-            <div className="px-6 py-4 border-b border-slate-700">
+          <motion.div
+            className="rounded-2xl border border-slate-700/60 bg-linear-to-br from-slate-800/60 to-slate-900/40 backdrop-blur-md"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <div className="px-6 py-4 border-b border-slate-700/50">
               <h3 className="text-lg font-semibold text-slate-100">
                 {selectedDate.toLocaleDateString('en-US', { 
                   month: 'long', 
@@ -444,9 +513,13 @@ export default function SchedulePage() {
             </div>
             <div className="p-6">
               {selectedDateEvents.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {selectedDateEvents.map((event) => (
-                    <div key={event.id} className={`bg-slate-700 rounded-lg p-4 border-l-4 ${getPriorityColor(event.priority)}`}>
+                    <motion.div 
+                      key={event.id} 
+                      className={`bg-slate-700/50 hover:bg-slate-700/70 rounded-xl p-4 border-l-4 ${getPriorityColor(event.priority)} transition-all`}
+                      whileHover={{ scale: 1.02 }}
+                    >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2">
@@ -553,7 +626,7 @@ export default function SchedulePage() {
                           </button>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               ) : (
@@ -563,9 +636,9 @@ export default function SchedulePage() {
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Event Modal */}
       <EventModal

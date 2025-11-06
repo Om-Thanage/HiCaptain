@@ -30,7 +30,7 @@ public class PaymentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAnyAuthority('Admin','Client')")
     public ResponseEntity<Payment> create(@RequestBody Payment p) {
         return ResponseEntity.status(HttpStatus.CREATED).body(svc.create(p));
     }

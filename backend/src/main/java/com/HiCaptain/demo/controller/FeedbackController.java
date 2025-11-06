@@ -17,7 +17,7 @@ public class FeedbackController {
     public FeedbackController(FeedbackService svc) { this.svc = svc; }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
+    @PreAuthorize("hasAnyAuthority('Admin','Client','ProjectManager')")
     public ResponseEntity<List<Feedback>> getAll() {
         return ResponseEntity.ok(svc.getAll());
     }

@@ -210,6 +210,58 @@ public class NotificationController {
     }
 
     /**
+     * Create a new notification (Admin, ProjectManager, Client only)
+     */
+    @PostMapping
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client')")
+    public ResponseEntity<Map<String, Object>> createNotification(
+            @RequestBody Map<String, Object> request,
+            @RequestHeader("Authorization") String authHeader) {
+        
+        try {
+            String token = authHeader.replace("Bearer ", "");
+            String createdBy = jwtService.extractUserId(token);
+            
+            String targetUserId = (String) request.get("userId");
+            String title = (String) request.get("title");
+            String message = (String) request.get("message");
+            String type = (String) request.getOrDefault("type", "info");
+            String category = (String) request.getOrDefault("category", "system");
+            String priority = (String) request.getOrDefault("priority", "normal");
+            String sourceType = (String) request.getOrDefault("sourceType", "manual");
+            String sourceId = (String) request.get("sourceId");
+            String sourceUrl = (String) request.get("sourceUrl");
+            String projectId = (String) request.get("projectId");
+            
+            if (targetUserId == null || title == null || message == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("success", false);
+                error.put("error", "Missing required fields: userId, title, message");
+                return ResponseEntity.badRequest().body(error);
+            }
+            
+            Notification notification = notificationService.createNotification(
+                targetUserId, title, message, type, category, sourceType, sourceId, 
+                sourceUrl, projectId, priority
+            );
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Notification created successfully");
+            response.put("notification", notification);
+            response.put("createdBy", createdBy);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", "Failed to create notification: " + e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
      * Create a test notification (for development/testing)
      */
     @PostMapping("/test")

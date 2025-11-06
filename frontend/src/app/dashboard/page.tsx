@@ -62,7 +62,7 @@ export default function DashboardPage() {
       case 'ProjectManager':
         return <ProjectManagerDashboard user={user} />;
       case 'Developer':
-        return <DeveloperDashboard />;
+        return <DeveloperDashboard user={user} />;
       case 'Client':
         return <ClientDashboard />;
       default:

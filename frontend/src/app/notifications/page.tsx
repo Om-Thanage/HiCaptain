@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import CreateNotificationModal from '@/components/forms/CreateNotificationModal';
 import { notificationService, NotificationData } from '@/services/notification';
+import { authService } from '@/services/auth';
 import { 
   Bell, 
   Check, 
@@ -28,9 +31,15 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ role: string } | null>(null);
 
   // Load notifications on component mount
   useEffect(() => {
+    // Get current user info
+    const user = authService.getUserFromToken();
+    setCurrentUser(user);
+    
     loadNotifications();
     
     // Set up real-time subscription
@@ -211,22 +220,18 @@ export default function NotificationsPage() {
   const currentUnreadCount = notifications.filter(n => !n.isRead).length;
   const importantCount = notifications.filter(n => n.priority === 'high').length;
 
+  // Check if user can create notifications (Admin, ProjectManager, Client)
+  const canCreateNotification = currentUser && ['Admin', 'ProjectManager', 'Client'].includes(currentUser.role);
+
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="space-y-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-slate-700 rounded w-64 mb-2"></div>
-            <div className="h-4 bg-slate-700 rounded w-96"></div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="animate-pulse bg-slate-800 rounded-lg p-6">
-                <div className="h-6 bg-slate-700 rounded mb-2"></div>
-                <div className="h-8 bg-slate-700 rounded"></div>
-              </div>
-            ))}
-          </div>
+        <div className="flex items-center justify-center h-80">
+          <motion.div
+            className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 0.9, ease: 'linear' }}
+          />
         </div>
       </DashboardLayout>
     );
@@ -234,74 +239,147 @@ export default function NotificationsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <motion.div
+        className="space-y-8 pl-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-100">Notifications</h1>
-            <p className="text-slate-400 mt-2">Stay updated with your projects and tasks</p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={refreshNotifications}
-              disabled={refreshing}
-              className="inline-flex items-center px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors duration-200 disabled:opacity-50"
+        <motion.div
+          className="space-y-5"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0, y: -25 },
+            visible: {
+              opacity: 1,
+              y: 0,
+              transition: { staggerChildren: 0.15 },
+            },
+          }}
+        >
+          <motion.div
+            className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
+            variants={{
+              hidden: { opacity: 0, y: -10 },
+              visible: { opacity: 1, y: 0 },
+            }}
+          >
+            <div>
+              <h1 className="text-4xl sm:text-5xl font-extrabold drop-shadow-md">
+                <span className="text-white/90">Notifications</span>
+              </h1>
+              <p className="text-slate-400 text-sm sm:text-base mt-1">
+                Stay updated with your projects and tasks
+              </p>
+            </div>
+            <motion.div
+              className="flex items-center space-x-3"
+              variants={{
+                hidden: { opacity: 0, y: -10 },
+                visible: { opacity: 1, y: 0 },
+              }}
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Refreshing...' : 'Refresh'}
-            </button>
-            <button
-              onClick={createTestNotification}
-              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Test Notification
-            </button>
-            {unreadCount > 0 && (
+              {canCreateNotification && (
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="inline-flex items-center px-4 py-2 bg-linear-to-r from-blue-600/90 to-indigo-600/90 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Notification
+                </button>
+              )}
               <button
-                onClick={markAllAsRead}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                onClick={refreshNotifications}
+                disabled={refreshing}
+                className="inline-flex items-center px-4 py-2 bg-slate-900/70 border border-slate-700/60 backdrop-blur-md shadow-sm hover:shadow-lg text-slate-200 rounded-xl hover:bg-slate-700/50 transition-all disabled:opacity-50"
               >
-                <Check className="w-4 h-4 mr-2" />
-                Mark All Read
+                <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
               </button>
-            )}
-          </div>
-        </div>
+              <button
+                onClick={createTestNotification}
+                className="inline-flex items-center px-4 py-2 bg-linear-to-r from-green-600/90 to-emerald-600/90 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Test Notification
+              </button>
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="inline-flex items-center px-4 py-2 bg-linear-to-r from-blue-600/90 to-indigo-600/90 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg"
+                >
+                  <Check className="w-4 h-4 mr-2" />
+                  Mark All Read
+                </button>
+              )}
+            </motion.div>
+          </motion.div>
+        </motion.div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-6">
-            <div className="flex items-center">
-              <Bell className="h-8 w-8 text-blue-400" />
-              <div className="ml-4">
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-4 gap-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
+          <motion.div
+            className="bg-slate-900/10 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20"
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-500/20 p-3 rounded-xl">
+                <Bell className="h-8 w-8 text-blue-400" />
+              </div>
+              <div>
                 <p className="text-sm font-medium text-slate-400">Total</p>
                 <p className="text-2xl font-bold text-slate-100">{notifications.length}</p>
               </div>
             </div>
-          </div>
-          <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-6">
-            <div className="flex items-center">
-              <AlertCircle className="h-8 w-8 text-yellow-400" />
-              <div className="ml-4">
+          </motion.div>
+          <motion.div
+            className="bg-slate-900/10 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20"
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-yellow-500/20 p-3 rounded-xl">
+                <AlertCircle className="h-8 w-8 text-yellow-400" />
+              </div>
+              <div>
                 <p className="text-sm font-medium text-slate-400">Unread</p>
                 <p className="text-2xl font-bold text-slate-100">{currentUnreadCount}</p>
               </div>
             </div>
-          </div>
-          <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-6">
-            <div className="flex items-center">
-              <CheckCircle className="h-8 w-8 text-green-400" />
-              <div className="ml-4">
+          </motion.div>
+          <motion.div
+            className="bg-slate-900/10 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20"
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-green-500/20 p-3 rounded-xl">
+                <CheckCircle className="h-8 w-8 text-green-400" />
+              </div>
+              <div>
                 <p className="text-sm font-medium text-slate-400">High Priority</p>
                 <p className="text-2xl font-bold text-slate-100">{importantCount}</p>
               </div>
             </div>
-          </div>
-          <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-6">
-            <div className="flex items-center">
-              <Clock className="h-8 w-8 text-purple-400" />
-              <div className="ml-4">
+          </motion.div>
+          <motion.div
+            className="bg-slate-900/10 backdrop-blur-xl rounded-2xl shadow-lg p-6 border border-white/20"
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-purple-500/20 p-3 rounded-xl">
+                <Clock className="h-8 w-8 text-purple-400" />
+              </div>
+              <div>
                 <p className="text-sm font-medium text-slate-400">Today</p>
                 <p className="text-2xl font-bold text-slate-100">
                   {notifications.filter(n => 
@@ -310,54 +388,68 @@ export default function NotificationsPage() {
                 </p>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center space-x-1 bg-slate-800 p-1 rounded-lg border border-slate-700 w-fit">
+        <motion.div
+          className="flex items-center space-x-1 bg-slate-900/10 backdrop-blur-xl p-1 rounded-xl border border-white/20 w-fit"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+        >
           <button
             onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               filter === 'all' 
-                ? 'bg-blue-600 text-white' 
-                : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700'
+                ? 'bg-blue-600 text-white shadow-lg' 
+                : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/50'
             }`}
           >
             All ({notifications.length})
           </button>
           <button
             onClick={() => setFilter('unread')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               filter === 'unread' 
-                ? 'bg-blue-600 text-white' 
-                : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700'
+                ? 'bg-blue-600 text-white shadow-lg' 
+                : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/50'
             }`}
           >
             Unread ({currentUnreadCount})
           </button>
           <button
             onClick={() => setFilter('important')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               filter === 'important' 
-                ? 'bg-blue-600 text-white' 
-                : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700'
+                ? 'bg-blue-600 text-white shadow-lg' 
+                : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/50'
             }`}
           >
             Important ({importantCount})
           </button>
-        </div>
+        </motion.div>
 
         {/* Notifications List */}
-        <div className="space-y-4">
+        <motion.div
+          className="space-y-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
           {filteredNotifications.length > 0 ? (
-            filteredNotifications.map((notification) => {
+            filteredNotifications.map((notification, index) => {
               const colors = notificationService.getNotificationColor(notification.type);
               return (
-                <div
+                <motion.div
                   key={notification.id}
-                  className={`bg-slate-800 rounded-lg border border-slate-700 border-l-4 p-6 transition-all hover:bg-slate-700/50 ${
+                  className={`bg-slate-900/10 backdrop-blur-xl rounded-2xl border border-white/20 border-l-4 p-6 transition-all hover:bg-slate-700/30 ${
                     colors.bg
                   } ${colors.border} ${!notification.isRead ? 'shadow-lg' : ''}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ scale: 1.01 }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-4 flex-1">
@@ -372,7 +464,11 @@ export default function NotificationsPage() {
                             {notification.title}
                           </h3>
                           {!notification.isRead && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <motion.div
+                              className="w-2 h-2 bg-blue-500 rounded-full"
+                              animate={{ scale: [1, 1.2, 1], opacity: [0.6, 1, 0.6] }}
+                              transition={{ duration: 2, repeat: Infinity }}
+                            />
                           )}
                           {notification.priority === 'high' && (
                             <div className="px-2 py-1 bg-red-900/20 text-red-300 text-xs rounded-full border border-red-800">
@@ -423,11 +519,16 @@ export default function NotificationsPage() {
                       </button>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })
           ) : (
-            <div className="text-center py-12 bg-slate-800 rounded-lg border border-slate-700">
+            <motion.div
+              className="text-center py-12 bg-slate-900/10 backdrop-blur-xl rounded-2xl border border-white/20"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
               <Bell className="mx-auto h-12 w-12 text-slate-400" />
               <h3 className="mt-4 text-lg font-medium text-slate-100">No notifications</h3>
               <p className="mt-2 text-slate-400">
@@ -436,10 +537,22 @@ export default function NotificationsPage() {
                   : `No ${filter} notifications found.`
                 }
               </p>
-            </div>
+            </motion.div>
           )}
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Create Notification Modal */}
+      {showCreateModal && (
+        <CreateNotificationModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onNotificationCreated={() => {
+            setShowCreateModal(false);
+            loadNotifications();
+          }}
+        />
+      )}
     </DashboardLayout>
   );
 }

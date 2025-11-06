@@ -46,7 +46,7 @@ public class InvoiceController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client')")
     public ResponseEntity<Invoice> update(@PathVariable String id, @RequestBody Invoice i) {
         return ResponseEntity.ok(svc.update(id, i));
     }

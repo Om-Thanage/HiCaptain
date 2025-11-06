@@ -19,7 +19,7 @@ public class UserController {
     public UserController(UserService svc) { this.svc = svc; }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client')")
     public ResponseEntity<List<User>> getAll(@RequestParam(value = "role", required = false) String role) {
         if (role == null || role.isBlank()) {
             return ResponseEntity.ok(svc.getAll());

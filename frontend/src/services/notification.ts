@@ -111,6 +111,28 @@ export const notificationService = {
     }
   },
 
+  // Create a new notification (Admin, ProjectManager, Client only)
+  createNotification: async (data: {
+    userId: string;
+    title: string;
+    message: string;
+    type?: string;
+    category?: string;
+    priority?: string;
+    sourceType?: string;
+    sourceId?: string;
+    sourceUrl?: string;
+    projectId?: string;
+  }): Promise<NotificationData> => {
+    try {
+      const response = await api.post('/api/notifications', data);
+      return response.data.notification;
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      throw error;
+    }
+  },
+
   // Create test notification (for development)
   createTestNotification: async (data: {
     title?: string;
