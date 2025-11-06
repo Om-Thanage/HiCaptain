@@ -6,6 +6,7 @@ import com.google.api.services.calendar.model.Event;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -23,6 +24,7 @@ public class GoogleCalendarController {
     private GoogleCalendarService googleCalendarService;
 
     @GetMapping("/auth/url")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<String> getAuthorizationUrl(@RequestParam String userId) {
         try {
             String authUrl = googleCalendarService.getAuthorizationUrl(userId);
@@ -51,6 +53,7 @@ public class GoogleCalendarController {
     }
 
     @GetMapping("/events/upcoming")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<List<Event>> getUpcomingEvents(
             @RequestParam String userId,
             @RequestParam(defaultValue = "10") int maxResults) {
@@ -64,6 +67,7 @@ public class GoogleCalendarController {
     }
 
     @GetMapping("/events")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<?> getEvents(
             @RequestParam String userId,
             @RequestParam(defaultValue = "30") int days) {
@@ -96,6 +100,7 @@ public class GoogleCalendarController {
     }
 
     @GetMapping("/calendars")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<List<CalendarListEntry>> getUserCalendars(@RequestParam String userId) {
         try {
             List<CalendarListEntry> calendars = googleCalendarService.getUserCalendars(userId);
@@ -106,6 +111,7 @@ public class GoogleCalendarController {
     }
 
     @GetMapping("/auth/status")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<Boolean> checkAuthStatus(@RequestParam String userId) {
         try {
             boolean isAuthorized = googleCalendarService.isUserAuthorized(userId);
@@ -117,11 +123,13 @@ public class GoogleCalendarController {
     }
 
     @GetMapping("/test")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<String> testEndpoint() {
         return ResponseEntity.ok("Google Calendar controller is working and authenticated!");
     }
 
     @GetMapping("/debug")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<String> debugEndpoint(@RequestParam String userId) {
         try {
             boolean isAuthorized = googleCalendarService.isUserAuthorized(userId);
@@ -132,6 +140,7 @@ public class GoogleCalendarController {
     }
 
     @PostMapping("/auth/revoke")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<String> revokeAuthorization(@RequestParam String userId) {
         try {
             googleCalendarService.revokeAuthorization(userId);

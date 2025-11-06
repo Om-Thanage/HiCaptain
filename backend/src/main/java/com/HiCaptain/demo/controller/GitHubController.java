@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -24,6 +25,7 @@ public class GitHubController {
     private GitHubService gitHubService;
 
     @PostMapping("/repositories/sync")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public Mono<ResponseEntity<GitHubRepository>> syncRepository(
             @RequestParam String owner,
             @RequestParam String repoName,
@@ -34,12 +36,14 @@ public class GitHubController {
     }
 
     @GetMapping("/repositories")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<List<GitHubRepository>> getRepositoriesByProject(@RequestParam String projectId) {
         List<GitHubRepository> repositories = gitHubService.getRepositoriesByProjectId(projectId);
         return ResponseEntity.ok(repositories);
     }
 
     @GetMapping("/repositories/{repositoryId}")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<GitHubRepository> getRepository(@PathVariable String repositoryId) {
         GitHubRepository repository = gitHubService.getRepositoryById(repositoryId);
         if (repository != null) {
@@ -49,12 +53,14 @@ public class GitHubController {
     }
 
     @DeleteMapping("/repositories/{repositoryId}")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<Void> deleteRepository(@PathVariable String repositoryId) {
         gitHubService.deleteRepository(repositoryId);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/commits")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public Flux<GitHubCommit> getCommits(
             @RequestParam String owner,
             @RequestParam String repoName,
@@ -65,6 +71,7 @@ public class GitHubController {
     }
 
     @GetMapping("/pull-requests")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public Flux<GitHubPullRequest> getPullRequests(
             @RequestParam String owner,
             @RequestParam String repoName,
@@ -74,6 +81,7 @@ public class GitHubController {
     }
 
     @GetMapping("/stats/contributors")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public Mono<JsonNode> getContributorStats(
             @RequestParam String owner,
             @RequestParam String repoName) {
@@ -82,6 +90,7 @@ public class GitHubController {
     }
 
     @GetMapping("/stats/languages")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public Mono<JsonNode> getLanguageStats(
             @RequestParam String owner,
             @RequestParam String repoName) {
@@ -90,6 +99,7 @@ public class GitHubController {
     }
 
     @GetMapping("/issues")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public Flux<JsonNode> getIssues(
             @RequestParam String owner,
             @RequestParam String repoName,
@@ -99,6 +109,7 @@ public class GitHubController {
     }
 
     @GetMapping("/branches")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public Flux<JsonNode> getBranches(
             @RequestParam String owner,
             @RequestParam String repoName) {
@@ -107,6 +118,7 @@ public class GitHubController {
     }
 
     @PostMapping("/webhooks")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public Mono<ResponseEntity<JsonNode>> createWebhook(
             @RequestParam String owner,
             @RequestParam String repoName,

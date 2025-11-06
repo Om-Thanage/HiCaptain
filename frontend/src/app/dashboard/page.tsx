@@ -48,11 +48,19 @@ export default function DashboardPage() {
   };
 
   const renderDashboardContent = () => {
-    switch (user?.role) {
+    if (!user) {
+      return (
+        <div className="text-center py-12">
+          <p className="text-slate-400">Please log in to access your dashboard.</p>
+        </div>
+      );
+    }
+
+    switch (user.role) {
       case 'Admin':
         return <AdminDashboard user={user} />;
       case 'ProjectManager':
-        return <ProjectManagerDashboard />;
+        return <ProjectManagerDashboard user={user} />;
       case 'Developer':
         return <DeveloperDashboard />;
       case 'Client':
@@ -60,7 +68,7 @@ export default function DashboardPage() {
       default:
         return (
           <div className="text-center py-12">
-            <p className="text-slate-400">Please log in to access your dashboard.</p>
+            <p className="text-slate-400">Unknown user role.</p>
           </div>
         );
     }

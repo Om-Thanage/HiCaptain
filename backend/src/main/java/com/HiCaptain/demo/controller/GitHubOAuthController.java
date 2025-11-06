@@ -5,6 +5,7 @@ import com.HiCaptain.demo.service.GitHubOAuthService;
 import com.HiCaptain.demo.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
@@ -28,6 +29,7 @@ public class GitHubOAuthController {
      * Frontend calls this endpoint when user clicks "Connect GitHub"
      */
     @PostMapping("/connect")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public ResponseEntity<Map<String, String>> initiateGitHubOAuth(
             @RequestHeader("Authorization") String authHeader) {
         
@@ -96,6 +98,7 @@ public class GitHubOAuthController {
      * Get user's GitHub connection status
      */
     @GetMapping("/status")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public ResponseEntity<Map<String, Object>> getConnectionStatus(
             @RequestHeader("Authorization") String authHeader) {
         
@@ -135,6 +138,7 @@ public class GitHubOAuthController {
      * Get user's accessible repositories
      */
     @GetMapping("/repositories")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public ResponseEntity<Map<String, Object>> getAccessibleRepositories(
             @RequestHeader("Authorization") String authHeader) {
         
@@ -167,6 +171,7 @@ public class GitHubOAuthController {
      * Disconnect GitHub account
      */
     @PostMapping("/disconnect")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public ResponseEntity<Map<String, String>> disconnectGitHub(
             @RequestHeader("Authorization") String authHeader) {
         
@@ -192,6 +197,7 @@ public class GitHubOAuthController {
      * Check if user has access to a specific repository
      */
     @GetMapping("/access/{owner}/{repo}")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public ResponseEntity<Map<String, Object>> checkRepositoryAccess(
             @PathVariable String owner,
             @PathVariable String repo,

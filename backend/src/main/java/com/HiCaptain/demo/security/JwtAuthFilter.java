@@ -44,10 +44,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             try {
                 String username = jwtService.extractUserName(token);
                 String role = jwtService.extractRole(token);
+                String userId = jwtService.extractUserId(token);
 
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    // Create a custom UserDetails that includes the userId
                     UserDetails userDetails = new org.springframework.security.core.userdetails.User(
-                            username,
+                            userId, // Use userId as the principal instead of username
                             "",
                             Collections.singleton(new SimpleGrantedAuthority(role))
                     );

@@ -30,6 +30,7 @@ public class ProjectController {
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<List<Project>> getAll() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        // Now auth.getName() returns the userId directly from JWT token
         String userId = auth.getName();
         String role = auth.getAuthorities().iterator().next().getAuthority();
 
