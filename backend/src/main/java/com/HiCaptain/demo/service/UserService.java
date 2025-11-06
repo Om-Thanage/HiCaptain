@@ -54,10 +54,30 @@ public class UserService {
 
     public User update(String id, User payload) {
         // Ensure the user exists before updating
-        userRepository.findById(id)
+        User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        payload.setId(id);
-        return userRepository.save(payload);
+        
+        // Update only the fields that are provided in the payload
+        if (payload.getName() != null) {
+            existingUser.setName(payload.getName());
+        }
+        if (payload.getEmail() != null) {
+            existingUser.setEmail(payload.getEmail());
+        }
+        if (payload.getPassword() != null && !payload.getPassword().isEmpty()) {
+            existingUser.setPassword(passwordEncoder.encode(payload.getPassword()));
+        }
+        if (payload.getRole() != null) {
+            existingUser.setRole(payload.getRole());
+        }
+        if (payload.getProjectIds() != null) {
+            existingUser.setProjectIds(payload.getProjectIds());
+        }
+        if (payload.getTaskIds() != null) {
+            existingUser.setTaskIds(payload.getTaskIds());
+        }
+        
+        return userRepository.save(existingUser);
     }
 
     public void delete(String id) {

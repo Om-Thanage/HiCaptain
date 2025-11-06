@@ -114,13 +114,25 @@ export default function UsersPage() {
   const saveRole = async (userId: string) => {
     try {
       setSavingId(userId);
+      console.log(`Updating user ${userId} role to ${selectedRole}`);
+      
+      // Only send the role field for update
       const updated = await userService.update(userId, { role: selectedRole });
-      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: updated.role } : u)));
-      toast.success('Role updated');
+      console.log('Update response:', updated);
+      
+      setUsers((prev) => 
+        prev.map((u) => 
+          u.id === userId 
+            ? { ...u, role: updated.role }
+            : u
+        )
+      );
+      toast.success(`Role updated to ${selectedRole}`);
       setEditingUserId(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating role:', err);
-      toast.error('Failed to update role');
+      const errorMessage = err?.response?.data?.message || 'Failed to update role';
+      toast.error(errorMessage);
     } finally {
       setSavingId(null);
     }
