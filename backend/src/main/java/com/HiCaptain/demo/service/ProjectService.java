@@ -5,6 +5,7 @@ import com.HiCaptain.demo.model.User;
 import com.HiCaptain.demo.repository.ProjectRepository;
 import com.HiCaptain.demo.repository.TaskRepository;
 import com.HiCaptain.demo.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.HashSet;
 
+@Slf4j
 @Service
 public class ProjectService {
     private final ProjectRepository projectRepo;
@@ -35,11 +37,14 @@ public class ProjectService {
     }
 
     public Project create(Project project) {
+        log.debug("Creating project: {}", project.getName());
         Project saved = projectRepo.save(project);
         String projectId = saved.getId();
+        log.debug("Project saved with ID: {}", projectId);
 
         // Assign to client
         if (saved.getClientId() != null && !saved.getClientId().isBlank()) {
+            log.debug("Assigning project {} to client {}", projectId, saved.getClientId());
             userRepo.findById(saved.getClientId()).ifPresent(u -> {
                 addProjectToUser(u, projectId);
                 userRepo.save(u);
@@ -48,6 +53,7 @@ public class ProjectService {
 
         // Assign to project manager
         if (saved.getProjectManagerId() != null && !saved.getProjectManagerId().isBlank()) {
+            log.debug("Assigning project {} to project manager {}", projectId, saved.getProjectManagerId());
             userRepo.findById(saved.getProjectManagerId()).ifPresent(u -> {
                 addProjectToUser(u, projectId);
                 userRepo.save(u);
@@ -56,6 +62,7 @@ public class ProjectService {
 
         // Assign to developers
         if (saved.getDeveloperIds() != null) {
+            log.debug("Assigning project {} to {} developers", projectId, saved.getDeveloperIds().size());
             for (String devId : saved.getDeveloperIds()) {
                 if (devId == null || devId.isBlank()) continue;
                 userRepo.findById(devId).ifPresent(u -> {
@@ -65,6 +72,7 @@ public class ProjectService {
             }
         }
 
+        log.info("Project created successfully: {} (ID: {})", saved.getName(), projectId);
         return saved;
     }
 
@@ -88,14 +96,19 @@ public class ProjectService {
     }
 
     public void delete(String id) {
+        log.debug("Attempting to delete project: {}", id);
         Optional<Project> projectOpt = projectRepo.findById(id);
-        if (projectOpt.isEmpty())
+        if (projectOpt.isEmpty()) {
+            log.warn("Project not found for deletion: {}", id);
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");
+        }
 
         // Cascade delete all related tasks by projectId (no reliance on Project.taskIds)
+        log.debug("Deleting all tasks associated with project: {}", id);
         taskRepo.deleteByProjectId(id);
 
         projectRepo.deleteById(id);
+        log.info("Project deleted successfully: {}", id);
     }
 
     public Project addDeveloper(String projectId, String developerId) {

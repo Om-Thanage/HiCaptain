@@ -6,6 +6,7 @@ import com.HiCaptain.demo.model.User;
 import com.HiCaptain.demo.repository.ProjectRepository;
 import com.HiCaptain.demo.repository.TaskRepository;
 import com.HiCaptain.demo.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class TaskService {
     private final TaskRepository taskRepo;
@@ -27,9 +29,11 @@ public class TaskService {
 
     public List<Task> getAll() {
         List<Task> tasks = taskRepo.findAll();
-        System.out.println("TaskService.getAll() - Found " + tasks.size() + " tasks");
-        for (Task task : tasks) {
-            System.out.println("Task: " + task.getId() + " - " + task.getTitle() + " (Project: " + task.getProjectId() + ")");
+        log.debug("TaskService.getAll() - Found {} tasks", tasks.size());
+        if (log.isTraceEnabled()) {
+            for (Task task : tasks) {
+                log.trace("Task: {} - {} (Project: {})", task.getId(), task.getTitle(), task.getProjectId());
+            }
         }
         return tasks;
     }
@@ -39,11 +43,13 @@ public class TaskService {
     }
 
     public Task create(Task t) {
+        log.debug("Creating task: {} for project: {}", t.getTitle(), t.getProjectId());
         // Set timestamps
         t.setCreatedAt(java.time.LocalDateTime.now());
         t.setUpdatedAt(java.time.LocalDateTime.now());
         
         Task savedTask = taskRepo.save(t);
+        log.debug("Task saved with ID: {}", savedTask.getId());
 
         // Auto-update Project.developerIds from Task.assignedDeveloperIds (no taskIds maintenance)
         projectRepo.findById(t.getProjectId()).ifPresent(project -> {
@@ -54,11 +60,13 @@ public class TaskService {
                 merged.addAll(t.getAssignedDeveloperIds());
                 project.setDeveloperIds(new java.util.ArrayList<>(merged));
                 projectRepo.save(project);
+                log.debug("Updated project {} with {} developers", project.getId(), merged.size());
             }
         });
 
         // Auto-update all Developers
         if (t.getAssignedDeveloperIds() != null) {
+            log.debug("Assigning task to {} developers", t.getAssignedDeveloperIds().size());
             for (String devId : t.getAssignedDeveloperIds()) {
                 userRepo.findById(devId).ifPresent(user -> {
                     List<String> devTasks = user.getTaskIds();
@@ -72,6 +80,7 @@ public class TaskService {
             }
         }
 
+        log.info("Task created successfully: {} (ID: {})", savedTask.getTitle(), savedTask.getId());
         return savedTask;
     }
 
@@ -79,8 +88,8 @@ public class TaskService {
         Task existing = taskRepo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
 
-        System.out.println("Updating task " + id + " with new data: " + t.getTitle() + " (status: " + t.getStatus() + ")");
-        System.out.println("Existing task: " + existing.getTitle() + " (status: " + existing.getStatus() + ")");
+        log.debug("Updating task {} with new data: {} (status: {})", id, t.getTitle(), t.getStatus());
+        log.debug("Existing task: {} (status: {})", existing.getTitle(), existing.getStatus());
 
         // Merge the changes instead of replacing the entire object
         if (t.getTitle() != null) existing.setTitle(t.getTitle());
@@ -100,7 +109,7 @@ public class TaskService {
         // Always update the modification timestamp
         existing.setUpdatedAt(java.time.LocalDateTime.now());
         
-        System.out.println("Merged task: " + existing.getTitle() + " (status: " + existing.getStatus() + ")");
+        log.debug("Merged task: {} (status: {})", existing.getTitle(), existing.getStatus());
         
         Task saved = taskRepo.save(existing);
         String newProjectId = existing.getProjectId();
@@ -119,6 +128,7 @@ public class TaskService {
             });
         }
 
+        log.info("Task updated successfully: {} (ID: {})", saved.getTitle(), saved.getId());
         return saved;
     }
 

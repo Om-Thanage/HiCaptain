@@ -2,6 +2,8 @@ package com.HiCaptain.demo.controller;
 
 import com.HiCaptain.demo.model.Task;
 import com.HiCaptain.demo.service.TaskService;
+import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/tasks")
 @CrossOrigin(origins = "http://localhost:3000")
@@ -36,34 +39,37 @@ public class TaskController {
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
-    public ResponseEntity<Task> create(@RequestBody Task t) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(svc.create(t));
+    public ResponseEntity<Task> create(@Valid @RequestBody Task t) {
+        log.debug("Creating new task: {} for project: {}", t.getTitle(), t.getProjectId());
+        Task created = svc.create(t);
+        log.info("Task created successfully: {} (ID: {})", created.getTitle(), created.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
-    public ResponseEntity<Task> update(@PathVariable String id, @RequestBody Task t) {
+    public ResponseEntity<Task> update(@PathVariable String id, @Valid @RequestBody Task t) {
         return ResponseEntity.ok(svc.update(id, t));
     }
 
     @GetMapping("/project/{projectId}")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer','Client')")
     public ResponseEntity<List<Task>> getByProjectId(@PathVariable String projectId) {
-        System.out.println("Getting tasks for project: " + projectId);
+        log.debug("Getting tasks for project: {}", projectId);
         List<Task> allTasks = svc.getAll();
-        System.out.println("Total tasks in database: " + allTasks.size());
+        log.debug("Total tasks in database: {}", allTasks.size());
         
         List<Task> tasks = allTasks.stream()
             .filter(task -> {
                 boolean matches = projectId.equals(task.getProjectId());
                 if (matches) {
-                    System.out.println("Found matching task: " + task.getId() + " - " + task.getTitle());
+                    log.trace("Found matching task: {} - {}", task.getId(), task.getTitle());
                 }
                 return matches;
             })
             .toList();
             
-        System.out.println("Filtered tasks for project " + projectId + ": " + tasks.size());
+        log.info("Filtered tasks for project {}: {} tasks found", projectId, tasks.size());
         return ResponseEntity.ok(tasks);
     }
 

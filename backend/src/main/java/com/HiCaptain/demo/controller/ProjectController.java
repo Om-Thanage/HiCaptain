@@ -4,6 +4,8 @@ import com.HiCaptain.demo.model.Project;
 import com.HiCaptain.demo.model.User;
 import com.HiCaptain.demo.service.ProjectService;
 import com.HiCaptain.demo.repository.UserRepository;
+import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/projects")
 @CrossOrigin(origins = "http://localhost:3000")
@@ -29,13 +32,16 @@ public class ProjectController {
     @GetMapping
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<List<Project>> getAll() {
+        log.debug("Fetching all projects");
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         // Now auth.getName() returns the userId directly from JWT token
         String userId = auth.getName();
         String role = auth.getAuthorities().iterator().next().getAuthority();
+        log.debug("User {} with role {} requesting all projects", userId, role);
 
         List<Project> all = svc.getAll();
         if ("Admin".equals(role)) {
+            log.info("Admin user {} retrieved {} projects", userId, all.size());
             return ResponseEntity.ok(all);
         }
 
@@ -49,6 +55,7 @@ public class ProjectController {
             };
         }).toList();
 
+        log.info("User {} with role {} retrieved {} filtered projects", userId, role, filtered.size());
         return ResponseEntity.ok(filtered);
     }
 
@@ -97,7 +104,8 @@ public class ProjectController {
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
-    public ResponseEntity<Project> create(@RequestBody Project p) {
+    public ResponseEntity<Project> create(@Valid @RequestBody Project p) {
+        log.debug("Creating new project: {}", p.getName());
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUserId = auth.getName();
         String currentUserRole = auth.getAuthorities().iterator().next().getAuthority();
@@ -113,7 +121,9 @@ public class ProjectController {
                 .orElse(currentUserId);
         p.setCreatedBy(currentUserRole + " : " + username);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(svc.create(p));
+        Project created = svc.create(p);
+        log.info("Project created successfully: {} (ID: {}) by {}", created.getName(), created.getId(), username);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PostMapping("/{projectId}/developers/{developerId}")
@@ -125,7 +135,7 @@ public class ProjectController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
-    public ResponseEntity<Project> update(@PathVariable String id, @RequestBody Project p) {
+    public ResponseEntity<Project> update(@PathVariable String id, @Valid @RequestBody Project p) {
         return ResponseEntity.ok(svc.update(id, p));
     }
 
