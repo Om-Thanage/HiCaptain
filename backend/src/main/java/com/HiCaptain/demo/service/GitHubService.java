@@ -5,86 +5,80 @@ import com.HiCaptain.demo.model.GitHubCommit;
 import com.HiCaptain.demo.model.GitHubPullRequest;
 import com.HiCaptain.demo.repository.GitHubRepositoryRepository;
 import com.fasterxml.jackson.databind.JsonNode;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.kohsuke.github.GHRepository;
+import org.kohsuke.github.GitHub;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.stream.Collectors;
 
+@Slf4j
 @Service
-@ConditionalOnClass(name = "org.kohsuke.github.GitHub")
+@RequiredArgsConstructor
 public class GitHubService {
 
-    @Autowired(required = false)
-    private Object gitHub;
-
-    @Autowired
-    private WebClient gitHubWebClient;
-
-    @Autowired
-    private GitHubRepositoryRepository gitHubRepositoryRepository;
+    private final GitHub gitHub;
+    private final WebClient gitHubWebClient;
+    private final GitHubRepositoryRepository gitHubRepositoryRepository;
 
     public Mono<GitHubRepository> syncRepository(String owner, String repoName, String projectId) {
         return Mono.fromCallable(() -> {
-            if (gitHub == null) {
-                throw new RuntimeException("GitHub integration is not available");
-            }
-            
             try {
-                // Use reflection to call GitHub methods since we can't import the class
-                Object ghRepo = gitHub.getClass().getMethod("getRepository", String.class)
-                    .invoke(gitHub, owner + "/" + repoName);
+                log.debug("Syncing repository: {}/{}", owner, repoName);
+                GHRepository ghRepo = gitHub.getRepository(owner + "/" + repoName);
                 
                 GitHubRepository repository = new GitHubRepository();
-                repository.setGithubRepoId(String.valueOf(ghRepo.getClass().getMethod("getId").invoke(ghRepo)));
-                repository.setName((String) ghRepo.getClass().getMethod("getName").invoke(ghRepo));
-                repository.setFullName((String) ghRepo.getClass().getMethod("getFullName").invoke(ghRepo));
-                repository.setDescription((String) ghRepo.getClass().getMethod("getDescription").invoke(ghRepo));
-                repository.setHtmlUrl(ghRepo.getClass().getMethod("getHtmlUrl").invoke(ghRepo).toString());
-                repository.setCloneUrl((String) ghRepo.getClass().getMethod("getHttpTransportUrl").invoke(ghRepo));
-                repository.setSshUrl((String) ghRepo.getClass().getMethod("getSshUrl").invoke(ghRepo));
-                repository.setDefaultBranch((String) ghRepo.getClass().getMethod("getDefaultBranch").invoke(ghRepo));
-                repository.setLanguage((String) ghRepo.getClass().getMethod("getLanguage").invoke(ghRepo));
-                repository.setStargazersCount((Integer) ghRepo.getClass().getMethod("getStargazersCount").invoke(ghRepo));
-                repository.setForksCount((Integer) ghRepo.getClass().getMethod("getForksCount").invoke(ghRepo));
-                repository.setOpenIssuesCount((Integer) ghRepo.getClass().getMethod("getOpenIssueCount").invoke(ghRepo));
-                repository.setSize((Integer) ghRepo.getClass().getMethod("getSize").invoke(ghRepo));
-                repository.setPrivate((Boolean) ghRepo.getClass().getMethod("isPrivate").invoke(ghRepo));
-                repository.setHasIssues((Boolean) ghRepo.getClass().getMethod("hasIssues").invoke(ghRepo));
-                repository.setHasProjects((Boolean) ghRepo.getClass().getMethod("hasProjects").invoke(ghRepo));
-                repository.setHasWiki((Boolean) ghRepo.getClass().getMethod("hasWiki").invoke(ghRepo));
-                repository.setArchived((Boolean) ghRepo.getClass().getMethod("isArchived").invoke(ghRepo));
-                repository.setDisabled((Boolean) ghRepo.getClass().getMethod("isDisabled").invoke(ghRepo));
+                repository.setGithubRepoId(String.valueOf(ghRepo.getId()));
+                repository.setName(ghRepo.getName());
+                repository.setFullName(ghRepo.getFullName());
+                repository.setDescription(ghRepo.getDescription());
+                repository.setHtmlUrl(ghRepo.getHtmlUrl().toString());
+                repository.setCloneUrl(ghRepo.getHttpTransportUrl());
+                repository.setSshUrl(ghRepo.getSshUrl());
+                repository.setDefaultBranch(ghRepo.getDefaultBranch());
+                repository.setLanguage(ghRepo.getLanguage());
+                repository.setStargazersCount(ghRepo.getStargazersCount());
+                repository.setForksCount(ghRepo.getForksCount());
+                repository.setOpenIssuesCount(ghRepo.getOpenIssueCount());
+                repository.setSize(ghRepo.getSize());
+                repository.setPrivate(ghRepo.isPrivate());
+                repository.setHasIssues(ghRepo.hasIssues());
+                repository.setHasProjects(ghRepo.hasProjects());
+                repository.setHasWiki(ghRepo.hasWiki());
+                repository.setArchived(ghRepo.isArchived());
+                repository.setDisabled(ghRepo.isDisabled());
                 
-                Object repoOwner = ghRepo.getClass().getMethod("getOwner").invoke(ghRepo);
-                repository.setOwnerId(String.valueOf(repoOwner.getClass().getMethod("getId").invoke(repoOwner)));
-                repository.setOwnerLogin((String) repoOwner.getClass().getMethod("getLogin").invoke(repoOwner));
-                repository.setOwnerType((String) repoOwner.getClass().getMethod("getType").invoke(repoOwner));
+                repository.setOwnerId(String.valueOf(ghRepo.getOwner().getId()));
+                repository.setOwnerLogin(ghRepo.getOwner().getLogin());
+                repository.setOwnerType(ghRepo.getOwner().getType());
                 repository.setProjectId(projectId);
                 
-                Object createdAt = ghRepo.getClass().getMethod("getCreatedAt").invoke(ghRepo);
-                Object updatedAt = ghRepo.getClass().getMethod("getUpdatedAt").invoke(ghRepo);
-                Object pushedAt = ghRepo.getClass().getMethod("getPushedAt").invoke(ghRepo);
-                
-                if (createdAt != null) {
-                    repository.setCreatedAt(((java.util.Date) createdAt).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
+                if (ghRepo.getCreatedAt() != null) {
+                    repository.setCreatedAt(ghRepo.getCreatedAt().toInstant()
+                        .atZone(ZoneId.systemDefault()).toLocalDateTime());
                 }
-                if (updatedAt != null) {
-                    repository.setUpdatedAt(((java.util.Date) updatedAt).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
+                if (ghRepo.getUpdatedAt() != null) {
+                    repository.setUpdatedAt(ghRepo.getUpdatedAt().toInstant()
+                        .atZone(ZoneId.systemDefault()).toLocalDateTime());
                 }
-                if (pushedAt != null) {
-                    repository.setPushedAt(((java.util.Date) pushedAt).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
+                if (ghRepo.getPushedAt() != null) {
+                    repository.setPushedAt(ghRepo.getPushedAt().toInstant()
+                        .atZone(ZoneId.systemDefault()).toLocalDateTime());
                 }
                 repository.setLastSyncAt(LocalDateTime.now());
 
-                return gitHubRepositoryRepository.save(repository);
-            } catch (Exception e) {
+                GitHubRepository saved = gitHubRepositoryRepository.save(repository);
+                log.info("Repository synced successfully: {}", saved.getFullName());
+                return saved;
+            } catch (IOException e) {
+                log.error("Failed to sync repository {}/{}: {}", owner, repoName, e.getMessage());
                 throw new RuntimeException("Failed to sync repository: " + e.getMessage(), e);
             }
         });

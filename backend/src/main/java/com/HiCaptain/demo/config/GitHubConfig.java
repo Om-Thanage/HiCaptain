@@ -1,13 +1,15 @@
 package com.HiCaptain.demo.config;
 
+import org.kohsuke.github.GitHub;
+import org.kohsuke.github.GitHubBuilder;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.io.IOException;
+
 @Configuration
-@ConditionalOnClass(name = "org.kohsuke.github.GitHub")
 public class GitHubConfig {
 
     @Value("${github.token:}")
@@ -17,23 +19,14 @@ public class GitHubConfig {
     private String githubApiBaseUrl;
 
     @Bean
-    @ConditionalOnClass(name = "org.kohsuke.github.GitHub")
-    public Object gitHub() {
-        try {
-            Class<?> gitHubClass = Class.forName("org.kohsuke.github.GitHub");
-            Class<?> gitHubBuilderClass = Class.forName("org.kohsuke.github.GitHubBuilder");
-            
-            if (githubToken != null && !githubToken.isEmpty()) {
-                Object builder = gitHubBuilderClass.getDeclaredConstructor().newInstance();
-                Object builderWithToken = gitHubBuilderClass.getMethod("withOAuthToken", String.class).invoke(builder, githubToken);
-                return gitHubBuilderClass.getMethod("build").invoke(builderWithToken);
-            }
-            // For public repositories without authentication
-            return gitHubClass.getMethod("connectAnonymously").invoke(null);
-        } catch (Exception e) {
-            System.err.println("GitHub API not available: " + e.getMessage());
-            return null;
+    public GitHub gitHub() throws IOException {
+        if (githubToken != null && !githubToken.isEmpty()) {
+            return new GitHubBuilder()
+                .withOAuthToken(githubToken)
+                .build();
         }
+        // For public repositories without authentication
+        return GitHub.connectAnonymously();
     }
 
     @Bean
