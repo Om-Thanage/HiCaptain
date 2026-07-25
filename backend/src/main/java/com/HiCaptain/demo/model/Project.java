@@ -1,5 +1,7 @@
 package com.HiCaptain.demo.model;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,10 +20,17 @@ public class Project {
     @Id
     private String id;
 
+    @NotBlank(message = "Project name is required")
     private String name;
+    
     private String description;
+    
+    @NotBlank(message = "Status is required")
     private String status;
+    
+    @NotNull(message = "Start date is required")
     private LocalDate startDate;
+    
     private LocalDate endDate;
     private String clientId;
     // Newly added: optional project manager assignment for the project

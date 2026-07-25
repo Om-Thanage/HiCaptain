@@ -1,5 +1,7 @@
 package com.HiCaptain.demo.model;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,12 +21,22 @@ public class Task {
     @Id
     private String id;
 
+    @NotBlank(message = "Title is required")
     private String title;
+    
     private String description;
+    
+    @NotBlank(message = "Status is required")
     private String status;
+    
     private String priority;
+    
+    @NotNull(message = "Deadline is required")
     private LocalDate deadline;
+    
+    @NotBlank(message = "Project ID is required")
     private String projectId;
+    
     private List<String> assignedDeveloperIds;
     
     // Additional fields for better task management
