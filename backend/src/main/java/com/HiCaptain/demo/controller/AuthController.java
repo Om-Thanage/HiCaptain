@@ -2,6 +2,7 @@ package com.HiCaptain.demo.controller;
 
 import com.HiCaptain.demo.dto.AuthRequest;
 import com.HiCaptain.demo.dto.AuthResponse;
+import com.HiCaptain.demo.dto.ErrorResponse;
 import com.HiCaptain.demo.model.User;
 import com.HiCaptain.demo.service.JwtService;
 import com.HiCaptain.demo.service.UserService;
@@ -33,17 +34,30 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request, jakarta.servlet.http.HttpServletRequest servletRequest) {
         log.debug("Login attempt for email: {}", request.getEmail());
         Optional<User> user = userService.findByEmail(request.getEmail());
         if (user.isPresent() && passwordEncoder.matches(request.getPassword(), user.get().getPassword())) {
             String token = jwtService.generateToken(user.get());
             log.info("User logged in successfully: {} (ID: {})", user.get().getEmail(), user.get().getId());
-            return ResponseEntity.ok(new AuthResponse(token));
+
+            return ResponseEntity.ok(new AuthResponse(
+                token,
+                user.get().getId(),
+                user.get().getName(),
+                user.get().getEmail(),
+                user.get().getRole().name()
+            ));
         }
 
         log.warn("Login failed for email: {} - Invalid credentials", request.getEmail());
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(new ErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                "Invalid credentials",
+                "Authentication failed",
+                servletRequest.getRequestURI()
+            ));
     }
-
 }
+
