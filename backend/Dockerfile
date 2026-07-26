@@ -6,6 +6,9 @@ WORKDIR /app
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
 
+# Make mvnw executable
+RUN chmod +x mvnw
+
 # Download dependencies (cached layer)
 RUN ./mvnw dependency:go-offline -B
 
@@ -19,19 +22,30 @@ RUN ./mvnw clean package -DskipTests
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
+# Install curl for health checks
+RUN apk add --no-cache curl
+
 # Create non-root user for security
 RUN addgroup -S spring && adduser -S spring -G spring
-USER spring:spring
 
 # Copy built artifact from build stage
 COPY --from=build /app/target/*.jar app.jar
 
+# Change ownership
+RUN chown spring:spring app.jar
+
+USER spring:spring
+
 # Expose port
 EXPOSE 8080
 
-# Health check
+# Health check using curl
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+CMD curl -f http://localhost:8080/ || exit 1
 
-# Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# JVM optimization flags for containerized environments
+ENTRYPOINT ["java", \
+    "-XX:+UseContainerSupport", \
+    "-XX:MaxRAMPercentage=75.0", \
+    "-Djava.security.egd=file:/dev/./urandom", \
+    "-jar", "app.jar"]
