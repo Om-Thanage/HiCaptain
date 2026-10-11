@@ -14,6 +14,8 @@ import java.util.Optional;
 
 @Service
 public class TimeLogService {
+    @org.springframework.beans.factory.annotation.Autowired private OrganizationService organizations;
+    @org.springframework.beans.factory.annotation.Autowired private ProjectService projects;
     private final TimeLogRepository repo;
     private final ProjectRepository projectRepo;
 
@@ -22,11 +24,15 @@ public class TimeLogService {
         this.projectRepo = projectRepo;
     }
 
-    public List<TimeLog> getAll() { return repo.findAll(); }
+    public List<TimeLog> getAll() { return repo.findAll().stream().filter(item -> projects.getById(item.getProjectId()).isPresent()).toList(); }
 
-    public Optional<TimeLog> getById(String id) { return repo.findById(id); }
+    public Optional<TimeLog> getById(String id) { return repo.findById(id).filter(item -> projects.getById(item.getProjectId()).isPresent()); }
 
     public TimeLog create(TimeLog t) {
+        requireProject(t.getProjectId());
+        t.setUserId(organizations.currentUserId());
+        requireMember(t.getUserId());
+        t.setId(null);
         TimeLog saved = repo.save(t);
         if (saved.getProjectId() != null) {
             projectRepo.findById(saved.getProjectId()).ifPresent(p -> {
@@ -43,11 +49,13 @@ public class TimeLogService {
     }
 
     public TimeLog update(String id, TimeLog t) {
-        TimeLog existing = repo.findById(id)
+        TimeLog existing = getById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "TimeLog not found"));
 
         String oldProjectId = existing.getProjectId();
         String newProjectId = t.getProjectId();
+        requireProject(newProjectId);
+        requireMember(t.getUserId());
 
         t.setId(id);
         TimeLog saved = repo.save(t);
@@ -79,7 +87,7 @@ public class TimeLogService {
     }
 
     public void delete(String id) {
-        TimeLog existing = repo.findById(id)
+        TimeLog existing = getById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "TimeLog not found"));
 
         repo.deleteById(id);
@@ -93,5 +101,13 @@ public class TimeLogService {
                 }
             });
         }
+    }
+
+    private void requireProject(String id) {
+        projects.getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+    }
+
+    private void requireMember(String id) {
+        if (id != null && !id.isBlank()) organizations.membership(organizations.currentOrgId(), id);
     }
 }

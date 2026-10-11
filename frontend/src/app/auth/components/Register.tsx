@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, UserPlus, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { authService } from '@/services/auth';
-import { User, Role } from '@/types';
+import { useAuthStore } from '@/store/auth';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import logo from '../../../../public/logo.png';
@@ -16,7 +16,7 @@ interface RegisterForm {
   email: string;
   password: string;
   confirmPassword: string;
-  role: Role;
+  organizationName: string;
 }
 
 export default function RegisterPage() {
@@ -24,6 +24,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const setToken = useAuthStore((state) => state.setToken);
 
   const {
     register,
@@ -42,17 +43,18 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
-      const userData: Omit<User, 'id'> = {
+      const userData = {
         name: data.name,
         email: data.email,
         password: data.password,
-        role: data.role,
-        taskIds: [],
+        organizationName: data.organizationName,
       };
 
-      await authService.register(userData);
-      toast.success('Account created successfully!');
-      router.push('/auth?mode=login');
+      const session = await authService.register(userData);
+      authService.setToken(session.token);
+      setToken(session.token);
+      toast.success('Your organization is ready');
+      router.push('/dashboard');
     } catch (error: any) {
       toast.error(error.response?.data || 'Registration failed');
     } finally {
@@ -95,20 +97,13 @@ export default function RegisterPage() {
               {errors.email && <p className="mt-1 text-sm text-red-400">{errors.email.message}</p>}
             </div>
 
-            {/* Role */}
+            {/* Organization */}
             <div>
-              <label className="block text-sm font-medium text-slate-200">Role</label>
-              <select
-                {...register('role', { required: 'Role is required' })}
-                className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option value="">Select your role</option>
-                <option value="Admin">Admin</option>
-                <option value="ProjectManager">Project Manager</option>
-                <option value="Developer">Developer</option>
-                <option value="Client">Client</option>
-              </select>
-              {errors.role && <p className="mt-1 text-sm text-red-400">{errors.role.message}</p>}
+              <label className="block text-sm font-medium text-slate-200">Organization name</label>
+              <input {...register('organizationName', { required: 'Organization name is required' })}
+                className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                placeholder="Your team or company" />
+              {errors.organizationName && <p className="mt-1 text-sm text-red-400">{errors.organizationName.message}</p>}
             </div>
 
             {/* Password */}
@@ -118,7 +113,7 @@ export default function RegisterPage() {
                 <input
                   {...register('password', {
                     required: 'Password is required',
-                    minLength: { value: 6, message: 'Minimum 6 characters' },
+                    minLength: { value: 8, message: 'Minimum 8 characters' },
                   })}
                   type={showPassword ? 'text' : 'password'}
                   className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none pr-10"

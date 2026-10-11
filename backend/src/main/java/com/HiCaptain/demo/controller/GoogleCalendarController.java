@@ -22,10 +22,12 @@ public class GoogleCalendarController {
 
     @Autowired
     private GoogleCalendarService googleCalendarService;
+    @Autowired private com.HiCaptain.demo.service.JwtService jwtService;
 
     @GetMapping("/auth/url")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<String> getAuthorizationUrl(@RequestParam String userId) {
+        requireCurrentUser(userId);
         try {
             String authUrl = googleCalendarService.getAuthorizationUrl(userId);
             return ResponseEntity.ok(authUrl);
@@ -42,7 +44,7 @@ public class GoogleCalendarController {
             HttpServletResponse response) throws IOException {
         
         try {
-            String userId = state; // The state parameter contains the user ID
+            String userId = jwtService.verifyOAuthState(state, "google");
             googleCalendarService.authorize(code, userId);
             
             // Redirect to frontend success page
@@ -57,6 +59,7 @@ public class GoogleCalendarController {
     public ResponseEntity<List<Event>> getUpcomingEvents(
             @RequestParam String userId,
             @RequestParam(defaultValue = "10") int maxResults) {
+        requireCurrentUser(userId);
         
         try {
             List<Event> events = googleCalendarService.getUpcomingEvents(userId, maxResults);
@@ -71,6 +74,7 @@ public class GoogleCalendarController {
     public ResponseEntity<?> getEvents(
             @RequestParam String userId,
             @RequestParam(defaultValue = "30") int days) {
+        requireCurrentUser(userId);
         
         try {
             // Check if user is authorized for Google Calendar first
@@ -102,6 +106,7 @@ public class GoogleCalendarController {
     @GetMapping("/calendars")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<List<CalendarListEntry>> getUserCalendars(@RequestParam String userId) {
+        requireCurrentUser(userId);
         try {
             List<CalendarListEntry> calendars = googleCalendarService.getUserCalendars(userId);
             return ResponseEntity.ok(calendars);
@@ -113,6 +118,7 @@ public class GoogleCalendarController {
     @GetMapping("/auth/status")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<Boolean> checkAuthStatus(@RequestParam String userId) {
+        requireCurrentUser(userId);
         try {
             boolean isAuthorized = googleCalendarService.isUserAuthorized(userId);
             return ResponseEntity.ok(isAuthorized);
@@ -131,6 +137,7 @@ public class GoogleCalendarController {
     @GetMapping("/debug")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<String> debugEndpoint(@RequestParam String userId) {
+        requireCurrentUser(userId);
         try {
             boolean isAuthorized = googleCalendarService.isUserAuthorized(userId);
             return ResponseEntity.ok("User " + userId + " is authorized: " + isAuthorized);
@@ -142,11 +149,18 @@ public class GoogleCalendarController {
     @PostMapping("/auth/revoke")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<String> revokeAuthorization(@RequestParam String userId) {
+        requireCurrentUser(userId);
         try {
             googleCalendarService.revokeAuthorization(userId);
             return ResponseEntity.ok("Authorization revoked successfully");
         } catch (IOException e) {
             return ResponseEntity.badRequest().body("Failed to revoke authorization");
+        }
+    }
+    private void requireCurrentUser(String userId) {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !userId.equals(auth.getName())) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN);
         }
     }
 }

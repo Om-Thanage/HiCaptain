@@ -17,6 +17,8 @@ import java.util.Optional;
 
 @Service
 public class MeetingService {
+    @org.springframework.beans.factory.annotation.Autowired private OrganizationService organizations;
+    @org.springframework.beans.factory.annotation.Autowired private ProjectService projects;
     private final MeetingRepository repo;
     private final ProjectRepository projectRepo;
     
@@ -28,11 +30,16 @@ public class MeetingService {
         this.projectRepo = projectRepo;
     }
 
-    public List<Meeting> getAll() { return repo.findAll(); }
+    public List<Meeting> getAll() { return repo.findAll().stream().filter(item -> projects.getById(item.getProjectId()).isPresent()).toList(); }
 
-    public Optional<Meeting> getById(String id) { return repo.findById(id); }
+    public Optional<Meeting> getById(String id) { return repo.findById(id).filter(item -> projects.getById(item.getProjectId()).isPresent()); }
 
     public Meeting create(Meeting m) {
+        requireProject(m.getProjectId());
+        m.setOrganizerId(organizations.currentUserId());
+        requireMember(m.getOrganizerId());
+        if (m.getAttendeeIds() != null) m.getAttendeeIds().forEach(this::requireMember);
+        m.setId(null);
         // Set timestamps
         m.setCreatedAt(LocalDateTime.now());
         m.setUpdatedAt(LocalDateTime.now());
@@ -70,11 +77,14 @@ public class MeetingService {
     }
 
     public Meeting update(String id, Meeting m) {
-        Meeting existing = repo.findById(id)
+        Meeting existing = getById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Meeting not found"));
 
         String oldProjectId = existing.getProjectId();
         String newProjectId = m.getProjectId();
+        requireProject(newProjectId);
+        requireMember(m.getOrganizerId());
+        if (m.getAttendeeIds() != null) m.getAttendeeIds().forEach(this::requireMember);
 
         // Set timestamps
         m.setId(id);
@@ -120,7 +130,7 @@ public class MeetingService {
     }
 
     public void delete(String id) {
-        Meeting existing = repo.findById(id)
+        Meeting existing = getById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Meeting not found"));
 
         // Delete Google Calendar event if exists
@@ -147,18 +157,27 @@ public class MeetingService {
     }
     
     public List<Meeting> getMeetingsByProjectId(String projectId) {
+        requireProject(projectId);
         return repo.findByProjectId(projectId);
     }
     
     public List<Meeting> getUpcomingMeetings() {
-        return repo.findByStartTimeAfterOrderByStartTimeAsc(LocalDateTime.now());
+        return repo.findByStartTimeAfterOrderByStartTimeAsc(LocalDateTime.now()).stream().filter(item -> projects.getById(item.getProjectId()).isPresent()).toList();
     }
     
     public List<Meeting> getMeetingsByOrganizer(String organizerId) {
-        return repo.findByOrganizerIdOrderByStartTimeDesc(organizerId);
+        return repo.findByOrganizerIdOrderByStartTimeDesc(organizerId).stream().filter(item -> projects.getById(item.getProjectId()).isPresent()).toList();
     }
     
     public List<Meeting> getMeetingsByAttendee(String attendeeId) {
-        return repo.findByAttendeeIdsContaining(attendeeId);
+        return repo.findByAttendeeIdsContaining(attendeeId).stream().filter(item -> projects.getById(item.getProjectId()).isPresent()).toList();
+    }
+
+    private void requireProject(String id) {
+        projects.getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+    }
+
+    private void requireMember(String id) {
+        if (id != null && !id.isBlank()) organizations.membership(organizations.currentOrgId(), id);
     }
 }

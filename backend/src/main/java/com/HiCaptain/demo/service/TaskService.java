@@ -20,15 +20,19 @@ public class TaskService {
     private final TaskRepository taskRepo;
     private final ProjectRepository projectRepo;
     private final UserRepository userRepo;
+    private final ProjectService projects;
+    private final OrganizationService organizations;
 
-    public TaskService(TaskRepository taskRepo, ProjectRepository projectRepo, UserRepository userRepo) {
+    public TaskService(TaskRepository taskRepo, ProjectRepository projectRepo, UserRepository userRepo, ProjectService projects, OrganizationService organizations) {
         this.taskRepo = taskRepo;
         this.projectRepo = projectRepo;
         this.userRepo = userRepo;
+        this.projects = projects;
+        this.organizations = organizations;
     }
 
     public List<Task> getAll() {
-        List<Task> tasks = taskRepo.findAll();
+        List<Task> tasks = taskRepo.findAll().stream().filter(t -> projects.getById(t.getProjectId()).isPresent()).toList();
         log.debug("TaskService.getAll() - Found {} tasks", tasks.size());
         if (log.isTraceEnabled()) {
             for (Task task : tasks) {
@@ -39,11 +43,14 @@ public class TaskService {
     }
 
     public Optional<Task> getById(String id) {
-        return taskRepo.findById(id);
+        return taskRepo.findById(id).filter(t -> projects.getById(t.getProjectId()).isPresent());
     }
 
     public Task create(Task t) {
         log.debug("Creating task: {} for project: {}", t.getTitle(), t.getProjectId());
+        requireProject(t.getProjectId());
+        validateDevelopers(t.getAssignedDeveloperIds());
+        t.setId(null);
         // Set timestamps
         t.setCreatedAt(java.time.LocalDateTime.now());
         t.setUpdatedAt(java.time.LocalDateTime.now());
@@ -85,7 +92,7 @@ public class TaskService {
     }
 
     public Task update(String id, Task t) {
-        Task existing = taskRepo.findById(id)
+        Task existing = getById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
 
         log.debug("Updating task {} with new data: {} (status: {})", id, t.getTitle(), t.getStatus());
@@ -97,8 +104,8 @@ public class TaskService {
         if (t.getStatus() != null) existing.setStatus(t.getStatus());
         if (t.getPriority() != null) existing.setPriority(t.getPriority());
         if (t.getDeadline() != null) existing.setDeadline(t.getDeadline());
-        if (t.getProjectId() != null) existing.setProjectId(t.getProjectId());
-        if (t.getAssignedDeveloperIds() != null) existing.setAssignedDeveloperIds(t.getAssignedDeveloperIds());
+        if (t.getProjectId() != null) { requireProject(t.getProjectId()); existing.setProjectId(t.getProjectId()); }
+        if (t.getAssignedDeveloperIds() != null) { validateDevelopers(t.getAssignedDeveloperIds()); existing.setAssignedDeveloperIds(t.getAssignedDeveloperIds()); }
         if (t.getAssigneeId() != null) existing.setAssigneeId(t.getAssigneeId());
         if (t.getCreatedBy() != null) existing.setCreatedBy(t.getCreatedBy());
         if (t.getCategory() != null) existing.setCategory(t.getCategory());
@@ -133,7 +140,7 @@ public class TaskService {
     }
 
     public void delete(String id) {
-        Optional<Task> taskOpt = taskRepo.findById(id);
+        Optional<Task> taskOpt = getById(id);
         if (taskOpt.isEmpty())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found");
 
@@ -154,5 +161,13 @@ public class TaskService {
                 });
             }
         }
+    }
+
+    private void requireProject(String id) {
+        projects.getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+    }
+
+    private void validateDevelopers(List<String> ids) {
+        if (ids != null) ids.forEach(id -> organizations.membership(organizations.currentOrgId(), id));
     }
 }

@@ -37,8 +37,9 @@ const navigation = {
 export default function Sidebar() {
   const pathname = usePathname();
   const user = authService.getUserFromToken();
-  const role = user?.role as keyof typeof navigation;
-  const items = [['Overview', '/dashboard', Home], ...(navigation[role] || [])] as Array<[
+  const roles = (user?.roles || [user?.role]).filter(Boolean) as Array<keyof typeof navigation>;
+  const links = roles.flatMap(role => navigation[role] || []);
+  const items = [['Overview', '/dashboard', Home], ...links.filter((item, index) => links.findIndex(other => other[1] === item[1]) === index)] as Array<[
     string, string, typeof Home
   ]>;
 

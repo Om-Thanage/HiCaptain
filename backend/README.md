@@ -722,6 +722,14 @@ Check:
 | `GITHUB_OAUTH_REDIRECT_URI` | No | http://localhost:8080/api/auth/github/callback | OAuth callback URL |
 | `GOOGLE_CALENDAR_CREDENTIALS_FILE_PATH` | Yes | - | Path to Google credentials JSON |
 | `SERVER_PORT` | No | 8080 | Application server port |
+| `SMTP_HOST` | For invitations | - | SMTP server hostname |
+| `SMTP_PORT` | No | 587 | SMTP server port |
+| `SMTP_USERNAME` | For invitations | - | SMTP login |
+| `SMTP_PASSWORD` | For invitations | - | SMTP password |
+| `SMTP_FROM` | For invitations | - | Verified sender address |
+| `SMTP_AUTH` | No | true | Enable SMTP authentication |
+| `SMTP_STARTTLS` | No | true | Enable STARTTLS |
+| `FRONTEND_URL` | No | http://localhost:3000 | Public site URL used in invitation links and CORS |
 
 ---
 
@@ -771,3 +779,12 @@ For support and questions:
 ---
 
 **Built with ❤️ using Spring Boot**
+
+## Organization accounts and invitations
+
+- `POST /auth/register` accepts `name`, `email`, `password`, and `organizationName`. It creates an organization and makes the registrant its Admin.
+- Admins invite people in the **Users** page. An existing account is added to that organization immediately; a new account receives a seven-day, single-use email link.
+- Invited people without an account register through `/invite?token=...`. Signed-in people can accept an invitation sent to their account's email address.
+- A user can have multiple roles in each organization and can switch between organizations from the dashboard header. Access tokens select one active organization; the API checks membership and roles on every request.
+- Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, and `FRONTEND_URL` before sending invitations. The server returns an error when SMTP delivery fails. Use a verified sender address and set `FRONTEND_URL` to the public frontend origin.
+- On first startup after upgrading, accounts with the old global role are added to an **Existing workspace** organization and old projects are assigned there. Back up MongoDB before deployment. The demo database seeder only runs with the explicit `demo` profile.

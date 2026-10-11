@@ -39,7 +39,7 @@ public class GitHubOAuthController {
             String userId = jwtService.extractUserId(token);
             
             // Generate random state for security
-            String state = java.util.UUID.randomUUID().toString();
+            String state = jwtService.generateOAuthState(userId, "github");
             
             // Get GitHub OAuth authorization URL
             String authUrl = oauthService.getAuthorizationUrl(userId, state);

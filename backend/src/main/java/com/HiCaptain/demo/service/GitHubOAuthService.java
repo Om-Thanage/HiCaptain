@@ -23,6 +23,7 @@ public class GitHubOAuthService {
 
     @Autowired
     private WebClient.Builder webClientBuilder;
+    @Autowired private JwtService jwtService;
 
     /**
      * Step 1: Generate GitHub OAuth authorization URL (like Vercel's "Connect GitHub" button)
@@ -41,7 +42,7 @@ public class GitHubOAuthService {
                 .queryParam("client_id", oauthConfig.getClientId())
                 .queryParam("redirect_uri", oauthConfig.getRedirectUri())
                 .queryParam("scope", String.join(",", oauthConfig.getScopes()))
-                .queryParam("state", state + ":" + userId) // Include user ID in state
+                .queryParam("state", state)
                 .queryParam("allow_signup", "true")
                 .build()
                 .toUriString();
@@ -53,11 +54,7 @@ public class GitHubOAuthService {
     public GitHubConnection handleCallback(String code, String state) {
         try {
             // Parse state to get user ID
-            String[] stateParts = state.split(":");
-            if (stateParts.length != 2) {
-                throw new RuntimeException("Invalid state parameter");
-            }
-            String userId = stateParts[1];
+            String userId = jwtService.verifyOAuthState(state, "github");
 
             // Exchange authorization code for access token
             JsonNode tokenResponse = exchangeCodeForToken(code);

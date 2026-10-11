@@ -1,63 +1,105 @@
 package com.HiCaptain.demo.controller;
 
-import com.HiCaptain.demo.dto.AuthRequest;
-import com.HiCaptain.demo.dto.AuthResponse;
-import com.HiCaptain.demo.dto.ErrorResponse;
+import com.HiCaptain.demo.model.Membership;
 import com.HiCaptain.demo.model.User;
+import com.HiCaptain.demo.repository.UserRepository;
 import com.HiCaptain.demo.service.JwtService;
-import com.HiCaptain.demo.service.UserService;
+import com.HiCaptain.demo.service.OrganizationService;
 import jakarta.validation.Valid;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import java.util.Comparator;
+import java.util.Locale;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Optional;
-
-@Slf4j
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AuthController {
-    @Autowired private UserService userService;
-    @Autowired private JwtService jwtService;
-    @Autowired private PasswordEncoder passwordEncoder;
+    private final UserRepository users;
+    private final OrganizationService organizations;
+    private final JwtService jwt;
+    private final PasswordEncoder passwords;
+
+    public AuthController(UserRepository users, OrganizationService organizations, JwtService jwt, PasswordEncoder passwords) {
+        this.users = users;
+        this.organizations = organizations;
+        this.jwt = jwt;
+        this.passwords = passwords;
+    }
+
+    public record Registration(@NotBlank String name, @Email @NotBlank String email,
+            @Size(min = 8) @NotBlank String password, @NotBlank String organizationName) {}
+    public record InvitedRegistration(@NotBlank String name, @Email @NotBlank String email,
+            @Size(min = 8) @NotBlank String password, @NotBlank String token) {}
+    public record Login(@Email @NotBlank String email, @NotBlank String password) {}
+    public record Session(String token, String userId, String name, String email, String role,
+            String organizationId, java.util.Set<com.HiCaptain.demo.util.Role> roles) {}
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody User user) {
-        log.debug("Registration attempt for email: {}", user.getEmail());
-        User savedUser = userService.save(user);
-        log.info("User registered successfully: {} (ID: {})", savedUser.getEmail(), savedUser.getId());
-        return ResponseEntity.ok(savedUser);
+    public Session register(@Valid @RequestBody Registration request) {
+        User user = createUser(request.name(), request.email(), request.password());
+        Membership membership;
+        try {
+            membership = organizations.createOrganization(user, request.organizationName());
+        } catch (RuntimeException failure) {
+            users.deleteById(user.getId());
+            throw failure;
+        }
+        return session(user, membership);
+    }
+
+    @PostMapping("/invitations/register")
+    public Session registerInvited(@Valid @RequestBody InvitedRegistration request) {
+        var invitation = organizations.preview(request.token());
+        if (!invitation.email().equalsIgnoreCase(request.email())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invitation email does not match");
+        User user = createUser(request.name(), request.email(), request.password());
+        Membership membership;
+        try {
+            membership = organizations.accept(request.token(), user);
+        } catch (RuntimeException failure) {
+            users.deleteById(user.getId());
+            throw failure;
+        }
+        return session(user, membership);
+    }
+
+    @GetMapping("/invitations/preview")
+    public OrganizationService.InvitationView preview(@RequestParam String token) {
+        return organizations.preview(token);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request, jakarta.servlet.http.HttpServletRequest servletRequest) {
-        log.debug("Login attempt for email: {}", request.getEmail());
-        Optional<User> user = userService.findByEmail(request.getEmail());
-        if (user.isPresent() && passwordEncoder.matches(request.getPassword(), user.get().getPassword())) {
-            String token = jwtService.generateToken(user.get());
-            log.info("User logged in successfully: {} (ID: {})", user.get().getEmail(), user.get().getId());
+    public Session login(@Valid @RequestBody Login request) {
+        User user = users.findByEmailIgnoreCase(request.email().trim().toLowerCase(Locale.ROOT))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
+        if (!passwords.matches(request.password(), user.getPassword())) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+        Membership membership = organizations.membershipsFor(user.getId()).stream()
+                .sorted(Comparator.comparing(Membership::getOrganizationId)).findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Account has no organization"));
+        return session(user, membership);
+    }
 
-            return ResponseEntity.ok(new AuthResponse(
-                token,
-                user.get().getId(),
-                user.get().getName(),
-                user.get().getEmail(),
-                user.get().getRole().name()
-            ));
+    private User createUser(String name, String email, String password) {
+        email = email.trim().toLowerCase(Locale.ROOT);
+        if (users.existsByEmailIgnoreCase(email)) throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exists");
+        User user = new User();
+        user.setName(name.trim());
+        user.setEmail(email);
+        user.setPassword(passwords.encode(password));
+        try {
+            return users.save(user);
+        } catch (org.springframework.dao.DuplicateKeyException duplicate) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exists");
         }
+    }
 
-        log.warn("Login failed for email: {} - Invalid credentials", request.getEmail());
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(new ErrorResponse(
-                HttpStatus.UNAUTHORIZED.value(),
-                "Invalid credentials",
-                "Authentication failed",
-                servletRequest.getRequestURI()
-            ));
+    public Session session(User user, Membership membership) {
+        String role = membership.getRoles().stream().min(java.util.Comparator.comparingInt(Enum::ordinal)).orElseThrow().name();
+        return new Session(jwt.generateToken(user, membership), user.getId(), user.getName(), user.getEmail(), role,
+                membership.getOrganizationId(), membership.getRoles());
     }
 }
-

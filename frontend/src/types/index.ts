@@ -6,6 +6,8 @@ export interface User {
   email: string;
   password?: string;
   role: Role;
+  roles?: Role[];
+  organizationId?: string;
   projectIds?: string[];
   taskIds: string[];
 }
@@ -18,6 +20,8 @@ export interface AuthRequest {
 export interface AuthResponse {
   token: string;
   user?: User;
+  organizationId: string;
+  roles: Role[];
 }
 
 export interface Project {
