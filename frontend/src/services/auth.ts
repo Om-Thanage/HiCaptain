@@ -19,6 +19,7 @@ export const authService = {
   },
 
   getToken(): string | null {
+    if (typeof window === 'undefined') return null;
     return Cookies.get('token') || localStorage.getItem('token');
   },
 

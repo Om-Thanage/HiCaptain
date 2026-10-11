@@ -254,7 +254,7 @@ export default function AnalyticsPage() {
                     labelLine={false}
                     label={({ name, value }) => `${name}: ${value}`}
                     outerRadius={80}
-                    fill="#8884d8"
+                    fill="#8a72e9"
                     dataKey="count"
                     nameKey="status"
                   >
@@ -262,7 +262,7 @@ export default function AnalyticsPage() {
                       <Cell key={`cell-ts-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                  <Tooltip contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e9e4df', borderRadius: '8px' }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -281,7 +281,7 @@ export default function AnalyticsPage() {
                     labelLine={false}
                     label={({ name, value }) => `${name}: ${value}`}
                     outerRadius={80}
-                    fill="#8884d8"
+                    fill="#8a72e9"
                     dataKey="count"
                     nameKey="status"
                   >
@@ -289,7 +289,7 @@ export default function AnalyticsPage() {
                       <Cell key={`cell-ps-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
+                  <Tooltip contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e9e4df', borderRadius: '8px' }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -302,11 +302,11 @@ export default function AnalyticsPage() {
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={analyticsData.monthlyRevenue || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="month" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" />
-                <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
-                <Area type="monotone" dataKey="amount" stroke="#10B981" fill="#10B981" fillOpacity={0.3} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e9e4df" />
+                <XAxis dataKey="month" stroke="#716a66" />
+                <YAxis stroke="#716a66" />
+                <Tooltip contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e9e4df', borderRadius: '8px' }} />
+                <Area type="monotone" dataKey="amount" stroke="#8bbd4b" fill="#8bbd4b" fillOpacity={0.3} />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -320,11 +320,11 @@ export default function AnalyticsPage() {
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={analyticsData.hoursWorkedByUser || []} layout="horizontal">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis type="number" stroke="#9CA3AF" />
-                  <YAxis dataKey="username" type="category" stroke="#9CA3AF" width={80} />
-                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
-                  <Bar dataKey="hours" fill="#3B82F6" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e9e4df" />
+                  <XAxis type="number" stroke="#716a66" />
+                  <YAxis dataKey="username" type="category" stroke="#716a66" width={80} />
+                  <Tooltip contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e9e4df', borderRadius: '8px' }} />
+                  <Bar dataKey="hours" fill="#8a72e9" />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -336,11 +336,11 @@ export default function AnalyticsPage() {
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={analyticsData.tasksCompletedByUser || []} layout="horizontal">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis type="number" stroke="#9CA3AF" />
-                  <YAxis dataKey="username" type="category" stroke="#9CA3AF" width={80} />
-                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }} />
-                  <Bar dataKey="count" fill="#10B981" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e9e4df" />
+                  <XAxis type="number" stroke="#716a66" />
+                  <YAxis dataKey="username" type="category" stroke="#716a66" width={80} />
+                  <Tooltip contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e9e4df', borderRadius: '8px' }} />
+                  <Bar dataKey="count" fill="#8bbd4b" />
                 </BarChart>
               </ResponsiveContainer>
             )}
