@@ -58,6 +58,9 @@ public class ProjectService {
         log.debug("Creating project: {}", project.getName());
         project.setId(null);
         project.setOrganizationId(organizations.currentOrgId());
+        project.setGoogleDriveFolderId(null);
+        project.setGoogleDriveOwnerUserId(null);
+        project.setGoogleDrivePermissionIds(null);
         validateMember(project.getClientId(), Role.Client);
         validateMember(project.getProjectManagerId(), Role.ProjectManager);
         if (project.getDeveloperIds() != null) project.getDeveloperIds().forEach(id -> validateMember(id, Role.Developer));
@@ -112,9 +115,12 @@ public class ProjectService {
     }
 
     public Project update(String id, Project project) {
-        getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+        Project existing = getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
         project.setId(id);
         project.setOrganizationId(organizations.currentOrgId());
+        project.setGoogleDriveFolderId(existing.getGoogleDriveFolderId());
+        project.setGoogleDriveOwnerUserId(existing.getGoogleDriveOwnerUserId());
+        project.setGoogleDrivePermissionIds(existing.getGoogleDrivePermissionIds());
         validateMember(project.getClientId(), Role.Client);
         validateMember(project.getProjectManagerId(), Role.ProjectManager);
         if (project.getDeveloperIds() != null) project.getDeveloperIds().forEach(userId -> validateMember(userId, Role.Developer));

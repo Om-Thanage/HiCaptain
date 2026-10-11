@@ -1,14 +1,15 @@
 import api from '@/lib/api';
 
-export interface SharedDrive { id: string; name: string }
-export interface StorageConfiguration { driveId: string; driveName: string; connectedBy: string }
+export interface DriveFolder { id: string; name: string; webViewLink: string }
+export interface FolderConfiguration { folderId: string; folderName: string; folderUrl: string; connectedBy: string }
 export interface DriveFile { id: string; name: string; mimeType: string; size: number; webViewLink: string }
 
 const base = '/api/google-workspace';
 export const googleWorkspaceService = {
-  async sharedDrives(): Promise<SharedDrive[]> { return (await api.get(`${base}/drives`)).data; },
-  async storage(): Promise<StorageConfiguration | null> { return (await api.get(`${base}/storage`)).data || null; },
-  async selectDrive(driveId: string): Promise<StorageConfiguration> { return (await api.put(`${base}/storage`, { driveId })).data; },
+  async folders(parentId?: string): Promise<DriveFolder[]> { return (await api.get(`${base}/folders`, { params: parentId ? { parentId } : {} })).data; },
+  async projectFolder(projectId: string): Promise<FolderConfiguration | null> { return (await api.get(`${base}/projects/${projectId}/folder`)).data || null; },
+  async selectFolder(projectId: string, folderId: string): Promise<FolderConfiguration> { return (await api.put(`${base}/projects/${projectId}/folder`, { folderId })).data; },
+  async syncFolderSharing(projectId: string): Promise<FolderConfiguration> { return (await api.post(`${base}/projects/${projectId}/folder/share`)).data; },
   async files(projectId: string): Promise<DriveFile[]> { return (await api.get(`${base}/projects/${projectId}/files`)).data; },
   async upload(projectId: string, file: File): Promise<DriveFile> {
     const data = new FormData(); data.append('file', file);

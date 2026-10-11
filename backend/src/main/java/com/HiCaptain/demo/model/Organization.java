@@ -10,6 +10,4 @@ public class Organization {
     @Id private String id;
     private String name;
     private String ownerUserId;
-    private String googleSharedDriveId;
-    private String googleDriveOwnerUserId;
 }

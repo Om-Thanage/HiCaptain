@@ -20,20 +20,30 @@ public class GoogleDriveController {
     private final GoogleDriveService drive;
     private final GoogleTasksService tasks;
     public GoogleDriveController(GoogleDriveService drive, GoogleTasksService tasks) { this.drive = drive; this.tasks = tasks; }
-    public record DriveRequest(String driveId) {}
+    public record FolderRequest(String folderId) {}
 
-    @GetMapping("/drives")
-    @PreAuthorize("hasAuthority('Admin')")
-    public List<GoogleDriveService.DriveView> availableDrives() throws IOException { return drive.availableDrives(); }
-
-    @PutMapping("/storage")
-    @PreAuthorize("hasAuthority('Admin')")
-    public GoogleDriveService.StorageView configure(@RequestBody DriveRequest request) throws IOException {
-        return drive.configure(request.driveId());
+    @GetMapping("/folders")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
+    public List<GoogleDriveService.FolderView> folders(@RequestParam(required = false) String parentId) throws IOException {
+        return drive.folders(parentId);
     }
 
-    @GetMapping("/storage")
-    public GoogleDriveService.StorageView configuration() throws IOException { return drive.configuration(); }
+    @PutMapping("/projects/{projectId}/folder")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
+    public GoogleDriveService.FolderConfiguration configure(@PathVariable String projectId, @RequestBody FolderRequest request) throws IOException {
+        return drive.configure(projectId, request.folderId());
+    }
+
+    @GetMapping("/projects/{projectId}/folder")
+    public GoogleDriveService.FolderConfiguration configuration(@PathVariable String projectId) throws IOException {
+        return drive.configuration(projectId);
+    }
+
+    @PostMapping("/projects/{projectId}/folder/share")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
+    public GoogleDriveService.FolderConfiguration syncSharing(@PathVariable String projectId) throws IOException {
+        return drive.syncSharing(projectId);
+    }
 
     @GetMapping("/projects/{projectId}/files")
     public List<GoogleDriveService.FileView> files(@PathVariable String projectId) throws IOException { return drive.files(projectId); }
