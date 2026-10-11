@@ -1,20 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Mail, Plus, ShieldCheck, UsersRound, X } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { authService } from '@/services/auth';
 import { Member, organizationService } from '@/services/organization';
 import { Role } from '@/types';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/auth';
+import styles from './users.module.css';
 
 const roles: Role[] = ['Admin', 'ProjectManager', 'Developer', 'Client'];
+const roleLabel: Record<Role, string> = { Admin: 'Admin', ProjectManager: 'Project manager', Developer: 'Developer', Client: 'Client' };
 
 export default function UsersPage() {
   const user = authService.getUserFromToken();
   const orgId = user?.organizationId;
   const isAdmin = user?.roles?.includes('Admin');
   const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [inviteRoles, setInviteRoles] = useState<Role[]>(['Developer']);
   const [draftRoles, setDraftRoles] = useState<Record<string, Role[]>>({});
@@ -22,9 +26,10 @@ export default function UsersPage() {
   const setToken = useAuthStore(state => state.setToken);
 
   async function refresh() {
-    if (!orgId) return;
+    if (!orgId) { setLoading(false); return; }
     try { setMembers(await organizationService.members(orgId)); setDraftRoles({}); }
     catch { toast.error('Could not load members'); }
+    finally { setLoading(false); }
   }
   useEffect(() => { refresh(); }, [orgId]);
 
@@ -37,7 +42,7 @@ export default function UsersPage() {
     if (!orgId || !inviteRoles.length) return;
     setBusy(true);
     try {
-      const result = await organizationService.invite(orgId, email, inviteRoles);
+      const result = await organizationService.invite(orgId, email.trim(), inviteRoles);
       toast.success(result.added ? 'Existing account added to your organization' : 'Invitation email sent');
       setEmail('');
       await refresh();
@@ -67,25 +72,37 @@ export default function UsersPage() {
     catch (cause: any) { toast.error(cause.response?.data?.detail || 'Could not remove member'); }
   }
 
-  return <DashboardLayout><div className="space-y-8 max-w-5xl">
-    <div><span className="hc-eyebrow">YOUR TEAM</span><h1 className="text-3xl font-bold text-white mt-2">Members & invitations</h1><p className="text-slate-400 mt-1">Invite teammates by email and give each person the roles they need.</p></div>
-    {isAdmin && <form onSubmit={invite} className="rounded-2xl border border-white/10 bg-slate-900/60 p-6 space-y-4">
-      <h2 className="text-xl font-semibold text-white">Invite a teammate</h2>
-      <input required type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="teammate@example.com" className="w-full rounded-lg border border-white/15 bg-white/5 p-3 text-white" />
-      <div className="flex flex-wrap gap-3">{roles.map(role => <label key={role} className="text-slate-200 flex items-center gap-2"><input type="checkbox" checked={inviteRoles.includes(role)} onChange={() => toggle(role, inviteRoles, setInviteRoles)} />{role}</label>)}</div>
-      <button disabled={busy || !inviteRoles.length} className="hc-pill-button">{busy ? 'Sending…' : 'Send invitation'}</button>
-    </form>}
-    <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-6"><h2 className="text-xl font-semibold text-white mb-5">Organization members</h2>
-      <div className="space-y-3">{members.map(member => <div key={member.id} className="rounded-xl border border-white/10 p-4 flex flex-col md:flex-row md:items-center gap-4 justify-between">
-        <div><strong className="text-white">{member.name}</strong><p className="text-slate-400 text-sm">{member.email}</p></div>
-        <div className="flex flex-wrap gap-3 items-center">{roles.map(role => <label key={role} className="text-slate-300 text-sm flex gap-1 items-center"><input type="checkbox" disabled={!isAdmin} checked={(draftRoles[member.id] || member.roles).includes(role)} onChange={() => {
+  return <DashboardLayout><div className={styles.page}>
+    <div className={styles.heading}>
+      <div><span className={styles.kicker}>PEOPLE & PERMISSIONS</span><h1>Your team, all in one place.</h1><p>Invite teammates and choose what they can do in this organization.</p></div>
+      <div className={styles.count}><span className={styles.countIcon}><UsersRound size={20} /></span><span><strong>{members.length}</strong><small>{members.length === 1 ? 'team member' : 'team members'}</small></span></div>
+    </div>
+
+    <div className={styles.grid}>
+      <section className={styles.membersCard} aria-labelledby="members-title">
+        <div className={styles.cardHeading}><div><span className={styles.sectionKicker}>THE PEOPLE</span><h2 id="members-title">Organization members</h2></div><span className={styles.memberCount}>{members.length} members</span></div>
+        {loading ? <p className={styles.empty}>Loading your team…</p> : members.length === 0 ? <p className={styles.empty}>No members yet. Invite someone to get started.</p> : <div className={styles.memberList}>{members.map((member, index) => {
           const selected = draftRoles[member.id] || member.roles;
-          setDraftRoles(current => ({ ...current, [member.id]: selected.includes(role) ? selected.filter(item => item !== role) : [...selected, role] }));
-        }} />{role}</label>)}
-          {isAdmin && draftRoles[member.id] && <button disabled={!draftRoles[member.id].length} className="text-blue-300 text-sm underline" onClick={() => changeRoles(member, draftRoles[member.id])}>Save roles</button>}
-          {isAdmin && user?.id !== member.id && <button className="text-red-300 text-sm underline" onClick={() => remove(member)}>Remove</button>}
-        </div>
-      </div>)}</div>
+          const changed = draftRoles[member.id] && (selected.length !== member.roles.length || selected.some(role => !member.roles.includes(role)));
+          return <div className={styles.member} key={member.id}>
+            <div className={styles.identity}><span className={`${styles.avatar} ${styles[`avatar${index % 3}`]}`}>{member.name?.charAt(0).toUpperCase() || '?'}</span><div><strong>{member.name} {member.id === user?.id && <span className={styles.you}>You</span>}</strong><span>{member.email}</span></div></div>
+            <div className={styles.memberControls}>
+              <div className={styles.roleList} aria-label={`Roles for ${member.name}`}>{roles.map(role => isAdmin ? <label key={role} className={`${styles.role} ${selected.includes(role) ? styles.selectedRole : ''}`}><input type="checkbox" checked={selected.includes(role)} onChange={() => toggle(role, selected, next => setDraftRoles(current => ({ ...current, [member.id]: next })))} />{roleLabel[role]}</label> : member.roles.includes(role) ? <span key={role} className={`${styles.role} ${styles.selectedRole}`}>{roleLabel[role]}</span> : null)}</div>
+              {isAdmin && <div className={styles.memberActions}>{changed && <button type="button" className={styles.saveButton} disabled={!selected.length} onClick={() => changeRoles(member, selected)}>Save roles</button>}{member.id !== user?.id && <button type="button" className={styles.removeButton} onClick={() => remove(member)} aria-label={`Remove ${member.name}`}><X size={15} /> Remove</button>}</div>}
+            </div>
+          </div>;
+        })}</div>}
+      </section>
+
+      <aside className={styles.side}>
+        {isAdmin ? <form onSubmit={invite} className={styles.inviteCard}>
+          <span className={styles.inviteIcon}><Mail size={22} /></span><span className={styles.sectionKicker}>GROW YOUR TEAM</span><h2>Invite a teammate</h2><p>Send an email invitation, then choose the roles they&apos;ll have when they join.</p>
+          <label className={styles.fieldLabel} htmlFor="invite-email">Email address</label><input id="invite-email" required type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="teammate@example.com" className={styles.emailInput} />
+          <span className={styles.fieldLabel}>Assign roles</span><div className={styles.inviteRoles}>{roles.map(role => <label key={role} className={`${styles.role} ${inviteRoles.includes(role) ? styles.selectedRole : ''}`}><input type="checkbox" checked={inviteRoles.includes(role)} onChange={() => toggle(role, inviteRoles, setInviteRoles)} />{roleLabel[role]}</label>)}</div>
+          <button type="submit" disabled={busy || !inviteRoles.length} className={styles.inviteButton}><Plus size={17} />{busy ? 'Sending…' : 'Send invitation'}</button>
+        </form> : <div className={styles.inviteCard}><span className={styles.inviteIcon}><UsersRound size={22} /></span><h2>Work better together</h2><p>Ask an organization admin to invite more people or update team roles.</p></div>}
+        <div className={styles.tip}><ShieldCheck size={19} /><p>People can belong to more than one organization and hold multiple roles in each.</p></div>
+      </aside>
     </div>
   </div></DashboardLayout>;
 }
