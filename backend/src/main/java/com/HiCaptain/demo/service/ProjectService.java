@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.HashSet;
+import com.HiCaptain.demo.util.Role;
 
 @Slf4j
 @Service
@@ -31,21 +32,35 @@ public class ProjectService {
     }
 
     public List<Project> getAll() {
-        return projectRepo.findAll().stream().filter(p -> organizations.currentOrgId().equals(p.getOrganizationId())).toList();
+        String orgId = organizations.currentOrgId();
+        String userId = organizations.currentUserId();
+        Set<Role> roles = organizations.membership(orgId, userId).getRoles();
+        return projectRepo.findAll().stream().filter(p -> canAccess(p, orgId, userId, roles)).toList();
     }
 
     public Optional<Project> getById(String id) {
         if (id == null) return Optional.empty();
-        return projectRepo.findById(id).filter(p -> organizations.currentOrgId().equals(p.getOrganizationId()));
+        String orgId = organizations.currentOrgId();
+        String userId = organizations.currentUserId();
+        Set<Role> roles = organizations.membership(orgId, userId).getRoles();
+        return projectRepo.findById(id).filter(p -> canAccess(p, orgId, userId, roles));
+    }
+
+    private boolean canAccess(Project project, String orgId, String userId, Set<Role> roles) {
+        if (project == null || !orgId.equals(project.getOrganizationId())) return false;
+        return roles.contains(Role.Admin)
+                || roles.contains(Role.ProjectManager) && userId.equals(project.getProjectManagerId())
+                || roles.contains(Role.Developer) && project.getDeveloperIds() != null && project.getDeveloperIds().contains(userId)
+                || roles.contains(Role.Client) && userId.equals(project.getClientId());
     }
 
     public Project create(Project project) {
         log.debug("Creating project: {}", project.getName());
         project.setId(null);
         project.setOrganizationId(organizations.currentOrgId());
-        validateMember(project.getClientId());
-        validateMember(project.getProjectManagerId());
-        if (project.getDeveloperIds() != null) project.getDeveloperIds().forEach(this::validateMember);
+        validateMember(project.getClientId(), Role.Client);
+        validateMember(project.getProjectManagerId(), Role.ProjectManager);
+        if (project.getDeveloperIds() != null) project.getDeveloperIds().forEach(id -> validateMember(id, Role.Developer));
         Project saved = projectRepo.save(project);
         String projectId = saved.getId();
         log.debug("Project saved with ID: {}", projectId);
@@ -100,9 +115,9 @@ public class ProjectService {
         getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
         project.setId(id);
         project.setOrganizationId(organizations.currentOrgId());
-        validateMember(project.getClientId());
-        validateMember(project.getProjectManagerId());
-        if (project.getDeveloperIds() != null) project.getDeveloperIds().forEach(this::validateMember);
+        validateMember(project.getClientId(), Role.Client);
+        validateMember(project.getProjectManagerId(), Role.ProjectManager);
+        if (project.getDeveloperIds() != null) project.getDeveloperIds().forEach(userId -> validateMember(userId, Role.Developer));
         return projectRepo.save(project);
     }
 
@@ -149,7 +164,8 @@ public class ProjectService {
         return project;
     }
 
-    private void validateMember(String userId) {
-        if (userId != null && !userId.isBlank()) organizations.membership(organizations.currentOrgId(), userId);
+    private void validateMember(String userId, Role role) {
+        if (userId != null && !userId.isBlank() && !organizations.membership(organizations.currentOrgId(), userId).getRoles().contains(role))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Member does not have the required organization role");
     }
 }

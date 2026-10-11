@@ -3,6 +3,8 @@ package com.HiCaptain.demo.controller;
 import com.HiCaptain.demo.model.Project;
 import com.HiCaptain.demo.model.User;
 import com.HiCaptain.demo.service.ProjectService;
+import com.HiCaptain.demo.service.OrganizationService;
+import com.HiCaptain.demo.util.Role;
 import com.HiCaptain.demo.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -23,10 +25,12 @@ public class ProjectController {
 
     private final ProjectService svc;
     private final UserRepository userRepo;
+    private final OrganizationService organizations;
 
-    public ProjectController(ProjectService svc, UserRepository userRepo) {
+    public ProjectController(ProjectService svc, UserRepository userRepo, OrganizationService organizations) {
         this.svc = svc;
         this.userRepo = userRepo;
+        this.organizations = organizations;
     }
 
     @GetMapping
@@ -111,6 +115,8 @@ public class ProjectController {
         if ("ProjectManager".equals(currentUserRole) && (p.getProjectManagerId() == null || p.getProjectManagerId().isBlank())) {
             p.setProjectManagerId(currentUserId);
         }
+        if ("ProjectManager".equals(currentUserRole) && (!currentUserId.equals(p.getProjectManagerId()) || p.getClientId() != null && !p.getClientId().isBlank()))
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN, "Only an Admin can assign client or project manager access");
 
         // Set createdBy as "<Role> : <username>"
         String username = userRepo.findById(currentUserId)
@@ -126,19 +132,40 @@ public class ProjectController {
     @PostMapping("/{projectId}/developers/{developerId}")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<Project> addDeveloperToProject(@PathVariable String projectId, @PathVariable String developerId) {
-        Project updated = svc.addDeveloper(projectId, developerId);
+        Project updated = organizations.setProjectAccess(projectId, developerId, Role.Developer, true);
         return ResponseEntity.ok(updated);
+    }
+
+    public record AccessRequest(Role role, boolean enabled) {}
+
+    @PutMapping("/{projectId}/members/{userId}/access")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
+    public Project setAccess(@PathVariable String projectId, @PathVariable String userId, @RequestBody AccessRequest request) {
+        return organizations.setProjectAccess(projectId, userId, request.role(), request.enabled());
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<Project> update(@PathVariable String id, @Valid @RequestBody Project p) {
+        var existing = svc.getById(id).orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND));
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean admin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("Admin"));
+        if (!admin && (!auth.getName().equals(existing.getProjectManagerId())
+                || !java.util.Objects.equals(existing.getClientId(), p.getClientId())
+                || !java.util.Objects.equals(existing.getProjectManagerId(), p.getProjectManagerId())
+                || !java.util.Objects.equals(existing.getDeveloperIds(), p.getDeveloperIds())))
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN, "Only an Admin can change project access here");
         return ResponseEntity.ok(svc.update(id, p));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<Void> delete(@PathVariable String id) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean admin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("Admin"));
+        if (!admin && !auth.getName().equals(svc.getById(id)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND)).getProjectManagerId()))
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN);
         svc.delete(id);
         return ResponseEntity.noContent().build();
     }

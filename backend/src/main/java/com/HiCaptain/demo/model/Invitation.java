@@ -15,6 +15,8 @@ public class Invitation {
     private String organizationId;
     private String email;
     private Set<Role> roles;
+    private Set<String> projectIds;
+    private Role projectRole;
     @Indexed(unique = true) private String tokenHash;
     private Instant expiresAt;
     private Instant acceptedAt;

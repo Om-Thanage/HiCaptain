@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -8,439 +8,68 @@ import { projectService } from '@/services/project';
 import { userService } from '@/services/user';
 import { authService } from '@/services/auth';
 import { Project, User } from '@/types';
-import { ArrowLeft, Calendar, Users, AlertCircle, Search, UserCheck, Code } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, FolderKanban, UsersRound } from 'lucide-react';
 import toast from 'react-hot-toast';
+import styles from './new.module.css';
 
-interface ProjectFormData {
-  name: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  clientId: string;
-  developerIds: string[];
-  projectManagerId?: string;
-}
+const localDate = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+const initialDates = () => { const today = new Date(); const tentative = new Date(today); tentative.setDate(tentative.getDate() + 30); return { startDate: localDate(today), endDate: localDate(tentative) }; };
+type Form = { name: string; description: string; startDate: string; endDate: string; clientId: string; projectManagerId: string; developerIds: string[] };
 
 export default function NewProjectPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const currentUser = authService.getUserFromToken();
+  const admin = currentUser?.roles?.includes('Admin');
+  const canCreate = admin || currentUser?.roles?.includes('ProjectManager');
   const [users, setUsers] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
-  const [formData, setFormData] = useState<ProjectFormData>({
-    name: '',
-    description: '',
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
-    clientId: '',
-    developerIds: [],
-    projectManagerId: undefined
-  });
+  const [form, setForm] = useState<Form>(() => ({ name: '', description: '', ...initialDates(), clientId: '', projectManagerId: '', developerIds: [] }));
+  const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Fetch all users on component mount
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const u = authService.getUserFromToken();
-        setCurrentUser(u);
-        const allUsers = await userService.getAll();
-        setUsers(allUsers);
-        // If current user is a Project Manager, auto-assign as PM
-        if (u?.role === 'ProjectManager') {
-          setFormData(prev => ({ ...prev, projectManagerId: u.id }));
-        }
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        toast.error('Failed to load users');
-      } finally {
-        setLoadingUsers(false);
-      }
-    };
+  useEffect(() => { userService.getAll().then(setUsers).catch(() => toast.error('Could not load team members')); }, []);
+  const clients = users.filter(user => user.roles?.includes('Client'));
+  const managers = users.filter(user => user.roles?.includes('ProjectManager'));
+  const developers = users.filter(user => user.roles?.includes('Developer'));
 
-    fetchUsers();
-  }, []);
-
-  // Get clients (users with Client role)
-  const clients = users.filter(user => (user.roles || [user.role]).includes('Client'));
-  
-  // Get developers (users with Developer role)
-  const developers = users.filter(user => (user.roles || [user.role]).includes('Developer'));
-  
-  // Get selected client info
-  const selectedClient = clients.find(client => client.id === formData.clientId);
-  
-  // Get selected developers info
-  const selectedDevelopers = developers.filter(dev => formData.developerIds.includes(dev.id));
-
-  // Project Managers list (for Admin to select)
-  const projectManagers = users.filter(user => (user.roles || [user.role]).includes('ProjectManager'));
-
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'Project name is required';
-    }
-
-    if (!formData.description.trim()) {
-      newErrors.description = 'Project description is required';
-    }
-
-    if (!formData.startDate) {
-      newErrors.startDate = 'Start date is required';
-    }
-
-    if (!formData.endDate) {
-      newErrors.endDate = 'End date is required';
-    }
-
-    if (formData.startDate && formData.endDate && new Date(formData.endDate) <= new Date(formData.startDate)) {
-      newErrors.endDate = 'End date must be after start date';
-    }
-
-    if (!formData.clientId.trim()) {
-      newErrors.clientId = 'Client ID is required';
-    }
-
-    // For Admin, project manager selection is required
-    if (currentUser?.role === 'Admin' && !formData.projectManagerId) {
-      newErrors.projectManagerId = 'Project Manager is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    setLoading(true);
-    
+  function toggleDeveloper(id: string) { setForm(current => ({ ...current, developerIds: current.developerIds.includes(id) ? current.developerIds.filter(value => value !== id) : [...current.developerIds, id] })); }
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const issues: Record<string, string> = {};
+    if (!form.name.trim()) issues.name = 'Enter a project name';
+    if (!form.startDate) issues.startDate = 'Choose a start date';
+    if (!form.endDate || form.endDate <= form.startDate) issues.endDate = 'Choose an end date after the start date';
+    setErrors(issues);
+    if (Object.keys(issues).length) return;
+    setBusy(true);
     try {
-      const projectData: Omit<Project, 'id'> = {
-        ...formData,
-        status: 'pending',
-        taskIds: [],
-        feedbackIds: [],
-        invoiceIds: [],
-        meetingIds: [],
-        paymentIds: [],
-        timeLogIds: []
-      };
+      const data: Omit<Project, 'id'> = { name: form.name.trim(), description: form.description.trim(), startDate: form.startDate, endDate: form.endDate, status: 'pending', clientId: admin ? form.clientId : '', projectManagerId: admin ? form.projectManagerId : currentUser?.id, developerIds: form.developerIds, taskIds: [], feedbackIds: [], invoiceIds: [], meetingIds: [], paymentIds: [], timeLogIds: [] };
+      const project = await projectService.create(data);
+      toast.success('Project created');
+      router.push(`/projects/${project.id}`);
+    } catch (cause: any) { toast.error(cause.response?.data?.detail || 'Could not create project'); }
+    finally { setBusy(false); }
+  }
 
-      const newProject = await projectService.create(projectData);
-      toast.success('Project created successfully!');
-      router.push(`/projects/${newProject.id}`);
-    } catch (error) {
-      console.error('Error creating project:', error);
-      toast.error('Failed to create project. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const addDeveloper = (developerId: string) => {
-    if (developerId && !formData.developerIds.includes(developerId)) {
-      setFormData(prev => ({
-        ...prev,
-        developerIds: [...prev.developerIds, developerId]
-      }));
-    }
-  };
-
-  const removeDeveloper = (developerId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      developerIds: prev.developerIds.filter(id => id !== developerId)
-    }));
-  };
-
-  return (
-    <DashboardLayout>
-      <div className="max-w-3xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center space-x-4">
-          <Link
-            href="/projects"
-            className="p-2 rounded-lg text-slate-400 hover:bg-slate-700 transition-colors duration-200"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-100">Create New Project</h1>
-            <p className="text-slate-400 mt-2">Add a new project to your workspace</p>
-          </div>
-        </div>
-
-        {/* Form */}
-        <div className="bg-slate-800 rounded-lg shadow-sm border border-slate-700">
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {/* Project Name */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Project Name *
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter project name"
-              />
-              {errors.name && (
-                <p className="mt-1 text-sm text-red-400 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.name}
-                </p>
-              )}
-            </div>
-
-            {/* Project Description */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Description *
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                rows={4}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter project description"
-              />
-              {errors.description && (
-                <p className="mt-1 text-sm text-red-400 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.description}
-                </p>
-              )}
-            </div>
-
-            {/* Date Range */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  <Calendar className="w-4 h-4 inline mr-2" />
-                  Start Date *
-                </label>
-                <input
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {errors.startDate && (
-                  <p className="mt-1 text-sm text-red-400">{errors.startDate}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  <Calendar className="w-4 h-4 inline mr-2" />
-                  End Date *
-                </label>
-                <input
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {errors.endDate && (
-                  <p className="mt-1 text-sm text-red-400">{errors.endDate}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Client Selection */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                <UserCheck className="w-4 h-4 inline mr-2" />
-                Select Client *
-              </label>
-              {loadingUsers ? (
-                <div className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
-                  Loading clients...
-                </div>
-              ) : clients.length > 0 ? (
-                <select
-                  value={formData.clientId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, clientId: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select a client</option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.name} (ID: {client.id})
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
-                  No clients found. Please register clients first.
-                </div>
-              )}
-              {selectedClient && (
-                <div className="mt-2 p-3 bg-slate-700 rounded-lg border border-slate-600">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
-                      <span className="text-white font-medium text-sm">
-                        {selectedClient.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-slate-200 font-medium">{selectedClient.name}</p>
-                      <p className="text-slate-400 text-sm">Client ID: {selectedClient.id}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {errors.clientId && (
-                <p className="mt-1 text-sm text-red-400 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.clientId}
-                </p>
-              )}
-            </div>
-
-            {/* Project Manager Selection (Admin only) */}
-            {currentUser?.role === 'Admin' && (
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  <Users className="w-4 h-4 inline mr-2" />
-                  Select Project Manager *
-                </label>
-                {loadingUsers ? (
-                  <div className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
-                    Loading project managers...
-                  </div>
-                ) : projectManagers.length > 0 ? (
-                  <select
-                    value={formData.projectManagerId || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, projectManagerId: e.target.value || undefined }))}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select a project manager</option>
-                    {projectManagers.map((pm) => (
-                      <option key={pm.id} value={pm.id}>
-                        {pm.name} (ID: {pm.id})
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
-                    No project managers found. Please register a project manager first.
-                  </div>
-                )}
-                {errors.projectManagerId && (
-                  <p className="mt-1 text-sm text-red-400 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-1" />
-                    {errors.projectManagerId}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Developer Selection */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                <Code className="w-4 h-4 inline mr-2" />
-                Select Developers
-              </label>
-              {loadingUsers ? (
-                <div className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
-                  Loading developers...
-                </div>
-              ) : developers.length > 0 ? (
-                <div className="space-y-3">
-                  <div className="max-h-48 overflow-y-auto space-y-2 p-3 bg-slate-700 rounded-lg border border-slate-600">
-                    {developers.map((developer) => (
-                      <div key={developer.id} className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          id={`dev-${developer.id}`}
-                          checked={formData.developerIds.includes(developer.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              addDeveloper(developer.id);
-                            } else {
-                              removeDeveloper(developer.id);
-                            }
-                          }}
-                          className="rounded border-slate-500 bg-slate-600 text-blue-600 focus:ring-blue-500"
-                        />
-                        <label htmlFor={`dev-${developer.id}`} className="flex items-center space-x-3 cursor-pointer flex-1">
-                          <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                            <span className="text-white font-medium text-sm">
-                              {developer.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="text-slate-200 font-medium">{developer.name}</p>
-                            <p className="text-slate-400 text-sm">ID: {developer.id}</p>
-                          </div>
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Selected Developers Summary */}
-                  {selectedDevelopers.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-sm text-slate-300 mb-2">Selected Developers ({selectedDevelopers.length}):</p>
-                      <div className="space-y-2">
-                        {selectedDevelopers.map((developer) => (
-                          <div key={developer.id} className="flex items-center justify-between bg-slate-600 px-3 py-2 rounded-lg">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
-                                <span className="text-white font-medium text-xs">
-                                  {developer.name.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <span className="text-slate-200">{developer.name}</span>
-                              <span className="text-slate-400 text-sm">({developer.id})</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removeDeveloper(developer.id)}
-                              className="text-red-400 hover:text-red-300 transition-colors text-sm"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-400">
-                  No developers found. Please register developers first.
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex justify-end space-x-3 pt-6">
-              <Link
-                href="/projects"
-                className="px-4 py-2 text-slate-400 hover:text-slate-300 transition-colors"
-              >
-                Cancel
-              </Link>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Creating...' : 'Create Project'}
-              </button>
-            </div>
-          </form>
-        </div>
+  return <DashboardLayout><div className={styles.page}>
+    <Link href="/projects" className={styles.back}><ArrowLeft size={16} /> All projects</Link>
+    <div className={styles.heading}><span className={styles.kicker}>A FRESH START</span><h1>Create a new project.</h1><p>Set the plan now. You can refine the team and timeline later.</p></div>
+    {!canCreate ? <div className={styles.card}>Only organization admins and project managers can create projects.</div> : <form onSubmit={submit} className={styles.layout}>
+      <div className={styles.main}>
+        <section className={styles.card}><div className={styles.sectionHeading}><span className={styles.icon}><FolderKanban size={20} /></span><div><span className={styles.kicker}>THE BASICS</span><h2>Project details</h2></div></div>
+          <label className={styles.field}>Project name <input value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} placeholder="e.g. Website redesign" maxLength={120} required />{errors.name && <small role="alert">{errors.name}</small>}</label>
+          <label className={styles.field}>Description <textarea value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} placeholder="What will this project deliver?" rows={4} /></label>
+        </section>
+        <section className={styles.card}><div className={styles.sectionHeading}><span className={`${styles.icon} ${styles.yellow}`}><CalendarDays size={20} /></span><div><span className={styles.kicker}>MAKE A PLAN</span><h2>Timeline</h2></div></div><p className={styles.help}>Starts today, with a tentative end date 30 days later. Change either date as needed.</p>
+          <div className={styles.dates}><label className={styles.field}>Start date<input type="date" required value={form.startDate} onChange={event => setForm({ ...form, startDate: event.target.value })} />{errors.startDate && <small role="alert">{errors.startDate}</small>}</label><label className={styles.field}>Tentative end date<input type="date" required min={form.startDate} value={form.endDate} onChange={event => setForm({ ...form, endDate: event.target.value })} />{errors.endDate && <small role="alert">{errors.endDate}</small>}</label></div>
+        </section>
+        <section className={styles.card}><div className={styles.sectionHeading}><span className={`${styles.icon} ${styles.lime}`}><UsersRound size={20} /></span><div><span className={styles.kicker}>WORK TOGETHER</span><h2>Project team</h2></div></div>
+          {admin && <div className={styles.dates}><label className={styles.field}>Project manager<select value={form.projectManagerId} onChange={event => setForm({ ...form, projectManagerId: event.target.value })}><option value="">Assign later</option>{managers.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label><label className={styles.field}>Client<select value={form.clientId} onChange={event => setForm({ ...form, clientId: event.target.value })}><option value="">Assign later</option>{clients.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label></div>}
+          {!admin && <p className={styles.help}>You will be the project manager. An admin can assign a client later.</p>}
+          <span className={styles.fieldTitle}>Developers <small>({form.developerIds.length} selected)</small></span>
+          {developers.length ? <div className={styles.developers}>{developers.map(user => <label key={user.id} className={styles.developer}><input type="checkbox" checked={form.developerIds.includes(user.id)} onChange={() => toggleDeveloper(user.id)} /><span className={styles.avatar}>{user.name.charAt(0).toUpperCase()}</span><span className={styles.devName}>{user.name}<small>{user.email}</small></span><span className={styles.check}><Check size={15} /></span></label>)}</div> : <p className={styles.help}>No developers in this organization yet. Invite one from the team page.</p>}
+        </section>
       </div>
-    </DashboardLayout>
-  );
+      <aside className={styles.side}><div className={styles.note}><span className={styles.kicker}>READY WHEN YOU ARE</span><h2>A good plan starts here.</h2><p>Your project begins with a clear team and a flexible deadline. You can manage project access after creating it.</p></div><div className={styles.actions}><button disabled={busy} type="submit">{busy ? 'Creating…' : 'Create project'}</button><Link href="/projects">Cancel</Link></div></aside>
+    </form>}
+  </div></DashboardLayout>;
 }

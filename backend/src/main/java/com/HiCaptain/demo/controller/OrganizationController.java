@@ -25,7 +25,7 @@ public class OrganizationController {
     }
     public record OrganizationView(String id, String name, Set<Role> roles) {}
     public record NameRequest(String name) {}
-    public record InviteRequest(String email, Set<Role> roles) {}
+    public record InviteRequest(String email, Set<Role> roles, Set<String> projectIds, Role projectRole) {}
     public record RolesRequest(Set<Role> roles) {}
     public record TokenRequest(String token) {}
 
@@ -53,10 +53,10 @@ public class OrganizationController {
     public List<OrganizationService.MemberView> members(@PathVariable String id) { return organizations.members(id); }
 
     @PostMapping("/{id}/invitations")
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public OrganizationService.InvitationView invite(@PathVariable String id, @RequestBody InviteRequest request) {
         requireActive(id);
-        return organizations.invite(id, request.email(), request.roles());
+        return organizations.invite(id, request.email(), request.roles(), request.projectIds(), request.projectRole());
     }
 
     @PostMapping("/invitations/accept")

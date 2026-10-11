@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { projectService } from '@/services/project';
+import { authService } from '@/services/auth';
 import { taskService } from '@/services/task';
 import { Project, Task } from '@/types';
 import {
@@ -98,6 +99,8 @@ export default function ProjectDetailPage() {
   const completedTasks = tasks.filter((task) => task.status === 'completed').length;
   const totalTasks = tasks.length;
   const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const user = authService.getUserFromToken();
+  const canManageAccess = user?.roles?.includes('Admin') || (user?.roles?.includes('ProjectManager') && project.projectManagerId === user.id);
 
   return (
     <DashboardLayout>
@@ -123,6 +126,7 @@ export default function ProjectDetailPage() {
               <p className="text-slate-400 mt-1 max-w-xl">{project.description}</p>
             </div>
           </div>
+          {canManageAccess && <Link href={`/projects/${project.id}/access`} className="hc-pill-button dark">Manage access</Link>}
         </div>
 
         {/* Project Stats */}

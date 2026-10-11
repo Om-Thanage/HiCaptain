@@ -784,6 +784,8 @@ For support and questions:
 
 - `POST /auth/register` accepts `name`, `email`, `password`, and `organizationName`. It creates an organization and makes the registrant its Admin.
 - Admins invite people in the **Users** page. An existing account is added to that organization immediately; a new account receives a seven-day, single-use email link.
+- Invitations can include `projectIds` and one `projectRole` (`Developer`, `Client`, or `ProjectManager`). Admins may select any eligible project role. A project manager may invite only a Developer to projects they manage. Selected project access is applied immediately for existing accounts or when a new account accepts the link.
+- `PUT /projects/{projectId}/members/{userId}/access` accepts `{ "role": "Developer", "enabled": true }`. Admins can change any eligible project role; the assigned project manager can change Developer access on that project. Removing an organization role or member also removes the corresponding project access.
 - Invited people without an account register through `/invite?token=...`. Signed-in people can accept an invitation sent to their account's email address.
 - A user can have multiple roles in each organization and can switch between organizations from the dashboard header. Access tokens select one active organization; the API checks membership and roles on every request.
 - Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, and `FRONTEND_URL` before sending invitations. The server returns an error when SMTP delivery fails. Use a verified sender address and set `FRONTEND_URL` to the public frontend origin.
