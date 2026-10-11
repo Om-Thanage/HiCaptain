@@ -8,7 +8,7 @@ import { projectService } from '@/services/project';
 import { userService } from '@/services/user';
 import { authService } from '@/services/auth';
 import { Project, User } from '@/types';
-import { ArrowLeft, CalendarDays, Check, FolderKanban, UsersRound } from 'lucide-react';
+import { CalendarDays, Check, FolderKanban, UsersRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import styles from './new.module.css';
 
@@ -51,7 +51,6 @@ export default function NewProjectPage() {
   }
 
   return <DashboardLayout><div className={styles.page}>
-    <Link href="/projects" className={styles.back}><ArrowLeft size={16} /> All projects</Link>
     <div className={styles.heading}><span className={styles.kicker}>A FRESH START</span><h1>Create a new project.</h1><p>Set the plan now. You can refine the team and timeline later.</p></div>
     {!canCreate ? <div className={styles.card}>Only organization admins and project managers can create projects.</div> : <form onSubmit={submit} className={styles.layout}>
       <div className={styles.main}>

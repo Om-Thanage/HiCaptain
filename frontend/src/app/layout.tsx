@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import DashboardLayout from '@/components/layout/DashboardLayout';
 
 export const metadata: Metadata = {
   title: "HiCaptain - Project Management Platform",
@@ -18,7 +19,7 @@ export default function RootLayout({
         className="font-sans antialiased"
         suppressHydrationWarning={true}
       >
-        {children}
+        <DashboardLayout>{children}</DashboardLayout>
         <Toaster 
           position="top-right"
           toastOptions={{
