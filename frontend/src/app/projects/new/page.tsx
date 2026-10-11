@@ -8,7 +8,7 @@ import { projectService } from '@/services/project';
 import { userService } from '@/services/user';
 import { authService } from '@/services/auth';
 import { Project, User } from '@/types';
-import { CalendarDays, Check, FolderKanban, UsersRound } from 'lucide-react';
+import { CalendarDays, Check, Layers3, UsersRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import styles from './new.module.css';
 
@@ -54,7 +54,7 @@ export default function NewProjectPage() {
     <div className={styles.heading}><span className={styles.kicker}>A FRESH START</span><h1>Create a new project.</h1><p>Set the plan now. You can refine the team and timeline later.</p></div>
     {!canCreate ? <div className={styles.card}>Only organization admins and project managers can create projects.</div> : <form onSubmit={submit} className={styles.layout}>
       <div className={styles.main}>
-        <section className={styles.card}><div className={styles.sectionHeading}><span className={styles.icon}><FolderKanban size={20} /></span><div><span className={styles.kicker}>THE BASICS</span><h2>Project details</h2></div></div>
+        <section className={styles.card}><div className={styles.sectionHeading}><span className={styles.icon}><Layers3 size={20} /></span><div><span className={styles.kicker}>THE BASICS</span><h2>Project details</h2></div></div>
           <label className={styles.field}>Project name <input value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} placeholder="e.g. Website redesign" maxLength={120} required />{errors.name && <small role="alert">{errors.name}</small>}</label>
           <label className={styles.field}>Description <textarea value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} placeholder="What will this project deliver?" rows={4} /></label>
         </section>
