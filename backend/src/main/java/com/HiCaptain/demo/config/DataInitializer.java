@@ -390,9 +390,7 @@ public class DataInitializer {
         project.setDeveloperIds(developerIds);
         project.setTaskIds(new ArrayList<>());
         project.setFeedbackIds(new ArrayList<>());
-        project.setInvoiceIds(new ArrayList<>());
         project.setMeetingIds(new ArrayList<>());
-        project.setPaymentIds(new ArrayList<>());
         project.setTimeLogIds(new ArrayList<>());
         return projectRepository.save(project);
     }

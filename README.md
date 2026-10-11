@@ -44,11 +44,9 @@ HiCaptain is a modern, full-stack project management system designed for softwar
 ### Key Highlights
 
 **Role-Based Access Control** - Admin, Project Manager, Developer, and Client roles with granular permissions  
-**Real-Time Analytics** - Track project progress, team performance, and resource allocation  
 **GitHub Integration** - Sync repositories, track commits, and monitor pull requests  
 **Google Calendar Sync** - Manage meetings and deadlines seamlessly  
 **Multi-Channel Notifications** - Email, SMS, Push, and In-App notifications  
-**Invoice & Payment Management** - Generate invoices and track payments  
 **Time Tracking** - Log hours spent on tasks and projects  
 **Responsive Design** - Works on desktop, tablet, and mobile devices  
 
@@ -84,14 +82,6 @@ HiCaptain is a modern, full-stack project management system designed for softwar
 - Generate time reports
 - Export time logs
 
-#### Analytics & Reporting
-- Real-time project analytics
-- Developer productivity metrics
-- Project progress tracking
-- Task completion rates
-- Time utilization reports
-
-
 ### Integration Features
 
 ####  GitHub Integration
@@ -110,12 +100,6 @@ HiCaptain is a modern, full-stack project management system designed for softwar
 - Two-way sync
 
 ### Advanced Features
-
-####  Financial Management
-- Invoice generation
-- Payment tracking
-- Payment status management
-- Client billing
 
 ####  Feedback System
 - Client feedback collection
@@ -162,7 +146,6 @@ HiCaptain is a modern, full-stack project management system designed for softwar
 | **React Hook Form** | 7.53.2 | Form validation |
 | **Zod** | 3.23.8 | Schema validation |
 | **Axios** | 1.7.7 | HTTP client |
-| **Recharts** | 2.12.7 | Data visualization |
 | **Framer Motion** | 11.18.2 | Animations |
 | **Lucide React** | 0.454.0 | Icon library |
 
@@ -193,8 +176,8 @@ HiCaptain is a modern, full-stack project management system designed for softwar
 │        (Spring Boot Backend - Controllers, Services)         │
 ├──────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │   Security  │  │  Integration │  │  Analytics   │      │
-│  │   (JWT)     │  │  (GitHub/GCal)│  │  Service     │      │
+│  │   Security  │  │  Integration │  │  Projects    │      │
+│  │   (JWT)     │  │  (GitHub/GCal)│  │  & Tasks     │      │
 │  └─────────────┘  └──────────────┘  └──────────────┘      │
 └────────────────────┬────────────────────────────────────────┘
                      │ MongoDB Driver
@@ -526,11 +509,6 @@ Interactive API documentation is available at: http://localhost:8080/swagger-ui.
 - `PUT /api/tasks/{id}` - Update task (Admin, PM, Dev)
 - `DELETE /api/tasks/{id}` - Delete task (Admin, PM only)
 
-#### Analytics
-- `GET /api/analytics/overview` - Get analytics overview
-- `GET /api/analytics/project/{projectId}` - Get project analytics
-- `GET /api/analytics/developer/{userId}` - Get developer analytics
-
 #### GitHub
 - `GET /api/github/repositories` - Get user repositories
 - `GET /api/github/commits/{repoName}` - Get repository commits
@@ -609,7 +587,6 @@ hicaptain/
 │   │   │   ├── auth/                 # Authentication pages
 │   │   │   ├── dashboard/            # Dashboard pages
 │   │   │   ├── projects/             # Project pages
-│   │   │   ├── analytics/            # Analytics pages
 │   │   │   └── layout.tsx            # Root layout
 │   │   ├── components/               # React components
 │   │   │   ├── dashboard/            # Dashboard components

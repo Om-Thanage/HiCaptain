@@ -136,8 +136,6 @@ export default function NotificationsPage() {
         return <FileText className="w-5 h-5 text-blue-400" />;
       case 'meeting':
         return <Calendar className="w-5 h-5 text-purple-400" />;
-      case 'payment':
-        return <CheckCircle className="w-5 h-5 text-green-400" />;
       case 'system':
         return <Settings className="w-5 h-5 text-slate-400" />;
       default:

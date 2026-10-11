@@ -29,7 +29,6 @@ public class TimeLog {
     private LocalDateTime endTime;
     private String description;
     
-    // Additional fields for compatibility with analytics
     private Integer hoursLogged;
     private Integer minutesLogged;
 }

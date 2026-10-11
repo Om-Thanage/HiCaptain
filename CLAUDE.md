@@ -1,15 +1,15 @@
 # CLAUDE.md - HiCaptain Project Guide
 
 ## Project Overview
-HiCaptain is a full-stack application with a Java Spring Boot backend and a Next.js frontend. It integrates with GitHub and Google Calendar and features project management (Kanban), analytics, invoicing, and user management.
+HiCaptain is a full-stack application with a Java Spring Boot backend and a Next.js frontend. It integrates with GitHub and Google Workspace and features project management (Kanban), scheduling, project storage, and user management.
 
 ## Core Purpose
-Centralized product/project management tool solving fragmentation across scheduling, Git integration, billing, and client feedback tools. Target users (per use-case diagram): Client, Project Manager, Tech Worker, Admin — small dev agencies/teams managing client projects end-to-end (tasks, GitHub sync, invoicing, support tickets) in one place.
+Centralized product/project management tool for scheduling, Git integration, tasks, and client feedback. Target users: Client, Project Manager, Developer, and Admin.
 
 ## Tech Stack
 - **Backend:** Java 17, Spring Boot 3.5.7, MongoDB, Spring Security, JWT, Maven.
-- **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS, Zustand, Recharts, Axios.
-- **Integrations:** GitHub API, Google Calendar API.
+- **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS, Zustand, Axios.
+- **Integrations:** GitHub API and Google Calendar, Drive, and Tasks APIs.
 
 ## Infrastructure
 - **Database:** MongoDB Atlas.

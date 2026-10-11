@@ -42,7 +42,7 @@ export default function NewProjectPage() {
     if (Object.keys(issues).length) return;
     setBusy(true);
     try {
-      const data: Omit<Project, 'id'> = { name: form.name.trim(), description: form.description.trim(), startDate: form.startDate, endDate: form.endDate, status: 'pending', clientId: admin ? form.clientId : '', projectManagerId: admin ? form.projectManagerId : currentUser?.id, developerIds: form.developerIds, taskIds: [], feedbackIds: [], invoiceIds: [], meetingIds: [], paymentIds: [], timeLogIds: [] };
+      const data: Omit<Project, 'id'> = { name: form.name.trim(), description: form.description.trim(), startDate: form.startDate, endDate: form.endDate, status: 'pending', clientId: admin ? form.clientId : '', projectManagerId: admin ? form.projectManagerId : currentUser?.id, developerIds: form.developerIds, taskIds: [], feedbackIds: [], meetingIds: [], timeLogIds: [] };
       const project = await projectService.create(data);
       toast.success('Project created');
       router.push(`/projects/${project.id}`);

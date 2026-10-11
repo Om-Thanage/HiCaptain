@@ -37,9 +37,7 @@ export interface Project {
   taskIds: string[];
   createdBy?: string;
   feedbackIds: string[];
-  invoiceIds: string[];
   meetingIds: string[];
-  paymentIds: string[];
   timeLogIds: string[];
 }
 
@@ -82,16 +80,6 @@ export interface Feedback {
   createdAt: string;
 }
 
-export interface Invoice {
-  id: string;
-  amount: number;
-  status: string;
-  dueDate: string;
-  projectId: string;
-  clientId: string;
-  createdAt: string;
-}
-
 export interface Meeting {
   id: string;
   title: string;
@@ -100,15 +88,6 @@ export interface Meeting {
   duration: number;
   projectId: string;
   participantIds: string[];
-}
-
-export interface Payment {
-  id: string;
-  amount: number;
-  status: string;
-  paymentDate: string;
-  invoiceId: string;
-  clientId: string;
 }
 
 export interface TimeLog {

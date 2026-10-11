@@ -1,6 +1,6 @@
 # HiCaptain Backend
 
-A comprehensive project management system built with Spring Boot, featuring GitHub and Google Calendar integration, JWT authentication, and real-time analytics.
+A project management system built with Spring Boot, featuring GitHub and Google Workspace integration and JWT authentication.
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.7-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/)
@@ -36,13 +36,11 @@ A comprehensive project management system built with Spring Boot, featuring GitH
 - **Project Management** - Create, update, and track projects with team assignments
 - **Task Management** - Comprehensive task tracking with deadlines, priorities, and progress
 - **Time Logging** - Track time spent on tasks and projects
-- **Analytics Dashboard** - Real-time project and developer analytics
 - **Notifications** - Multi-channel notification system (Email, SMS, Push, In-App)
 
 ### Integrations
 - **GitHub Integration** - OAuth authentication, repository management, commit tracking, PR monitoring
 - **Google Calendar** - Event synchronization, meeting scheduling
-- **Payment Processing** - Invoice generation and payment tracking
 
 ### Advanced Features
 - **JWT Authentication** - Secure token-based authentication
@@ -398,22 +396,11 @@ backend/
 | GET | `/github/repos/{owner}/{repo}/commits` | Get repository commits | Yes |
 | GET | `/github/repos/{owner}/{repo}/pullrequests` | Get pull requests | Yes |
 
-### Analytics
-
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| GET | `/analytics/overview` | Get analytics overview | Yes |
-| GET | `/analytics/project/{projectId}` | Get project analytics | Yes |
-| GET | `/analytics/developer/{developerId}` | Get developer analytics | Yes |
-| GET | `/analytics/task-distribution` | Get task distribution | Yes |
-
 ### Additional Features
 
 - **Time Logs** - `/timelogs/*`
 - **Meetings** - `/meetings/*`
 - **Notifications** - `/notifications/*`
-- **Invoices** - `/invoices/*`
-- **Payments** - `/payments/*`
 - **Feedback** - `/feedback/*`
 - **Google Calendar** - `/calendar/*`
 
@@ -634,7 +621,7 @@ Check:
 | **Admin** | Full access to all endpoints |
 | **Project Manager** | Create/manage projects, assign tasks, view all project data |
 | **Developer** | View assigned projects/tasks, update task status, log time |
-| **Client** | View their projects, provide feedback, view invoices |
+| **Client** | View their projects and provide feedback |
 
 ---
 

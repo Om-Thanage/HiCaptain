@@ -48,8 +48,6 @@ public class Project {
     // ...existing code...
     // New aggregates maintained automatically by services
     private List<String> feedbackIds;
-    private List<String> invoiceIds;
     private List<String> meetingIds;
-    private List<String> paymentIds;
     private List<String> timeLogIds;
 }

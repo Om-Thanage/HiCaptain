@@ -160,7 +160,6 @@ export default function CreateNotificationModal({ isOpen, onClose, onNotificatio
     { value: 'task', label: 'Task' },
     { value: 'project', label: 'Project' },
     { value: 'meeting', label: 'Meeting' },
-    { value: 'payment', label: 'Payment' },
     { value: 'announcement', label: 'Announcement' },
     { value: 'reminder', label: 'Reminder' },
   ];

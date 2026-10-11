@@ -5,7 +5,7 @@ export interface NotificationData {
   userId: string;
   title: string;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error' | 'task' | 'meeting' | 'payment' | 'system';
+  type: 'info' | 'success' | 'warning' | 'error' | 'task' | 'meeting' | 'system';
   category: string;
   source: string;
   actionUrl?: string;
@@ -221,7 +221,6 @@ export const notificationService = {
       error: '❌',
       task: '📋',
       meeting: '📅',
-      payment: '💰',
       system: '⚙️',
       info: 'ℹ️'
     };
@@ -235,7 +234,6 @@ export const notificationService = {
       error: { bg: 'bg-red-900/10', border: 'border-l-red-500', text: 'text-red-400' },
       task: { bg: 'bg-blue-900/10', border: 'border-l-blue-500', text: 'text-blue-400' },
       meeting: { bg: 'bg-purple-900/10', border: 'border-l-purple-500', text: 'text-purple-400' },
-      payment: { bg: 'bg-green-900/10', border: 'border-l-green-500', text: 'text-green-400' },
       system: { bg: 'bg-slate-900/10', border: 'border-l-slate-500', text: 'text-slate-400' },
       info: { bg: 'bg-blue-900/10', border: 'border-l-blue-500', text: 'text-blue-400' }
     };
