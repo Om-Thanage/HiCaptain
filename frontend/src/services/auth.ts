@@ -8,19 +8,26 @@ export const authService = {
     return response.data;
   },
 
-  async register(userData: Omit<User, 'id'>): Promise<User> {
+  async register(userData: { name: string; email: string; password: string; organizationName: string }): Promise<AuthResponse> {
     const response = await api.post('/auth/register', userData);
     return response.data;
   },
 
   setToken(token: string) {
-    Cookies.set('token', token, { expires: 7 }); // 7 days
+    const expiry = this.getClaims<{ exp: number }>(token).exp;
+    Cookies.set('token', token, { expires: new Date(expiry * 1000), sameSite: 'lax', secure: window.location.protocol === 'https:' });
     localStorage.setItem('token', token);
   },
 
   getToken(): string | null {
     if (typeof window === 'undefined') return null;
-    return Cookies.get('token') || localStorage.getItem('token');
+    const token = Cookies.get('token') || localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      if (this.getClaims<{ exp: number }>(token).exp * 1000 > Date.now()) return token;
+    } catch {}
+    this.clearToken();
+    return null;
   },
 
   clearToken() {
@@ -39,6 +46,8 @@ export const authService = {
         id: payload.userId || '',
         name: payload.sub || '',
         role: payload.role || 'Developer',
+        roles: payload.roles || [payload.role || 'Developer'],
+        organizationId: payload.organizationId,
         email: payload.email || '',
         taskIds: [],
       };

@@ -66,6 +66,7 @@ public class GitHubController {
             @RequestParam String repoName,
             @RequestParam(defaultValue = "main") String branch,
             @RequestParam(defaultValue = "50") int limit) {
+        gitHubService.requireCurrentRepository(owner, repoName);
         
         return gitHubService.getCommits(owner, repoName, branch, limit);
     }
@@ -76,6 +77,7 @@ public class GitHubController {
             @RequestParam String owner,
             @RequestParam String repoName,
             @RequestParam(defaultValue = "open") String state) {
+        gitHubService.requireCurrentRepository(owner, repoName);
         
         return gitHubService.getPullRequests(owner, repoName, state);
     }
@@ -85,6 +87,7 @@ public class GitHubController {
     public Mono<JsonNode> getContributorStats(
             @RequestParam String owner,
             @RequestParam String repoName) {
+        gitHubService.requireCurrentRepository(owner, repoName);
         
         return gitHubService.getRepositoryStats(owner, repoName);
     }
@@ -94,6 +97,7 @@ public class GitHubController {
     public Mono<JsonNode> getLanguageStats(
             @RequestParam String owner,
             @RequestParam String repoName) {
+        gitHubService.requireCurrentRepository(owner, repoName);
         
         return gitHubService.getLanguagesStats(owner, repoName);
     }
@@ -104,6 +108,7 @@ public class GitHubController {
             @RequestParam String owner,
             @RequestParam String repoName,
             @RequestParam(defaultValue = "open") String state) {
+        gitHubService.requireCurrentRepository(owner, repoName);
         
         return gitHubService.getIssues(owner, repoName, state);
     }
@@ -113,6 +118,7 @@ public class GitHubController {
     public Flux<JsonNode> getBranches(
             @RequestParam String owner,
             @RequestParam String repoName) {
+        gitHubService.requireCurrentRepository(owner, repoName);
         
         return gitHubService.getBranches(owner, repoName);
     }
@@ -123,6 +129,7 @@ public class GitHubController {
             @RequestParam String owner,
             @RequestParam String repoName,
             @RequestParam String webhookUrl) {
+        gitHubService.requireCurrentRepository(owner, repoName);
         
         return gitHubService.createWebhook(owner, repoName, webhookUrl)
                 .map(ResponseEntity::ok);

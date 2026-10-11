@@ -21,23 +21,31 @@ public class ProjectService {
     private final ProjectRepository projectRepo;
     private final TaskRepository taskRepo;
     private final UserRepository userRepo;
+    private final OrganizationService organizations;
 
-    public ProjectService(ProjectRepository projectRepo, TaskRepository taskRepo, UserRepository userRepo) {
+    public ProjectService(ProjectRepository projectRepo, TaskRepository taskRepo, UserRepository userRepo, OrganizationService organizations) {
         this.projectRepo = projectRepo;
         this.taskRepo = taskRepo;
         this.userRepo = userRepo;
+        this.organizations = organizations;
     }
 
     public List<Project> getAll() {
-        return projectRepo.findAll();
+        return projectRepo.findAll().stream().filter(p -> organizations.currentOrgId().equals(p.getOrganizationId())).toList();
     }
 
     public Optional<Project> getById(String id) {
-        return projectRepo.findById(id);
+        if (id == null) return Optional.empty();
+        return projectRepo.findById(id).filter(p -> organizations.currentOrgId().equals(p.getOrganizationId()));
     }
 
     public Project create(Project project) {
         log.debug("Creating project: {}", project.getName());
+        project.setId(null);
+        project.setOrganizationId(organizations.currentOrgId());
+        validateMember(project.getClientId());
+        validateMember(project.getProjectManagerId());
+        if (project.getDeveloperIds() != null) project.getDeveloperIds().forEach(this::validateMember);
         Project saved = projectRepo.save(project);
         String projectId = saved.getId();
         log.debug("Project saved with ID: {}", projectId);
@@ -89,15 +97,18 @@ public class ProjectService {
     }
 
     public Project update(String id, Project project) {
-        if (!projectRepo.existsById(id))
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");
+        getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
         project.setId(id);
+        project.setOrganizationId(organizations.currentOrgId());
+        validateMember(project.getClientId());
+        validateMember(project.getProjectManagerId());
+        if (project.getDeveloperIds() != null) project.getDeveloperIds().forEach(this::validateMember);
         return projectRepo.save(project);
     }
 
     public void delete(String id) {
         log.debug("Attempting to delete project: {}", id);
-        Optional<Project> projectOpt = projectRepo.findById(id);
+        Optional<Project> projectOpt = getById(id);
         if (projectOpt.isEmpty()) {
             log.warn("Project not found for deletion: {}", id);
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");
@@ -112,13 +123,13 @@ public class ProjectService {
     }
 
     public Project addDeveloper(String projectId, String developerId) {
-        Project project = projectRepo.findById(projectId)
+        Project project = getById(projectId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
 
         User developer = userRepo.findById(developerId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Developer not found"));
 
-        if (developer.getRole() == null || !"Developer".equals(developer.getRole().toString())) {
+        if (!organizations.membership(organizations.currentOrgId(), developerId).getRoles().contains(com.HiCaptain.demo.util.Role.Developer)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User is not a Developer");
         }
 
@@ -136,5 +147,9 @@ public class ProjectService {
         userRepo.save(developer);
 
         return project;
+    }
+
+    private void validateMember(String userId) {
+        if (userId != null && !userId.isBlank()) organizations.membership(organizations.currentOrgId(), userId);
     }
 }

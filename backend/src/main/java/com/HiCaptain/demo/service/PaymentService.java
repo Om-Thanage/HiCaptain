@@ -15,6 +15,7 @@ import java.util.Optional;
 
 @Service
 public class PaymentService {
+    @org.springframework.beans.factory.annotation.Autowired private InvoiceService invoices;
     private final PaymentRepository repo;
     private final InvoiceRepository invoiceRepo;
     private final ProjectRepository projectRepo;
@@ -25,11 +26,13 @@ public class PaymentService {
         this.projectRepo = projectRepo;
     }
 
-    public List<Payment> getAll() { return repo.findAll(); }
+    public List<Payment> getAll() { return repo.findAll().stream().filter(p -> invoices.getById(p.getInvoiceId()).isPresent()).toList(); }
 
-    public Optional<Payment> getById(String id) { return repo.findById(id); }
+    public Optional<Payment> getById(String id) { return repo.findById(id).filter(p -> invoices.getById(p.getInvoiceId()).isPresent()); }
 
     public Payment create(Payment p) {
+        requireInvoice(p.getInvoiceId());
+        p.setId(null);
         Payment saved = repo.save(p);
         // Maintain invoice.paymentIds
         if (saved.getInvoiceId() != null) {
@@ -59,11 +62,12 @@ public class PaymentService {
     }
 
     public Payment update(String id, Payment p) {
-        Payment existing = repo.findById(id)
+        Payment existing = getById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found"));
 
         String oldInvoiceId = existing.getInvoiceId();
         String newInvoiceId = p.getInvoiceId();
+        requireInvoice(newInvoiceId);
 
         p.setId(id);
         Payment saved = repo.save(p);
@@ -117,7 +121,7 @@ public class PaymentService {
     }
 
     public void delete(String id) {
-        Payment existing = repo.findById(id)
+        Payment existing = getById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payment not found"));
 
         repo.deleteById(id);
@@ -140,5 +144,9 @@ public class PaymentService {
                 }
             });
         }
+    }
+
+    private void requireInvoice(String id) {
+        invoices.getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice not found"));
     }
 }

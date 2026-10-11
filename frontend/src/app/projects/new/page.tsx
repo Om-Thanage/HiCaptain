@@ -62,10 +62,10 @@ export default function NewProjectPage() {
   }, []);
 
   // Get clients (users with Client role)
-  const clients = users.filter(user => user.role === 'Client');
+  const clients = users.filter(user => (user.roles || [user.role]).includes('Client'));
   
   // Get developers (users with Developer role)
-  const developers = users.filter(user => user.role === 'Developer');
+  const developers = users.filter(user => (user.roles || [user.role]).includes('Developer'));
   
   // Get selected client info
   const selectedClient = clients.find(client => client.id === formData.clientId);
@@ -74,7 +74,7 @@ export default function NewProjectPage() {
   const selectedDevelopers = developers.filter(dev => formData.developerIds.includes(dev.id));
 
   // Project Managers list (for Admin to select)
-  const projectManagers = users.filter(user => user.role === 'ProjectManager');
+  const projectManagers = users.filter(user => (user.roles || [user.role]).includes('ProjectManager'));
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};

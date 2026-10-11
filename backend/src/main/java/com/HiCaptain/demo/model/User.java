@@ -13,6 +13,8 @@ import java.util.List;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.springframework.data.mongodb.core.index.Indexed;
 
 @Document(collection = "users")
 @Data
@@ -28,10 +30,12 @@ public class User {
     
     @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
+    @Indexed(unique = true)
     private String email;
     
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
     
     private Role role;

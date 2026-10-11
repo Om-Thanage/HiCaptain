@@ -33,6 +33,7 @@ public class GoogleCalendarService {
     private JsonFactory jsonFactory;
 
     private static final String APPLICATION_NAME = "HiCaptain";
+    @Autowired private JwtService jwtService;
 
     public String getAuthorizationUrl(String userId) {
         if (flow == null) {
@@ -40,7 +41,7 @@ public class GoogleCalendarService {
         }
         return flow.newAuthorizationUrl()
                 .setRedirectUri("http://localhost:8080/api/google-calendar/auth/callback")
-                .setState(userId)
+                .setState(jwtService.generateOAuthState(userId, "google"))
                 .build();
     }
 

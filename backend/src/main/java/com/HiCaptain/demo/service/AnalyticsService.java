@@ -12,6 +12,12 @@ import java.util.stream.Collectors;
 
 @Service
 public class AnalyticsService {
+    @Autowired private ProjectService projects;
+    @Autowired private TaskService tasks;
+    @Autowired private TimeLogService timeLogs;
+    @Autowired private InvoiceService invoices;
+    @Autowired private MeetingService meetings;
+    @Autowired private OrganizationService organizations;
 
     @Autowired
     private ProjectRepository projectRepository;
@@ -41,10 +47,10 @@ public class AnalyticsService {
         Map<String, Object> analytics = new HashMap<>();
         
         // Basic counts
-        analytics.put("totalProjects", projectRepository.count());
-        analytics.put("totalTasks", taskRepository.count());
-        analytics.put("totalUsers", userRepository.count());
-        analytics.put("totalMeetings", meetingRepository.count());
+        analytics.put("totalProjects", projects.getAll().size());
+        analytics.put("totalTasks", tasks.getAll().size());
+        analytics.put("totalUsers", organizations.members(organizations.currentOrgId()).size());
+        analytics.put("totalMeetings", meetings.getAll().size());
         
         
         // Task statistics
@@ -80,7 +86,7 @@ public class AnalyticsService {
 
     private Map<String, Long> getTaskStatistics() {
         Map<String, Long> stats = new HashMap<>();
-        List<Task> allTasks = taskRepository.findAll();
+        List<Task> allTasks = tasks.getAll();
         
         stats.put("total", (long) allTasks.size());
         stats.put("completed", allTasks.stream().filter(task -> "completed".equals(task.getStatus())).count());
@@ -92,7 +98,7 @@ public class AnalyticsService {
     }
 
     private List<Map<String, Object>> getProjectStatistics() {
-        List<Project> allProjects = projectRepository.findAll();
+        List<Project> allProjects = projects.getAll();
         
         return allProjects.stream().map(project -> {
             Map<String, Object> projectStat = new HashMap<>();
@@ -101,7 +107,7 @@ public class AnalyticsService {
             projectStat.put("status", project.getStatus());
             
             // Calculate completion percentage
-            List<Task> projectTasks = taskRepository.findByProjectId(project.getId());
+            List<Task> projectTasks = tasks.getAll().stream().filter(item -> project.getId().equals(item.getProjectId())).toList();
             long completedTasks = projectTasks.stream().filter(task -> "completed".equals(task.getStatus())).count();
             double completionRate = projectTasks.isEmpty() ? 0 : (double) completedTasks / projectTasks.size() * 100;
             projectStat.put("completionRate", Math.round(completionRate * 100.0) / 100.0);
@@ -117,7 +123,7 @@ public class AnalyticsService {
         List<Map<String, Object>> activities = new ArrayList<>();
         
         // Recent tasks
-        List<Task> recentTasks = taskRepository.findTop10ByOrderByUpdatedAtDesc();
+        List<Task> recentTasks = tasks.getAll().stream().sorted(Comparator.comparing(Task::getUpdatedAt, Comparator.nullsFirst(Comparator.naturalOrder())).reversed()).limit(10).toList();
         recentTasks.forEach(task -> {
             Map<String, Object> activity = new HashMap<>();
             activity.put("type", "task");
@@ -129,7 +135,7 @@ public class AnalyticsService {
         });
         
         // Recent commits
-        List<GitHubCommit> recentCommits = gitHubCommitRepository.findTop10ByOrderByAuthorDateDesc();
+        List<GitHubCommit> recentCommits = gitHubCommitRepository.findTop10ByOrderByAuthorDateDesc().stream().filter(item -> projects.getById(item.getProjectId()).isPresent()).toList();
         recentCommits.forEach(commit -> {
             Map<String, Object> activity = new HashMap<>();
             activity.put("type", "commit");
@@ -148,7 +154,7 @@ public class AnalyticsService {
 
     private Map<String, Object> getTimeTrackingStatistics() {
         Map<String, Object> stats = new HashMap<>();
-        List<TimeLog> allTimeLogs = timeLogRepository.findAll();
+        List<TimeLog> allTimeLogs = timeLogs.getAll();
         
         // Total hours logged
         int totalMinutes = allTimeLogs.stream()
@@ -181,7 +187,7 @@ public class AnalyticsService {
 
     private Map<String, Object> getRevenueStatistics() {
         Map<String, Object> stats = new HashMap<>();
-        List<Invoice> allInvoices = invoiceRepository.findAll();
+        List<Invoice> allInvoices = invoices.getAll();
         
         // Total revenue
         double totalRevenue = allInvoices.stream()
@@ -218,10 +224,10 @@ public class AnalyticsService {
     private Map<String, Object> getGitHubStatistics() {
         Map<String, Object> stats = new HashMap<>();
         
-        List<GitHubRepository> repositories = gitHubRepositoryRepository.findAll();
+        List<GitHubRepository> repositories = gitHubRepositoryRepository.findAll().stream().filter(item -> projects.getById(item.getProjectId()).isPresent()).toList();
         stats.put("totalRepositories", repositories.size());
         
-        List<GitHubCommit> commits = gitHubCommitRepository.findAll();
+        List<GitHubCommit> commits = gitHubCommitRepository.findAll().stream().filter(item -> projects.getById(item.getProjectId()).isPresent()).toList();
         stats.put("totalCommits", commits.size());
         
         // Commits this week
@@ -253,7 +259,7 @@ public class AnalyticsService {
 
     private Map<String, Object> getMeetingStatistics() {
         Map<String, Object> stats = new HashMap<>();
-        List<Meeting> allMeetings = meetingRepository.findAll();
+        List<Meeting> allMeetings = meetings.getAll();
         
         stats.put("totalMeetings", allMeetings.size());
         
@@ -283,7 +289,7 @@ public class AnalyticsService {
     }
 
     public List<Map<String, Object>> getProjectProgress() {
-        List<Project> projects = projectRepository.findAll();
+        List<Project> projects = this.projects.getAll();
         
         return projects.stream().map(project -> {
             Map<String, Object> progress = new HashMap<>();
@@ -291,7 +297,7 @@ public class AnalyticsService {
             progress.put("projectName", project.getName());
             progress.put("status", project.getStatus());
             
-            List<Task> tasks = taskRepository.findByProjectId(project.getId());
+            List<Task> tasks = this.tasks.getAll().stream().filter(item -> project.getId().equals(item.getProjectId())).toList();
             long completedTasks = tasks.stream().filter(task -> "completed".equals(task.getStatus())).count();
             double completionRate = tasks.isEmpty() ? 0 : (double) completedTasks / tasks.size() * 100;
             
@@ -306,9 +312,9 @@ public class AnalyticsService {
     public Map<String, Object> getUserProductivity(String userId) {
         Map<String, Object> productivity = new HashMap<>();
         
-        List<Task> userTasks = taskRepository.findByAssigneeId(userId);
-        List<TimeLog> userTimeLogs = timeLogRepository.findByUserId(userId);
-        List<GitHubCommit> userCommits = gitHubCommitRepository.findByAuthorUsername(userId);
+        List<Task> userTasks = tasks.getAll().stream().filter(item -> userId.equals(item.getAssigneeId())).toList();
+        List<TimeLog> userTimeLogs = timeLogs.getAll().stream().filter(item -> userId.equals(item.getUserId())).toList();
+        List<GitHubCommit> userCommits = gitHubCommitRepository.findByAuthorUsername(userId).stream().filter(item -> projects.getById(item.getProjectId()).isPresent()).toList();
         
         productivity.put("totalTasks", userTasks.size());
         productivity.put("completedTasks", userTasks.stream().filter(task -> "completed".equals(task.getStatus())).count());
@@ -326,7 +332,7 @@ public class AnalyticsService {
     public Map<String, Object> getProjectAnalytics(String projectId, String userId, String userRole) {
         Map<String, Object> analytics = new HashMap<>();
         
-        Optional<Project> projectOpt = projectRepository.findById(projectId);
+        Optional<Project> projectOpt = projects.getById(projectId);
         if (projectOpt.isEmpty()) {
             return analytics;
         }
@@ -340,7 +346,7 @@ public class AnalyticsService {
         ));
         
         // Project tasks
-        List<Task> projectTasks = taskRepository.findByProjectId(projectId);
+        List<Task> projectTasks = tasks.getAll().stream().filter(item -> projectId.equals(item.getProjectId())).toList();
         Map<String, Long> taskStats = new HashMap<>();
         taskStats.put("total", (long) projectTasks.size());
         taskStats.put("completed", projectTasks.stream().filter(task -> "completed".equals(task.getStatus())).count());
@@ -349,14 +355,14 @@ public class AnalyticsService {
         analytics.put("taskStats", taskStats);
         
         // Project time logs
-        List<TimeLog> projectTimeLogs = timeLogRepository.findByProjectId(projectId);
+        List<TimeLog> projectTimeLogs = timeLogs.getAll().stream().filter(item -> projectId.equals(item.getProjectId())).toList();
         int totalMinutes = projectTimeLogs.stream()
                 .mapToInt(timeLog -> (int)(timeLog.getHoursWorked() * 60))
                 .sum();
         analytics.put("totalHours", totalMinutes / 60);
         
         // Project revenue
-        List<Invoice> projectInvoices = invoiceRepository.findByProjectId(projectId);
+        List<Invoice> projectInvoices = invoices.getAll().stream().filter(item -> projectId.equals(item.getProjectId())).toList();
         double totalRevenue = projectInvoices.stream().mapToDouble(Invoice::getAmount).sum();
         analytics.put("totalRevenue", totalRevenue);
         
@@ -366,7 +372,7 @@ public class AnalyticsService {
     public Map<String, Object> getUserAnalytics(String userId) {
         Map<String, Object> analytics = new HashMap<>();
         
-        Optional<User> userOpt = userRepository.findById(userId);
+        Optional<User> userOpt = userRepository.findById(userId).filter(item -> organizations.membership(organizations.currentOrgId(), userId) != null);
         if (userOpt.isEmpty()) {
             return analytics;
         }
@@ -375,11 +381,11 @@ public class AnalyticsService {
         analytics.put("userInfo", Map.of(
             "id", user.getId(),
             "name", user.getName(),
-            "role", user.getRole().toString()
+            "role", organizations.membership(organizations.currentOrgId(), userId).getRoles().iterator().next().name()
         ));
         
         // User tasks
-        List<Task> userTasks = taskRepository.findByAssigneeId(userId);
+        List<Task> userTasks = tasks.getAll().stream().filter(item -> userId.equals(item.getAssigneeId())).toList();
         Map<String, Long> taskStats = new HashMap<>();
         taskStats.put("total", (long) userTasks.size());
         taskStats.put("completed", userTasks.stream().filter(task -> "completed".equals(task.getStatus())).count());
@@ -388,14 +394,14 @@ public class AnalyticsService {
         analytics.put("taskStats", taskStats);
         
         // User time logs
-        List<TimeLog> userTimeLogs = timeLogRepository.findByUserId(userId);
+        List<TimeLog> userTimeLogs = timeLogs.getAll().stream().filter(item -> userId.equals(item.getUserId())).toList();
         int totalMinutes = userTimeLogs.stream()
                 .mapToInt(timeLog -> (int)(timeLog.getHoursWorked() * 60))
                 .sum();
         analytics.put("totalHours", totalMinutes / 60);
         
         // User commits
-        List<GitHubCommit> userCommits = gitHubCommitRepository.findByAuthorUsername(userId);
+        List<GitHubCommit> userCommits = gitHubCommitRepository.findByAuthorUsername(userId).stream().filter(item -> projects.getById(item.getProjectId()).isPresent()).toList();
         analytics.put("totalCommits", userCommits.size());
         
         return analytics;
@@ -410,7 +416,7 @@ public class AnalyticsService {
             activities.addAll(getRecentActivity());
         } else {
             // Show only user's activities for others
-            List<Task> userTasks = taskRepository.findByAssigneeIdOrderByUpdatedAtDesc(userId);
+            List<Task> userTasks = tasks.getAll().stream().filter(item -> userId.equals(item.getAssigneeId())).toList();
             userTasks.stream().limit(limit).forEach(task -> {
                 Map<String, Object> activity = new HashMap<>();
                 activity.put("type", "task");
@@ -421,7 +427,7 @@ public class AnalyticsService {
                 activities.add(activity);
             });
             
-            List<GitHubCommit> userCommits = gitHubCommitRepository.findByAuthorUsernameOrderByAuthorDateDesc(userId);
+            List<GitHubCommit> userCommits = gitHubCommitRepository.findByAuthorUsernameOrderByAuthorDateDesc(userId).stream().filter(item -> projects.getById(item.getProjectId()).isPresent()).toList();
             userCommits.stream().limit(limit).forEach(commit -> {
                 Map<String, Object> activity = new HashMap<>();
                 activity.put("type", "commit");

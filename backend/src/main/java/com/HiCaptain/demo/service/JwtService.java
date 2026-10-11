@@ -1,6 +1,7 @@
 package com.HiCaptain.demo.service;
 
 import com.HiCaptain.demo.model.User;
+import com.HiCaptain.demo.model.Membership;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -23,10 +24,13 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken(User user) {
+    public String generateToken(User user, Membership membership) {
         return Jwts.builder()
-                .claim("role", user.getRole().name())
+                .claim("role", membership.getRoles().stream().min(java.util.Comparator.comparingInt(Enum::ordinal)).orElseThrow().name())
+                .claim("roles", membership.getRoles().stream().map(Enum::name).toList())
+                .claim("organizationId", membership.getOrganizationId())
                 .claim("userId", user.getId())
+                .claim("email", user.getEmail())
                 .setSubject(user.getName())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))
@@ -46,11 +50,25 @@ public class JwtService {
         return extractClaims(token).getSubject();
     }
 
-    public String extractRole(String token) {
-        return extractClaims(token).get("role", String.class);
-    }
-
     public String extractUserId(String token) {
         return extractClaims(token).get("userId", String.class);
+    }
+
+    public String extractOrganizationId(String token) {
+        return extractClaims(token).get("organizationId", String.class);
+    }
+
+    public String generateOAuthState(String userId, String provider) {
+        return Jwts.builder().setSubject(userId).claim("purpose", "oauth:" + provider)
+                .setIssuedAt(new Date()).setExpiration(new Date(System.currentTimeMillis() + 10 * 60 * 1000))
+                .signWith(getSignKey(), SignatureAlgorithm.HS256).compact();
+    }
+
+    public String verifyOAuthState(String state, String provider) {
+        Claims claims = extractClaims(state);
+        if (!("oauth:" + provider).equals(claims.get("purpose", String.class))) {
+            throw new IllegalArgumentException("Invalid OAuth state");
+        }
+        return claims.getSubject();
     }
 }

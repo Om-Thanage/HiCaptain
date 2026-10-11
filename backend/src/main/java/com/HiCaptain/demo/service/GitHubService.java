@@ -27,8 +27,10 @@ public class GitHubService {
     private final GitHub gitHub;
     private final WebClient gitHubWebClient;
     private final GitHubRepositoryRepository gitHubRepositoryRepository;
+    private final ProjectService projects;
 
     public Mono<GitHubRepository> syncRepository(String owner, String repoName, String projectId) {
+        projects.getById(projectId).orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Project not found"));
         return Mono.fromCallable(() -> {
             try {
                 log.debug("Syncing repository: {}/{}", owner, repoName);
@@ -224,14 +226,22 @@ public class GitHubService {
     }
 
     public List<GitHubRepository> getRepositoriesByProjectId(String projectId) {
+        projects.getById(projectId).orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Project not found"));
         return gitHubRepositoryRepository.findByProjectId(projectId);
     }
 
     public GitHubRepository getRepositoryById(String repositoryId) {
-        return gitHubRepositoryRepository.findById(repositoryId).orElse(null);
+        return gitHubRepositoryRepository.findById(repositoryId).filter(repo -> projects.getById(repo.getProjectId()).isPresent()).orElse(null);
     }
 
     public void deleteRepository(String repositoryId) {
+        if (getRepositoryById(repositoryId) == null) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
         gitHubRepositoryRepository.deleteById(repositoryId);
+    }
+
+    public void requireCurrentRepository(String owner, String repoName) {
+        boolean found = gitHubRepositoryRepository.findAll().stream().anyMatch(repo ->
+                (owner + "/" + repoName).equalsIgnoreCase(repo.getFullName()) && projects.getById(repo.getProjectId()).isPresent());
+        if (!found) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Repository not linked to this organization");
     }
 }

@@ -15,6 +15,8 @@ import java.util.Optional;
 
 @Service
 public class InvoiceService {
+    @org.springframework.beans.factory.annotation.Autowired private OrganizationService organizations;
+    @org.springframework.beans.factory.annotation.Autowired private ProjectService projects;
     private final InvoiceRepository repo;
     private final PaymentRepository paymentRepo;
     private final ProjectRepository projectRepo;
@@ -25,11 +27,14 @@ public class InvoiceService {
         this.projectRepo = projectRepo;
     }
 
-    public List<Invoice> getAll() { return repo.findAll(); }
+    public List<Invoice> getAll() { return repo.findAll().stream().filter(item -> projects.getById(item.getProjectId()).isPresent()).toList(); }
 
-    public Optional<Invoice> getById(String id) { return repo.findById(id); }
+    public Optional<Invoice> getById(String id) { return repo.findById(id).filter(item -> projects.getById(item.getProjectId()).isPresent()); }
 
     public Invoice create(Invoice invoice) {
+        requireProject(invoice.getProjectId());
+        requireMember(invoice.getClientId());
+        invoice.setId(null);
         Invoice saved = repo.save(invoice);
         if (saved.getProjectId() != null) {
             projectRepo.findById(saved.getProjectId()).ifPresent(p -> {
@@ -46,11 +51,13 @@ public class InvoiceService {
     }
 
     public Invoice update(String id, Invoice invoice) {
-        Invoice existing = repo.findById(id)
+        Invoice existing = getById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice not found"));
 
         String oldProjectId = existing.getProjectId();
         String newProjectId = invoice.getProjectId();
+        requireProject(newProjectId);
+        requireMember(invoice.getClientId());
 
         invoice.setId(id);
         Invoice saved = repo.save(invoice);
@@ -82,7 +89,7 @@ public class InvoiceService {
     }
 
     public void delete(String id) {
-        Optional<Invoice> invOpt = repo.findById(id);
+        Optional<Invoice> invOpt = getById(id);
         if (invOpt.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice not found");
 
         Invoice inv = invOpt.get();
@@ -110,5 +117,13 @@ public class InvoiceService {
             paymentRepo.deleteAllById(inv.getPaymentIds());
         }
         repo.deleteById(id);
+    }
+
+    private void requireProject(String id) {
+        projects.getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+    }
+
+    private void requireMember(String id) {
+        if (id != null && !id.isBlank()) organizations.membership(organizations.currentOrgId(), id);
     }
 }

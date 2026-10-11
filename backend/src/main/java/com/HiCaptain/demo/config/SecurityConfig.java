@@ -3,6 +3,7 @@ package com.HiCaptain.demo.config;
 import com.HiCaptain.demo.security.JwtAuthFilter;
 import com.HiCaptain.demo.service.JwtService;
 import com.HiCaptain.demo.service.UserService;
+import com.HiCaptain.demo.service.OrganizationService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,8 +24,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     @Bean
-    public JwtAuthFilter jwtAuthFilter(JwtService jwtService, UserService userService) {
-        return new JwtAuthFilter(jwtService, userService);
+    public JwtAuthFilter jwtAuthFilter(JwtService jwtService, UserService userService, OrganizationService organizationService) {
+        return new JwtAuthFilter(jwtService, userService, organizationService);
     }
 
     @Bean
@@ -36,12 +37,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         http
+                .cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(c -> c.disable()) // Disable CSRF for stateless JWT
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/error").permitAll() // Allow root path and error page
                         .requestMatchers("/auth/**").permitAll() // Allow registration/login
-                        .requestMatchers("/api/google-calendar/auth/**").permitAll() // Allow Google Calendar OAuth callbacks
-                        .requestMatchers("/api/auth/github/**").permitAll() // Allow GitHub OAuth callbacks
+                        .requestMatchers("/api/google-calendar/auth/callback").permitAll()
+                        .requestMatchers("/api/auth/github/callback").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll() // Allow Swagger UI and OpenAPI docs
                         .requestMatchers("/client/data").hasAnyAuthority("Admin", "Client") // Client + Admin access
                         .requestMatchers("/admin/data").hasAnyAuthority("Admin")  // Admin access
