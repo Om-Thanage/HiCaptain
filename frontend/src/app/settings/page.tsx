@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowUpRight, Bell, CalendarDays, Github, LogOut, ShieldCheck, UsersRound } from 'lucide-react';
+import { ArrowUpRight, Bell, HardDrive, Github, LogOut, ShieldCheck, UsersRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { authService } from '@/services/auth';
@@ -21,6 +21,9 @@ export default function SettingsPage() {
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
+    const googleResult = new URLSearchParams(window.location.search).get('google');
+    if (googleResult === 'connected') toast.success('Google Workspace connected');
+    if (googleResult === 'error') toast.error('Google Workspace connection failed');
     const currentUser = authService.getUserFromToken();
     setUser(currentUser);
     organizationService.list().then(items => setOrganization(items.find(item => item.id === currentUser?.organizationId) || null)).catch(() => {});
@@ -52,13 +55,13 @@ export default function SettingsPage() {
       const response = await api.get('/api/google-calendar/auth/url', { params: { userId: user.id }, responseType: 'text' });
       if (!String(response.data).startsWith('https://')) throw new Error('No authorization URL returned');
       window.location.assign(response.data);
-    } catch { toast.error('Google Calendar connection is unavailable. Check OAuth configuration.'); setBusy(null); }
+    } catch { toast.error('Google Workspace connection is unavailable. Check OAuth configuration.'); setBusy(null); }
   }
   async function disconnectCalendar() {
     if (!user) return;
     setBusy('calendar');
-    try { await api.post('/api/google-calendar/auth/revoke', null, { params: { userId: user.id } }); setCalendar({ connected: false }); toast.success('Google Calendar disconnected'); }
-    catch { toast.error('Could not disconnect Google Calendar'); }
+    try { await api.post('/api/google-calendar/auth/revoke', null, { params: { userId: user.id } }); setCalendar({ connected: false }); toast.success('Google Workspace disconnected'); }
+    catch { toast.error('Could not disconnect Google Workspace'); }
     finally { setBusy(null); }
   }
 
@@ -78,8 +81,9 @@ export default function SettingsPage() {
     </div>
     <section className={styles.connections}><div className={styles.sectionHeading}><div><span className={styles.kicker}>WORKS WITH YOUR TOOLS</span><h2>Connected apps</h2><p>Connect services to bring your work into HiCaptain.</p></div></div>
       <div className={styles.connectionGrid}>{canUseGithub && <div className={styles.connection}><span className={`${styles.icon} ${styles.dark}`}><Github size={23} /></span><div className={styles.connectionText}><h3>GitHub</h3><p>{github === null ? 'Connection status unavailable' : github.connected ? `Connected as ${github.detail || 'your account'}` : 'Connect repositories and development work'}</p></div><button type="button" disabled={!!busy || github === null} onClick={github?.connected ? disconnectGithub : connectGithub}>{busy === 'github' ? 'Working…' : github?.connected ? 'Disconnect' : 'Connect'}</button></div>}
-        <div className={styles.connection}><span className={`${styles.icon} ${styles.lime}`}><CalendarDays size={22} /></span><div className={styles.connectionText}><h3>Google Calendar</h3><p>{calendar === null ? 'Connection status unavailable' : calendar.connected ? 'Connected to your calendar' : 'Bring meetings and deadlines together'}</p></div><button type="button" disabled={!!busy || calendar === null} onClick={calendar?.connected ? disconnectCalendar : connectCalendar}>{busy === 'calendar' ? 'Working…' : calendar?.connected ? 'Disconnect' : 'Connect'}</button></div>
+        <div className={styles.connection}><span className={`${styles.icon} ${styles.lime}`}><HardDrive size={22} /></span><div className={styles.connectionText}><h3>Google Workspace</h3><p>{calendar === null ? 'Connection status unavailable' : calendar.connected ? 'Calendar, Meet, Drive, and Tasks connected' : 'Connect Calendar, Meet, Drive, and Tasks'}</p></div><button type="button" disabled={!!busy || calendar === null} onClick={calendar?.connected ? disconnectCalendar : connectCalendar}>{busy === 'calendar' ? 'Working…' : calendar?.connected ? 'Disconnect' : 'Connect'}</button></div>
       </div>
+      {user?.roles?.includes('Admin') && <Link href="/storage" className={styles.textLink}>Choose the organization Shared Drive <ArrowUpRight size={15} /></Link>}
     </section>
     <section className={styles.session}><div><span className={styles.kicker}>SECURITY</span><h2>Account session</h2><p>Sign out of HiCaptain on this device.</p></div><button type="button" onClick={() => authService.logout()}><LogOut size={17} /> Log out</button></section>
   </div></DashboardLayout>;

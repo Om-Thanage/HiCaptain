@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { authService } from '@/services/auth';
 import { taskService } from '@/services/task';
 import { userService } from '@/services/user';
+import { googleWorkspaceService } from '@/services/googleWorkspace';
 import { Project, Task, TaskRequest, User } from '@/types';
 import styles from './kanban.module.css';
 
@@ -23,6 +24,8 @@ export default function ProjectKanban({ project }: { project: Project }) {
   const [editing, setEditing] = useState<Task | null>(null);
   const [form, setForm] = useState<TaskRequest>(() => emptyForm(project.id));
   const [saving, setSaving] = useState(false);
+  const [linkedTasks, setLinkedTasks] = useState<string[]>([]);
+  const [copyingTask, setCopyingTask] = useState<string | null>(null);
   const roles = authService.getUserFromToken()?.roles || [];
   const canManage = roles.includes('Admin') || roles.includes('ProjectManager');
   const canEdit = canManage || roles.includes('Developer');
@@ -31,6 +34,7 @@ export default function ProjectKanban({ project }: { project: Project }) {
     setLoading(true);
     taskService.getByProjectId(project.id).then(data => setTasks(data.map(normalize))).catch(() => toast.error('Could not load tasks')).finally(() => setLoading(false));
     if (project.developerIds?.length) userService.getDevelopers().then(users => setDevelopers(users.filter(user => project.developerIds.includes(user.id)))).catch(() => {});
+    googleWorkspaceService.linkedTasks(project.id).then(setLinkedTasks).catch(() => {});
   }, [project.id, project.developerIds]);
 
   function openCreate(status = 'pending') { setEditing(null); setForm(emptyForm(project.id, status)); setDialogOpen(true); }
@@ -71,6 +75,13 @@ export default function ProjectKanban({ project }: { project: Project }) {
     catch { toast.error('Could not delete task'); }
   }
 
+  async function copyToGoogle(task: Task) {
+    setCopyingTask(task.id);
+    try { await googleWorkspaceService.copyTask(task.id); setLinkedTasks(current => [...current, task.id]); toast.success('Copied to your Google Tasks list'); }
+    catch { toast.error('Connect Google Workspace in Settings to copy tasks'); }
+    finally { setCopyingTask(null); }
+  }
+
   return <section className={styles.board}>
     <div className={styles.heading}><div><span className={styles.kicker}>KEEP THINGS MOVING</span><h2>Project tasks</h2><p>Plan the work and track each task from start to finish.</p></div>{canManage && <button type="button" className={styles.primary} onClick={() => openCreate()}><Plus size={17} /> Add task</button>}</div>
     {loading ? <div className={styles.notice}>Loading tasks…</div> : <div className={styles.columns}>{columns.map(column => <div key={column.id} className={styles.column} onDragOver={event => { if (canEdit) event.preventDefault(); }} onDrop={event => { event.preventDefault(); const task = tasks.find(item => item.id === event.dataTransfer.getData('text/plain')); if (task) move(task, column.id); }}>
@@ -79,6 +90,7 @@ export default function ProjectKanban({ project }: { project: Project }) {
         <div className={styles.taskTop}><span className={`${styles.priority} ${styles[task.priority] || ''}`}>{task.priority}</span><div className={styles.taskActions}>{canEdit && <button type="button" onClick={() => openEdit(task)} aria-label={`Edit ${task.title}`}><Pencil size={15} /></button>}{canManage && <button type="button" onClick={() => remove(task)} aria-label={`Delete ${task.title}`}><Trash2 size={15} /></button>}{canEdit && <GripVertical size={15} aria-hidden="true" />}</div></div>
         <h4>{task.title}</h4>{task.description && <p>{task.description}</p>}
         <div className={styles.taskFooter}><span>{task.deadline && <><CalendarDays size={14} /> {date(task.deadline)}</>}</span><div className={styles.avatars}>{task.assignedDeveloperIds?.slice(0, 3).map(id => <span key={id} title={developers.find(user => user.id === id)?.name || 'Team member'}>{developers.find(user => user.id === id)?.name?.charAt(0).toUpperCase() || '?'}</span>)}</div></div>
+        <button type="button" className={styles.googleTask} disabled={linkedTasks.includes(task.id) || copyingTask === task.id} onClick={() => copyToGoogle(task)}>{linkedTasks.includes(task.id) ? 'In Google Tasks' : copyingTask === task.id ? 'Copying…' : 'Add to Google Tasks'}</button>
       </article>)}{!tasks.some(task => task.status === column.id) && <div className={styles.empty}>No tasks here yet</div>}</div>
       {canManage && <button type="button" className={styles.columnAdd} onClick={() => openCreate(column.id)}><Plus size={16} /> Add task</button>}
     </div>)}</div>}

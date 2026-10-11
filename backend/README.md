@@ -205,14 +205,16 @@ openssl rand -base64 32
    - **Authorization callback URL:** `http://localhost:8080/api/auth/github/callback`
 4. Copy Client ID and Client Secret to your `.env` file
 
-### 6. Google Calendar API Setup
+### 6. Google Workspace setup
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project
-3. Enable Google Calendar API
-4. Create credentials (OAuth 2.0 Client ID)
-5. Download the `credentials.json` file
-6. Place it in `src/main/resources/credentials.json`
+1. In [Google Cloud Console](https://console.cloud.google.com/), enable **Google Calendar API**, **Google Drive API**, and **Google Tasks API** for your project.
+2. Configure the OAuth consent screen. For a single Workspace domain, an internal app is simplest. Add Calendar, Drive, and Tasks scopes. External apps may require Google verification, especially for the full Drive scope.
+3. Create an OAuth **Web application** client. Add `http://localhost:8080/api/google-calendar/auth/callback` as an authorized redirect URI (use your backend URL in production). Download the client JSON outside the repository.
+4. Set `GOOGLE_CALENDAR_CREDENTIALS_FILE_PATH` to the absolute JSON path and `GOOGLE_OAUTH_REDIRECT_URI` to the same redirect URI. Generate `GOOGLE_TOKEN_ENCRYPTION_KEY` with `openssl rand -base64 32` and keep it stable. Changing this key makes stored connections unusable.
+5. Connect Google Workspace from **Settings**. Existing users must reconnect to grant the new Drive and Tasks scopes. Each user connects their own Google account for Calendar, Meet, and personal Tasks.
+6. Give an organization admin access to a Google Workspace **Shared Drive**. That admin connects Google Workspace and selects the Shared Drive on **Storage**. HiCaptain creates one folder per project inside that drive. Project access in HiCaptain controls listing, upload, download, and delete through the app. Opening Google Docs in a browser also requires Google Drive access for that Google account.
+
+Meeting creation and updates write to the organizer's primary Google Calendar. A virtual meeting requests a Google Meet link; attendees receive Google Calendar invitations. The Schedule page combines Google events, HiCaptain meetings, and project deadlines. **Add to Google Tasks** copies a project task to the member's personal HiCaptain task list in Google Tasks once; subsequent changes are not synchronized. Uploads and app downloads are limited to 10 MB; larger files can be managed in Google Drive.
 
 ---
 

@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   Home, FolderKanban, BarChart3, FileText, MessageCircle,
-  Calendar, GitBranch, Bell, Users,
+  Calendar, GitBranch, Bell, Users, HardDrive,
 } from 'lucide-react';
 import { authService } from '@/services/auth';
 
@@ -12,22 +12,22 @@ const navigation = {
   Admin: [
     ['Users', '/users', Users], ['Projects', '/projects', FolderKanban],
     ['Analytics', '/analytics', BarChart3], ['Invoices', '/invoices', FileText],
-    ['Feedback', '/feedback', MessageCircle], ['Schedule', '/schedule', Calendar],
+    ['Feedback', '/feedback', MessageCircle], ['Schedule', '/schedule', Calendar], ['Storage', '/storage', HardDrive],
     ['Git', '/git', GitBranch], ['Notifications', '/notifications', Bell],
   ],
   ProjectManager: [
     ['Projects', '/projects', FolderKanban], ['Analytics', '/analytics', BarChart3],
-    ['Schedule', '/schedule', Calendar], ['Feedback', '/feedback', MessageCircle],
+    ['Schedule', '/schedule', Calendar], ['Storage', '/storage', HardDrive], ['Feedback', '/feedback', MessageCircle],
     ['Invoices', '/invoices', FileText], ['Git', '/git', GitBranch],
     ['Notifications', '/notifications', Bell],
   ],
   Developer: [
-    ['Projects', '/projects', FolderKanban], ['Schedule', '/schedule', Calendar],
+    ['Projects', '/projects', FolderKanban], ['Schedule', '/schedule', Calendar], ['Storage', '/storage', HardDrive],
     ['Git', '/git', GitBranch], ['Notifications', '/notifications', Bell],
   ],
   Client: [
     ['Projects', '/projects', FolderKanban], ['Invoices', '/invoices', FileText],
-    ['Feedback', '/feedback', MessageCircle], ['Schedule', '/schedule', Calendar],
+    ['Feedback', '/feedback', MessageCircle], ['Schedule', '/schedule', Calendar], ['Storage', '/storage', HardDrive],
     ['Notifications', '/notifications', Bell],
   ],
 } as const;

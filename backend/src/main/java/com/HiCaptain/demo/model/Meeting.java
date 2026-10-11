@@ -22,6 +22,7 @@ public class Meeting {
     private String description;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+    private String timeZone;
     private String meetingLink;
     private String googleMeetLink;
     private String googleEventId;

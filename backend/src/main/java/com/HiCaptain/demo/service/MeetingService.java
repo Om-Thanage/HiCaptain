@@ -36,6 +36,7 @@ public class MeetingService {
 
     public Meeting create(Meeting m) {
         requireProject(m.getProjectId());
+        validate(m);
         m.setOrganizerId(organizations.currentUserId());
         requireMember(m.getOrganizerId());
         if (m.getAttendeeIds() != null) m.getAttendeeIds().forEach(this::requireMember);
@@ -46,19 +47,17 @@ public class MeetingService {
         
         Meeting saved = repo.save(m);
         
-        // Create Google Calendar event if user wants sync
-        if (saved.isSyncWithGoogleCalendar() && saved.getOrganizerId() != null && googleCalendarService != null) {
+        // Keep local and Google events in step when Google sync was requested.
+        if (saved.isSyncWithGoogleCalendar()) {
             try {
                 Event event = googleCalendarService.createMeetingEvent(saved, saved.getOrganizerId());
                 saved.setGoogleEventId(event.getId());
                 saved.setGoogleMeetLink(googleCalendarService.extractMeetLinkFromEvent(event));
                 saved = repo.save(saved);
             } catch (Exception e) {
-                // Log error but don't fail the meeting creation
-                System.err.println("Failed to create Google Calendar event: " + e.getMessage());
+                repo.deleteById(saved.getId());
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not create the Google Calendar meeting", e);
             }
-        } else if (saved.isSyncWithGoogleCalendar() && googleCalendarService == null) {
-            System.err.println("Warning: Google Calendar sync requested but service is not available");
         }
         
         final Meeting finalSaved = saved;
@@ -83,7 +82,10 @@ public class MeetingService {
         String oldProjectId = existing.getProjectId();
         String newProjectId = m.getProjectId();
         requireProject(newProjectId);
-        requireMember(m.getOrganizerId());
+        m.setOrganizerId(existing.getOrganizerId());
+        validate(m);
+        m.setGoogleEventId(existing.getGoogleEventId());
+        m.setGoogleMeetLink(existing.getGoogleMeetLink());
         if (m.getAttendeeIds() != null) m.getAttendeeIds().forEach(this::requireMember);
 
         // Set timestamps
@@ -91,17 +93,23 @@ public class MeetingService {
         m.setCreatedAt(existing.getCreatedAt()); // Keep original creation time
         m.setUpdatedAt(LocalDateTime.now());
         
-        Meeting saved = repo.save(m);
-        
-        // Update Google Calendar event if exists and sync is enabled
-        if (saved.isSyncWithGoogleCalendar() && saved.getGoogleEventId() != null && saved.getOrganizerId() != null && googleCalendarService != null) {
+        if (m.isSyncWithGoogleCalendar()) {
             try {
-                googleCalendarService.updateMeetingEvent(saved, saved.getOrganizerId());
+                Event event = m.getGoogleEventId() == null
+                        ? googleCalendarService.createMeetingEvent(m, m.getOrganizerId())
+                        : googleCalendarService.updateMeetingEvent(m, m.getOrganizerId());
+                m.setGoogleEventId(event.getId());
+                m.setGoogleMeetLink(googleCalendarService.extractMeetLinkFromEvent(event));
             } catch (Exception e) {
-                // Log error but don't fail the meeting update
-                System.err.println("Failed to update Google Calendar event: " + e.getMessage());
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not update the Google Calendar meeting", e);
             }
+        } else if (m.getGoogleEventId() != null) {
+            try { googleCalendarService.deleteMeetingEvent(m.getGoogleEventId(), m.getOrganizerId()); }
+            catch (Exception e) { throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not remove the Google Calendar meeting", e); }
+            m.setGoogleEventId(null);
+            m.setGoogleMeetLink(null);
         }
+        Meeting saved = repo.save(m);
 
         if (!Objects.equals(oldProjectId, newProjectId)) {
             if (oldProjectId != null) {
@@ -134,12 +142,11 @@ public class MeetingService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Meeting not found"));
 
         // Delete Google Calendar event if exists
-        if (existing.getGoogleEventId() != null && existing.getOrganizerId() != null && googleCalendarService != null) {
+        if (existing.getGoogleEventId() != null && existing.getOrganizerId() != null) {
             try {
                 googleCalendarService.deleteMeetingEvent(existing.getGoogleEventId(), existing.getOrganizerId());
             } catch (Exception e) {
-                // Log error but don't fail the meeting deletion
-                System.err.println("Failed to delete Google Calendar event: " + e.getMessage());
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not remove the Google Calendar meeting", e);
             }
         }
 
@@ -179,5 +186,16 @@ public class MeetingService {
 
     private void requireMember(String id) {
         if (id != null && !id.isBlank()) organizations.membership(organizations.currentOrgId(), id);
+    }
+
+    private void validate(Meeting meeting) {
+        if (meeting.getTitle() == null || meeting.getTitle().isBlank() || meeting.getStartTime() == null
+                || meeting.getEndTime() == null || !meeting.getEndTime().isAfter(meeting.getStartTime()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a title and a valid meeting time");
+        if (meeting.isVirtual() && !meeting.isSyncWithGoogleCalendar())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Google Meet requires Calendar sync");
+        if (meeting.isSyncWithGoogleCalendar() && !googleCalendarService.isUserAuthorized(
+                meeting.getOrganizerId() == null ? organizations.currentUserId() : meeting.getOrganizerId()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Connect Google Workspace in Settings first");
     }
 }

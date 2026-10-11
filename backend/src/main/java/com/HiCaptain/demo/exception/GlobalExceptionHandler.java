@@ -13,12 +13,26 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<ErrorResponse> handleGoogleIoException(IOException ex, HttpServletRequest request) {
+        log.warn("External service error on path {}: {}", request.getRequestURI(), ex.getMessage());
+        if (!request.getRequestURI().startsWith("/api/google-"))
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse(
+                    500, "Internal Server Error", "An unexpected error occurred. Please try again later.", request.getRequestURI()));
+        HttpStatus status = ex.getMessage() != null && (ex.getMessage().contains("Connect Google Workspace")
+                || ex.getMessage().contains("credentials are not configured")
+                || ex.getMessage().contains("GOOGLE_TOKEN_ENCRYPTION_KEY")) ? HttpStatus.CONFLICT : HttpStatus.BAD_GATEWAY;
+        String message = status == HttpStatus.CONFLICT ? ex.getMessage() : "Google Workspace is unavailable. Reconnect in Settings or try again.";
+        return ResponseEntity.status(status).body(new ErrorResponse(status.value(), status.getReasonPhrase(), message, request.getRequestURI()));
+    }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {

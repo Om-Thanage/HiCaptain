@@ -3,15 +3,17 @@ package com.HiCaptain.demo.controller;
 import com.HiCaptain.demo.service.GoogleCalendarService;
 import com.google.api.services.calendar.model.CalendarListEntry;
 import com.google.api.services.calendar.model.Event;
+import com.google.api.client.util.DateTime;
+import java.time.Instant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -23,6 +25,7 @@ public class GoogleCalendarController {
     @Autowired
     private GoogleCalendarService googleCalendarService;
     @Autowired private com.HiCaptain.demo.service.JwtService jwtService;
+    @Value("${app.frontend-url:http://localhost:3000}") private String frontendUrl;
 
     @GetMapping("/auth/url")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
@@ -31,7 +34,7 @@ public class GoogleCalendarController {
         try {
             String authUrl = googleCalendarService.getAuthorizationUrl(userId);
             return ResponseEntity.ok(authUrl);
-        } catch (RuntimeException e) {
+        } catch (IOException e) {
             // Handle missing credentials gracefully
             return ResponseEntity.badRequest().body("Google Calendar integration not configured: " + e.getMessage());
         }
@@ -48,9 +51,9 @@ public class GoogleCalendarController {
             googleCalendarService.authorize(code, userId);
             
             // Redirect to frontend success page
-            response.sendRedirect("http://localhost:3000/dashboard?google_auth=success");
+            response.sendRedirect(frontendUrl + "/settings?google=connected");
         } catch (Exception e) {
-            response.sendRedirect("http://localhost:3000/dashboard?google_auth=error");
+            response.sendRedirect(frontendUrl + "/settings?google=error");
         }
     }
 
@@ -71,36 +74,16 @@ public class GoogleCalendarController {
 
     @GetMapping("/events")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
-    public ResponseEntity<?> getEvents(
-            @RequestParam String userId,
-            @RequestParam(defaultValue = "30") int days) {
+    public ResponseEntity<List<Event>> getEvents(@RequestParam String userId, @RequestParam String from,
+            @RequestParam String to) throws IOException {
         requireCurrentUser(userId);
-        
-        try {
-            // Check if user is authorized for Google Calendar first
-            boolean isAuthorized = googleCalendarService.isUserAuthorized(userId);
-            if (!isAuthorized) {
-                // User not authorized - return empty list so UI doesn't break
-                return ResponseEntity.ok().body(Collections.emptyList());
-            }
-            
-            // Convert days to maxResults for consistency with existing service
-            int maxResults = Math.min(days * 3, 50); // Assume ~3 events per day max, cap at 50
-            List<Event> events = googleCalendarService.getUpcomingEvents(userId, maxResults);
-            return ResponseEntity.ok(events);
-        } catch (IOException e) {
-            // I/O error - return empty list to prevent UI breaking
-            System.err.println("IOException fetching Google Calendar events: " + e.getMessage());
-            return ResponseEntity.ok().body(Collections.emptyList());
-        } catch (RuntimeException e) {
-            // Google Calendar not configured or other runtime error
-            System.err.println("RuntimeException fetching Google Calendar events: " + e.getMessage());
-            return ResponseEntity.ok().body(Collections.emptyList());
-        } catch (Exception e) {
-            // Any other error - return empty list to prevent UI breaking
-            System.err.println("Unexpected error fetching Google Calendar events: " + e.getMessage());
-            return ResponseEntity.ok().body(Collections.emptyList());
-        }
+        if (!googleCalendarService.isUserAuthorized(userId))
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Connect Google Workspace in Settings first");
+        Instant start = Instant.parse(from);
+        Instant end = Instant.parse(to);
+        if (!end.isAfter(start) || end.isAfter(start.plus(java.time.Duration.ofDays(62))))
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Choose a date range within 62 days");
+        return ResponseEntity.ok(googleCalendarService.getEvents(userId, new DateTime(start.toEpochMilli()), new DateTime(end.toEpochMilli())));
     }
 
     @GetMapping("/calendars")
