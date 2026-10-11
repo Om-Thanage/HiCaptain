@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse(
                     500, "Internal Server Error", "An unexpected error occurred. Please try again later.", request.getRequestURI()));
         HttpStatus status = ex.getMessage() != null && (ex.getMessage().contains("Connect Google Workspace")
-                || ex.getMessage().contains("credentials are not configured")
+                || ex.getMessage().contains("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET")
                 || ex.getMessage().contains("GOOGLE_TOKEN_ENCRYPTION_KEY")) ? HttpStatus.CONFLICT : HttpStatus.BAD_GATEWAY;
         String message = status == HttpStatus.CONFLICT ? ex.getMessage() : "Google Workspace is unavailable. Reconnect in Settings or try again.";
         return ResponseEntity.status(status).body(new ErrorResponse(status.value(), status.getReasonPhrase(), message, request.getRequestURI()));

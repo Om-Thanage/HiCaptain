@@ -169,8 +169,11 @@ GITHUB_OAUTH_CLIENT_SECRET=your-github-oauth-client-secret
 GITHUB_OAUTH_REDIRECT_URI=http://localhost:8080/api/auth/github/callback
 GITHUB_OAUTH_SCOPES=repo,read:user,user:email,admin:repo_hook
 
-# Google Calendar Integration
-GOOGLE_CALENDAR_CREDENTIALS_FILE_PATH=/credentials.json
+# Google Workspace Integration
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
+GOOGLE_OAUTH_REDIRECT_URI=http://localhost:8080/api/google-calendar/auth/callback
+GOOGLE_TOKEN_ENCRYPTION_KEY=your-base64-encoded-32-byte-key
 
 # Server Configuration
 SERVER_PORT=8080
@@ -209,8 +212,8 @@ openssl rand -base64 32
 
 1. In [Google Cloud Console](https://console.cloud.google.com/), enable **Google Calendar API**, **Google Drive API**, and **Google Tasks API** for your project.
 2. Configure the OAuth consent screen. For a single Workspace domain, an internal app is simplest. Add Calendar, Drive, and Tasks scopes. External apps may require Google verification, especially for the full Drive scope.
-3. Create an OAuth **Web application** client. Add `http://localhost:8080/api/google-calendar/auth/callback` as an authorized redirect URI (use your backend URL in production). Download the client JSON outside the repository.
-4. Set `GOOGLE_CALENDAR_CREDENTIALS_FILE_PATH` to the absolute JSON path and `GOOGLE_OAUTH_REDIRECT_URI` to the same redirect URI. Generate `GOOGLE_TOKEN_ENCRYPTION_KEY` with `openssl rand -base64 32` and keep it stable. Changing this key makes stored connections unusable.
+3. Create an OAuth **Web application** client. Add `http://localhost:8080/api/google-calendar/auth/callback` as an authorized redirect URI (use your backend URL in production). Copy its client ID and client secret.
+4. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in backend `.env` or your production secret manager. Set `GOOGLE_OAUTH_REDIRECT_URI` to the same redirect URI registered with Google. Generate `GOOGLE_TOKEN_ENCRYPTION_KEY` with `openssl rand -base64 32` and keep it stable. Changing this key makes stored connections unusable. Restart the backend after updating these values.
 5. Connect Google Workspace from **Settings**. Existing users must reconnect to grant the new Drive and Tasks scopes. Each user connects their own Google account for Calendar, Meet, and personal Tasks.
 6. Give an organization admin access to a Google Workspace **Shared Drive**. That admin connects Google Workspace and selects the Shared Drive on **Storage**. HiCaptain creates one folder per project inside that drive. Project access in HiCaptain controls listing, upload, download, and delete through the app. Opening Google Docs in a browser also requires Google Drive access for that Google account.
 
@@ -332,7 +335,6 @@ backend/
 │   │   │   └── BackendApplication.java
 │   │   └── resources/
 │   │       ├── application.properties
-│   │       └── credentials.json
 │   └── test/                    # Test Classes
 ├── .env                         # Environment variables (not committed)
 ├── .env.example                 # Environment variables template
@@ -722,7 +724,10 @@ Check:
 | `GITHUB_OAUTH_CLIENT_ID` | Yes | - | GitHub OAuth Client ID |
 | `GITHUB_OAUTH_CLIENT_SECRET` | Yes | - | GitHub OAuth Client Secret |
 | `GITHUB_OAUTH_REDIRECT_URI` | No | http://localhost:8080/api/auth/github/callback | OAuth callback URL |
-| `GOOGLE_CALENDAR_CREDENTIALS_FILE_PATH` | Yes | - | Path to Google credentials JSON |
+| `GOOGLE_CLIENT_ID` | For Workspace | - | Google OAuth Web application client ID |
+| `GOOGLE_CLIENT_SECRET` | For Workspace | - | Google OAuth Web application client secret |
+| `GOOGLE_OAUTH_REDIRECT_URI` | For Workspace | http://localhost:8080/api/google-calendar/auth/callback | Registered Google OAuth callback URL |
+| `GOOGLE_TOKEN_ENCRYPTION_KEY` | For Workspace | - | Stable base64 encoded 32 byte key for stored refresh tokens |
 | `SERVER_PORT` | No | 8080 | Application server port |
 | `SMTP_HOST` | For invitations | - | SMTP server hostname |
 | `SMTP_PORT` | No | 587 | SMTP server port |

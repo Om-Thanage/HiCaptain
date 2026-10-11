@@ -264,11 +264,11 @@ GITHUB_OAUTH_CLIENT_SECRET=your_github_oauth_client_secret
 GITHUB_OAUTH_REDIRECT_URI=http://localhost:8080/api/auth/github/callback
 GITHUB_OAUTH_SCOPES=repo,read:user,user:email,admin:repo_hook
 
-# Google Calendar Integration (Optional)
-GOOGLE_CALENDAR_CREDENTIALS_FILE_PATH=/credentials.json
+# Google Workspace Integration (Optional)
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_REDIRECT_URI=http://localhost:8080/api/calendar/callback
+GOOGLE_OAUTH_REDIRECT_URI=http://localhost:8080/api/google-calendar/auth/callback
+GOOGLE_TOKEN_ENCRYPTION_KEY=your_base64_encoded_32_byte_key
 
 # Server Configuration
 SERVER_PORT=8080

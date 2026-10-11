@@ -21,14 +21,10 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.time.ZoneId;
@@ -46,33 +42,29 @@ public class GoogleCalendarService {
             "https://www.googleapis.com/auth/tasks");
     private final GoogleWorkspaceConnectionRepository connections;
     private final JwtService jwtService;
-    private final String credentialsPath;
+    private final String clientId;
+    private final String clientSecret;
     private final String tokenKey;
     private final String redirectUri;
 
     public GoogleCalendarService(GoogleWorkspaceConnectionRepository connections, JwtService jwtService,
-            @Value("${google.calendar.credentials.file-path:/credentials.json}") String credentialsPath,
+            @Value("${google.workspace.client-id:}") String clientId,
+            @Value("${google.workspace.client-secret:}") String clientSecret,
             @Value("${google.workspace.token-key:}") String tokenKey,
             @Value("${google.workspace.redirect-uri:http://localhost:8080/api/google-calendar/auth/callback}") String redirectUri) {
         this.connections = connections;
         this.jwtService = jwtService;
-        this.credentialsPath = credentialsPath;
+        this.clientId = clientId;
+        this.clientSecret = clientSecret;
         this.tokenKey = tokenKey;
         this.redirectUri = redirectUri;
     }
 
-    private InputStream credentials() throws IOException {
-        Path file = Path.of(credentialsPath);
-        if (Files.isRegularFile(file)) return Files.newInputStream(file);
-        InputStream resource = getClass().getResourceAsStream(credentialsPath.startsWith("/") ? credentialsPath : "/" + credentialsPath);
-        if (resource == null) throw new IOException("Google OAuth credentials are not configured");
-        return resource;
-    }
-
     private GoogleClientSecrets secrets() throws IOException {
-        try (InputStream input = credentials()) {
-            return GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(input));
-        }
+        if (clientId.isBlank() || clientSecret.isBlank())
+            throw new IOException("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be configured");
+        return new GoogleClientSecrets().setWeb(new GoogleClientSecrets.Details()
+                .setClientId(clientId).setClientSecret(clientSecret));
     }
 
     private NetHttpTransport transport() throws IOException {

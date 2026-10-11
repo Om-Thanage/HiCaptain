@@ -58,7 +58,10 @@ The `.env` file is already included in `.gitignore` to prevent accidental commit
 | `GITHUB_OAUTH_CLIENT_SECRET` | GitHub OAuth Client Secret | Yes | - |
 | `GITHUB_OAUTH_REDIRECT_URI` | OAuth callback URL | No | http://localhost:8080/api/auth/github/callback |
 | `GITHUB_OAUTH_SCOPES` | GitHub OAuth scopes | No | repo,read:user,user:email,admin:repo_hook |
-| `GOOGLE_CALENDAR_CREDENTIALS_FILE_PATH` | Path to Google Calendar credentials | Yes | - |
+| `GOOGLE_CLIENT_ID` | Google OAuth Web application client ID | For Workspace | - |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth Web application client secret | For Workspace | - |
+| `GOOGLE_OAUTH_REDIRECT_URI` | Registered Google OAuth callback URL | For Workspace | http://localhost:8080/api/google-calendar/auth/callback |
+| `GOOGLE_TOKEN_ENCRYPTION_KEY` | Stable base64 encoded 32 byte token encryption key | For Workspace | - |
 | `SERVER_PORT` | Application server port | No | 8080 |
 
 ### Generating Secrets
