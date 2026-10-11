@@ -56,6 +56,19 @@ public class AnalyticsService {
         // Task statistics
         Map<String, Long> taskStats = getTaskStatistics();
         analytics.put("taskStats", taskStats);
+        List<Task> workspaceTasks = tasks.getAll();
+        List<TimeLog> workspaceTimeLogs = timeLogs.getAll();
+        var members = organizations.members(organizations.currentOrgId());
+        boolean canReviewTeam = "Admin".equals(userRole) || "ProjectManager".equals(userRole);
+        analytics.put("tasksCompletedByUser", !canReviewTeam ? List.of() : members.stream().map(member -> Map.of(
+                "userId", member.id(), "username", member.name(), "count", workspaceTasks.stream()
+                        .filter(task -> "completed".equals(task.getStatus()))
+                        .filter(task -> member.id().equals(task.getAssigneeId()) || task.getAssignedDeveloperIds() != null && task.getAssignedDeveloperIds().contains(member.id()))
+                        .count())).toList());
+        analytics.put("hoursWorkedByUser", !canReviewTeam ? List.of() : members.stream().map(member -> Map.of(
+                "userId", member.id(), "username", member.name(), "hours", workspaceTimeLogs.stream()
+                        .filter(log -> member.id().equals(log.getUserId()))
+                        .mapToDouble(TimeLog::getHoursWorked).sum())).toList());
         
         // Project statistics
         List<Map<String, Object>> projectStats = getProjectStatistics();
@@ -91,7 +104,7 @@ public class AnalyticsService {
         stats.put("total", (long) allTasks.size());
         stats.put("completed", allTasks.stream().filter(task -> "completed".equals(task.getStatus())).count());
         stats.put("inProgress", allTasks.stream().filter(task -> "in-progress".equals(task.getStatus())).count());
-        stats.put("todo", allTasks.stream().filter(task -> "todo".equals(task.getStatus())).count());
+        stats.put("todo", allTasks.stream().filter(task -> "todo".equals(task.getStatus()) || "pending".equals(task.getStatus())).count());
         stats.put("blocked", allTasks.stream().filter(task -> "blocked".equals(task.getStatus())).count());
         
         return stats;

@@ -330,7 +330,7 @@ export default function AnalyticsPage() {
             )}
           </ChartCard>
 
-          <ChartCard title="Tasks Completed by Team Member" delay={0.25}>
+          <ChartCard title="Completed tasks assigned to each teammate" delay={0.25}>
             {!(analyticsData.tasksCompletedByUser || []).length ? (
               <div className="text-sm text-slate-400">No per-user completion data</div>
             ) : (

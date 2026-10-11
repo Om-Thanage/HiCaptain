@@ -47,7 +47,7 @@ function transformToAnalyticsData(raw: any): AnalyticsData {
   const tasksByStatus = [
     { status: 'completed', count: Number(taskStats.completed || 0) },
     { status: 'in-progress', count: Number(taskStats.inProgress || 0) },
-    { status: 'todo', count: Number(taskStats.todo || 0) },
+    { status: 'pending', count: Number(taskStats.pending ?? taskStats.todo ?? 0) },
     { status: 'blocked', count: Number(taskStats.blocked || 0) },
   ].filter(item => item.count > 0);
 
@@ -89,7 +89,7 @@ function transformToAnalyticsData(raw: any): AnalyticsData {
     totalUsers: Number(raw?.totalUsers ?? 0),
 
     completedTasks: Number(taskStats.completed ?? 0),
-    pendingTasks: Number(taskStats.todo ?? 0),
+    pendingTasks: Number(taskStats.pending ?? taskStats.todo ?? 0),
     inProgressTasks: Number(taskStats.inProgress ?? 0),
 
     totalHoursWorked: Number(raw?.totalHours ?? timeStats.weeklyHours ?? 0),
@@ -119,7 +119,7 @@ function transformToAnalyticsData(raw: any): AnalyticsData {
 export const analyticsService = {
   // Get comprehensive analytics data
   getAnalytics: async (): Promise<AnalyticsData> => {
-    const response = await api.get('/api/analytics');
+    const response = await api.get('/api/analytics/dashboard');
     return transformToAnalyticsData(response.data);
   },
 

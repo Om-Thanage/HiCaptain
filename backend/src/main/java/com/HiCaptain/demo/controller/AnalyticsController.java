@@ -24,7 +24,9 @@ public class AnalyticsController {
     public ResponseEntity<Map<String, Object>> getDashboardAnalytics() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String userId = auth.getName();
-        String userRole = auth.getAuthorities().iterator().next().getAuthority();
+        String userRole = auth.getAuthorities().stream().map(authority -> authority.getAuthority())
+                .filter(role -> "Admin".equals(role) || "ProjectManager".equals(role))
+                .findFirst().orElseGet(() -> auth.getAuthorities().iterator().next().getAuthority());
         
         Map<String, Object> analytics = analyticsService.getDashboardAnalytics(userId, userRole);
         return ResponseEntity.ok(analytics);

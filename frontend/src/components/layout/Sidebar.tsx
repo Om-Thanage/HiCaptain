@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   Home, FolderKanban, BarChart3, FileText, MessageCircle,
-  Calendar, GitBranch, Bell, Settings, Users,
+  Calendar, GitBranch, Bell, Users,
 } from 'lucide-react';
 import { authService } from '@/services/auth';
 
@@ -14,23 +14,21 @@ const navigation = {
     ['Analytics', '/analytics', BarChart3], ['Invoices', '/invoices', FileText],
     ['Feedback', '/feedback', MessageCircle], ['Schedule', '/schedule', Calendar],
     ['Git', '/git', GitBranch], ['Notifications', '/notifications', Bell],
-    ['Settings', '/settings', Settings],
   ],
   ProjectManager: [
     ['Projects', '/projects', FolderKanban], ['Analytics', '/analytics', BarChart3],
     ['Schedule', '/schedule', Calendar], ['Feedback', '/feedback', MessageCircle],
     ['Invoices', '/invoices', FileText], ['Git', '/git', GitBranch],
-    ['Notifications', '/notifications', Bell], ['Settings', '/settings', Settings],
+    ['Notifications', '/notifications', Bell],
   ],
   Developer: [
     ['Projects', '/projects', FolderKanban], ['Schedule', '/schedule', Calendar],
     ['Git', '/git', GitBranch], ['Notifications', '/notifications', Bell],
-    ['Settings', '/settings', Settings],
   ],
   Client: [
     ['Projects', '/projects', FolderKanban], ['Invoices', '/invoices', FileText],
     ['Feedback', '/feedback', MessageCircle], ['Schedule', '/schedule', Calendar],
-    ['Notifications', '/notifications', Bell], ['Settings', '/settings', Settings],
+    ['Notifications', '/notifications', Bell],
   ],
 } as const;
 
