@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   Home, FolderKanban, BarChart3, FileText, MessageCircle,
-  Calendar, GitBranch, Bell, Settings, Users, LogOut,
+  Calendar, GitBranch, Bell, Settings, Users,
 } from 'lucide-react';
 import { authService } from '@/services/auth';
 
@@ -69,9 +69,6 @@ export default function Sidebar() {
           <strong>Make work flow.</strong>
           <span>Keep your team and projects moving together.</span>
         </div>
-        <button onClick={() => authService.logout()} className="hc-nav-link hc-logout" type="button">
-          <LogOut size={18} strokeWidth={1.9} /> <span>Log out</span>
-        </button>
       </div>
     </aside>
   );

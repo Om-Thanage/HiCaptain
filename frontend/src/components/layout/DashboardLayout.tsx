@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Bell, ChevronRight, FolderKanban } from 'lucide-react';
+import { Bell, ChevronRight, FolderKanban, LogOut } from 'lucide-react';
 import Sidebar from './Sidebar';
 import { useAuthStore } from '@/store/auth';
 import { authService } from '@/services/auth';
@@ -68,10 +68,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <select aria-label="Organization" value={user?.organizationId || ''} onChange={event => switchOrganization(event.target.value)} className="rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm text-slate-900">
               {organizations.map(org => <option key={org.id} value={org.id}>{org.name}</option>)}
             </select>
-            <button type="button" onClick={createOrganization} className="text-sm font-medium" title="Create organization">+ Organization</button>
+            <button type="button" onClick={createOrganization} className="hc-create-org text-sm font-medium" aria-label="Create organization" title="Create organization">+ Organization</button>
             <Link href="/projects" className="hc-topbar-search"><FolderKanban size={16} /> Projects</Link>
             <Link href="/notifications" className="hc-topbar-icon" aria-label="Notifications"><Bell size={18} /></Link>
             <div className="hc-avatar" title={user?.name || 'Account'}>{user?.name?.charAt(0).toUpperCase() || 'H'}</div>
+            <button type="button" onClick={() => authService.logout()} className="hc-topbar-logout" aria-label="Log out"><LogOut size={16} /><span>Log out</span></button>
           </div>
         </header>
         <main className="hc-app-main">{children}</main>
