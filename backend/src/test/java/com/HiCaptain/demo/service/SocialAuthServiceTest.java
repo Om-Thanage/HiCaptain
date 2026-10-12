@@ -27,6 +27,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,6 +41,32 @@ class SocialAuthServiceTest {
     @Mock AuthController auth;
     @Mock ObjectMapper json;
     @InjectMocks SocialAuthService social;
+
+    @Test
+    void githubSignInUsesTheSharedCallbackAndIdentityScopes() {
+        ReflectionTestUtils.setField(social, "githubClientId", "client-id");
+        ReflectionTestUtils.setField(social, "githubClientSecret", "client-secret");
+        ReflectionTestUtils.setField(social, "githubRedirectUri", "https://api.example.com/api/auth/github/callback");
+
+        String url = social.authorizationUrl("github", "signed-state");
+
+        assertTrue(url.contains("redirect_uri=https%3A%2F%2Fapi.example.com%2Fapi%2Fauth%2Fgithub%2Fcallback"));
+        assertTrue(url.contains("scope=read%3Auser+user%3Aemail"));
+        assertTrue(!url.contains("repo"));
+    }
+
+    @Test
+    void googleSignInSendsTheConfiguredCallbackAndOnlyIdentityScopes() {
+        ReflectionTestUtils.setField(social, "googleClientId", "client-id.apps.googleusercontent.com");
+        ReflectionTestUtils.setField(social, "googleClientSecret", "client-secret");
+        ReflectionTestUtils.setField(social, "googleRedirectUri", "https://api.example.com/auth/oauth/google/callback");
+
+        String url = social.authorizationUrl("google", "signed-state");
+
+        assertTrue(url.contains("redirect_uri=https%3A%2F%2Fapi.example.com%2Fauth%2Foauth%2Fgoogle%2Fcallback"));
+        assertTrue(url.contains("scope=openid+email+profile"));
+        assertTrue(!url.contains("calendar") && !url.contains("drive") && !url.contains("tasks"));
+    }
 
     @Test
     void newVerifiedIdentityMustCreateAnAdminOrganizationBeforeSigningIn() {

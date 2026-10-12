@@ -41,9 +41,10 @@ public class SocialAuthController {
         if (invitation != null && !invitation.isBlank()) organizations.preview(invitation);
         String state = jwt.generateOAuthState(UUID.randomUUID().toString(), "social-" + provider);
         String url = social.authorizationUrl(provider, state);
-        response.addHeader("Set-Cookie", cookie(state, request, 600));
+        String cookiePath = provider.equals("github") ? "/api/auth/github" : "/auth/oauth";
+        response.addHeader("Set-Cookie", cookie("hc_social_state", state, request, 600, cookiePath));
         response.addHeader("Set-Cookie", cookie("hc_social_invite",
-                invitation == null ? "" : invitation, request, invitation == null || invitation.isBlank() ? 0 : 600));
+                invitation == null ? "" : invitation, request, invitation == null || invitation.isBlank() ? 0 : 600, cookiePath));
         return new RedirectView(url);
     }
 
@@ -57,8 +58,9 @@ public class SocialAuthController {
             if (cookie.getName().equals("hc_social_state")) cookieState = cookie.getValue();
             if (cookie.getName().equals("hc_social_invite")) invitation = cookie.getValue();
         }
-        response.addHeader("Set-Cookie", cookie("", request, 0));
-        response.addHeader("Set-Cookie", cookie("hc_social_invite", "", request, 0));
+        String cookiePath = request.getRequestURI().startsWith("/api/auth/github") ? "/api/auth/github" : "/auth/oauth";
+        response.addHeader("Set-Cookie", cookie("hc_social_state", "", request, 0, cookiePath));
+        response.addHeader("Set-Cookie", cookie("hc_social_invite", "", request, 0, cookiePath));
         if (state == null || cookieState == null || !MessageDigest.isEqual(
                 state.getBytes(StandardCharsets.UTF_8), cookieState.getBytes(StandardCharsets.UTF_8)))
             return failure("Sign-in session expired. Please try again.");
@@ -87,12 +89,8 @@ public class SocialAuthController {
         return new RedirectView(frontendUrl + "/auth/oauth/callback?error=" + URLEncoder.encode(message, StandardCharsets.UTF_8));
     }
 
-    private String cookie(String value, HttpServletRequest request, int age) {
-        return cookie("hc_social_state", value, request, age);
-    }
-
-    private String cookie(String name, String value, HttpServletRequest request, int age) {
+    private String cookie(String name, String value, HttpServletRequest request, int age, String path) {
         boolean secure = request.isSecure() || "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto"));
-        return name + "=" + value + "; Max-Age=" + age + "; Path=/auth/oauth; HttpOnly; SameSite=Lax" + (secure ? "; Secure" : "");
+        return name + "=" + value + "; Max-Age=" + age + "; Path=" + path + "; HttpOnly; SameSite=Lax" + (secure ? "; Secure" : "");
     }
 }

@@ -61,7 +61,8 @@ public class GoogleCalendarService {
     }
 
     private GoogleClientSecrets secrets() throws IOException {
-        if (clientId.isBlank() || clientSecret.isBlank())
+        if (clientId.isBlank() || clientSecret.isBlank()
+                || clientId.startsWith("your-") || clientSecret.startsWith("your-"))
             throw new IOException("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be configured");
         return new GoogleClientSecrets().setWeb(new GoogleClientSecrets.Details()
                 .setClientId(clientId).setClientSecret(clientSecret));

@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,6 +28,9 @@ public class GitHubOAuthController {
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private SocialAuthController socialAuthController;
 
     @Value("${app.frontend-url:http://localhost:3000}")
     private String frontendUrl;
@@ -77,7 +82,19 @@ public class GitHubOAuthController {
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String state,
             @RequestParam(required = false) String error,
-            @RequestParam(required = false, name = "error_description") String errorDescription) {
+            @RequestParam(required = false, name = "error_description") String errorDescription,
+            HttpServletRequest request, HttpServletResponse response) {
+
+        boolean socialSignIn = false;
+        if (state != null) {
+            try {
+                jwtService.verifyOAuthState(state, "social-github");
+                socialSignIn = true;
+            } catch (RuntimeException ignored) {
+                // Repository authorization has its own signed state and callback handling.
+            }
+        }
+        if (socialSignIn) return socialAuthController.callback("github", code, state, error, request, response);
         
         try {
             if (error != null) {

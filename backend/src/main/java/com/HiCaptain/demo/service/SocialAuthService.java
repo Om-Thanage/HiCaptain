@@ -72,7 +72,8 @@ public class SocialAuthService {
         String clientId = provider.equals("github") ? githubClientId : googleClientId;
         String secret = provider.equals("github") ? githubClientSecret : googleClientSecret;
         String redirect = provider.equals("github") ? githubRedirectUri : googleRedirectUri;
-        if (clientId.isBlank() || secret.isBlank() || redirect.isBlank())
+        if (clientId.isBlank() || secret.isBlank() || redirect.isBlank()
+                || clientId.startsWith("your-") || secret.startsWith("your-"))
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, provider + " sign-in is not configured");
         if (provider.equals("github")) return "https://github.com/login/oauth/authorize?client_id=" + enc(clientId)
                 + "&redirect_uri=" + enc(redirect) + "&scope=" + enc("read:user user:email") + "&state=" + enc(state);
