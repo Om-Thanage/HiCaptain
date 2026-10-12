@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ExternalLink, GitBranch, GitCommitHorizontal, GitPullRequest, Github, Plus } from 'lucide-react';
+import Image from 'next/image';
+import { ExternalLink, GitBranch, GitCommitHorizontal, GitPullRequest, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { githubService, type GitHubCommit, type GitHubPullRequest, type GitHubRepository } from '@/services/github';
 import { githubOAuthService, type GitHubConnectionStatus } from '@/services/githubOAuth';
@@ -92,11 +93,11 @@ export default function ProjectGit({ projectId }: { projectId: string }) {
 
   return <section className={styles.section} aria-label="Project GitHub activity">
     <div className={styles.heading}>
-      <div><span className={styles.eyebrow}>DEVELOPMENT</span><h2><Github size={24} /> GitHub</h2><p>Repositories, commits, and pull requests for this project.</p></div>
+      <div className={styles.headingContent}><span className={styles.logo}><Image src="/github-mark.svg" alt="GitHub logo" width={33} height={33} /></span><div><span className={styles.eyebrow}>DEVELOPMENT</span><h2>GitHub</h2><p>Repositories, commits, and pull requests for this project.</p></div></div>
       {connection?.connected && <span className={styles.connected}>Connected as {connection.githubUsername}</span>}
     </div>
     {loading ? <p className={styles.empty}>Loading GitHub activity…</p> : !connection?.connected ?
-      <div className={styles.emptyCard}><GitBranch size={24} /><strong>Connect your GitHub account</strong><p>Connect to link repositories and see project activity here.</p><button onClick={connect} disabled={busy}>Connect GitHub</button></div> : <>
+      <div className={styles.emptyCard}><span className={styles.emptyLogo}><Image src="/github-mark.svg" alt="" width={28} height={28} /></span><strong>Connect your GitHub account</strong><p>Connect to link repositories and see project activity here.</p><button onClick={connect} disabled={busy}>Connect GitHub</button></div> : <>
       <form className={styles.linkForm} onSubmit={linkRepository}>
         <label htmlFor="github-repository">Link a repository</label>
         <div><input id="github-repository" value={repoName} onChange={event => setRepoName(event.target.value)} placeholder="owner/repository" /><button disabled={busy} type="submit"><Plus size={16} /> Link repository</button></div>
