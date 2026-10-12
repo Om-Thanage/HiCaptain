@@ -3,6 +3,18 @@ import { AuthRequest, AuthResponse, User } from '@/types';
 import Cookies from 'js-cookie';
 
 export const authService = {
+  socialStartUrl(provider: 'google' | 'github', invitation?: string) {
+    const base = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/auth/oauth/${provider}/start`;
+    return invitation ? `${base}?invitation=${encodeURIComponent(invitation)}` : base;
+  },
+
+  async socialTicket(ticket: string): Promise<{ name: string; email: string; needsOrganization: boolean; invitedOrganization?: string }> {
+    return (await api.get('/auth/oauth/ticket', { params: { ticket } })).data;
+  },
+
+  async socialExchange(ticket: string, organizationName?: string): Promise<AuthResponse> {
+    return (await api.post('/auth/oauth/exchange', { ticket, organizationName })).data;
+  },
   async login(credentials: AuthRequest): Promise<AuthResponse> {
     const response = await api.post('/auth/login', credentials);
     return response.data;

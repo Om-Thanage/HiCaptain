@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { authService } from '@/services/auth';
 import { Invitation, organizationService } from '@/services/organization';
 import { useAuthStore } from '@/store/auth';
+import SocialSignIn from '@/app/auth/components/SocialSignIn';
 
 function InvitationPage() {
   const router = useRouter();
@@ -49,6 +50,7 @@ function InvitationPage() {
           {!signedIn && <><label className="block text-sm">Your name<input className="mt-1 w-full rounded-lg bg-white/10 border border-white/20 p-3" value={name} onChange={e => setName(e.target.value)} /></label>
             <label className="block text-sm">Password<input type="password" minLength={8} className="mt-1 w-full rounded-lg bg-white/10 border border-white/20 p-3" value={password} onChange={e => setPassword(e.target.value)} /></label></>}
           <button className="hc-pill-button w-full" disabled={busy || (!signedIn && (!name.trim() || password.length < 8))} onClick={accept}>{busy ? 'Joining…' : 'Accept invitation'}</button>
+          {!signedIn && <SocialSignIn invitation={token} />}
           {signedIn && <p className="text-sm text-slate-400">Signed in with another account? <button className="underline" onClick={() => { authService.clearToken(); setToken(null); window.location.reload(); }}>Sign out</button> to accept with the invited email.</p>}
         </>}
       </div></div></div></div>;

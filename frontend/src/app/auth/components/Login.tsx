@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/auth';
 import { AuthRequest } from '@/types';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import SocialSignIn from './SocialSignIn';
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -97,6 +98,8 @@ export default function Login() {
           )}
         </motion.button>
       </form>
+
+      <SocialSignIn />
 
       <p className="mt-6 text-center text-sm text-slate-400">
         Don't have an account?{' '}

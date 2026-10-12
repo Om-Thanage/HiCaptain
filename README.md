@@ -4,7 +4,7 @@ HiCaptain is a project workspace for teams. The current interface follows a ligh
 
 ## What you can do
 
-- **Organizations and access:** Create an account and become the admin of a new organization. Invite teammates by email; people with existing accounts can join directly, while new teammates create an account from the invitation link. A person can belong to multiple organizations and hold multiple roles in each one. Admins manage organization roles, and project access can be scoped to selected projects.
+- **Organizations and access:** Create an account with email and password, Google, or GitHub and become the admin of a new organization. Invite teammates by email; people with existing accounts can join directly, while new teammates create an account from the invitation link. A person can belong to multiple organizations and hold multiple roles in each one. Admins manage organization roles, and project access can be scoped to selected projects.
 - **Projects:** Create projects with a start date that defaults to today, a tentative end date, a description, and a team. Project details show the timeline, team, Kanban board, and GitHub activity. Admins and project managers can manage the permitted project team.
 - **Tasks and team progress:** Create, assign, edit, and move tasks across the Kanban board. Track priorities, deadlines, and status from the project and workspace overview. Copy individual tasks to your Google Tasks list.
 - **Schedule and meetings:** See project deadlines, meetings, and Google Calendar events together. Connect Google Workspace to create calendar meetings with Google Meet links.
@@ -33,7 +33,7 @@ Requirements: Java 17, Node.js compatible with Next.js 16, npm, and MongoDB. Ext
    cp backend/.env.example backend/.env
    ```
 
-   Set `MONGODB_URI` and a strong `JWT_SECRET`. Keep `.env` out of Git. For invitation emails, set the `SMTP_*` fields and `FRONTEND_URL`. For Google Workspace, set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`, and a stable `GOOGLE_TOKEN_ENCRYPTION_KEY`. For GitHub, set `GITHUB_TOKEN`, `GITHUB_OAUTH_CLIENT_ID`, `GITHUB_OAUTH_CLIENT_SECRET`, and `GITHUB_OAUTH_REDIRECT_URI`. See [backend/.env.example](backend/.env.example) for the complete list.
+   Set `MONGODB_URI` and a strong `JWT_SECRET`. Keep `.env` out of Git. For invitation emails, set the `SMTP_*` fields and `FRONTEND_URL`. For Google sign-in and Workspace, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`; Workspace also needs `GOOGLE_OAUTH_REDIRECT_URI` and a stable `GOOGLE_TOKEN_ENCRYPTION_KEY`. GitHub sign-in uses `GITHUB_LOGIN_CLIENT_ID` and `GITHUB_LOGIN_CLIENT_SECRET`; repository integration uses `GITHUB_TOKEN` and `GITHUB_OAUTH_*`. See [backend/.env.example](backend/.env.example) for the complete list.
 
 2. Start the backend:
 
@@ -58,10 +58,19 @@ Requirements: Java 17, Node.js compatible with Next.js 16, npm, and MongoDB. Ext
 
 Register these backend callback URLs with the providers for local development:
 
-- GitHub: `http://localhost:8080/api/auth/github/callback`
-- Google: `http://localhost:8080/api/google-calendar/auth/callback`
+- GitHub sign-in app: `http://localhost:8080/auth/oauth/github/callback`
+- GitHub repository integration app: `http://localhost:8080/api/auth/github/callback`
+- Google sign-in: `http://localhost:8080/auth/oauth/google/callback`
+- Google Workspace integration: `http://localhost:8080/api/google-calendar/auth/callback`
 
-Use your deployed backend URLs in production. Set `FRONTEND_URL` to the public frontend origin so OAuth returns to the right app. Connect Google Workspace from **Settings**; connect GitHub from a project's **GitHub** section.
+### Create the credentials
+
+1. In **GitHub → Settings → Developer settings → OAuth Apps**, create a **New OAuth App** for HiCaptain sign-in. Set the homepage URL to `http://localhost:3000` and the authorization callback URL to the GitHub sign-in callback above. Copy its client ID and generate a client secret for `GITHUB_LOGIN_CLIENT_ID` and `GITHUB_LOGIN_CLIENT_SECRET` in `backend/.env`. This flow requests only `read:user` and `user:email`.
+2. Create a **second GitHub OAuth App** for the project repository integration. Set its callback to the GitHub repository integration URL above. Put its client ID and secret in `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET`. Keeping the apps separate lets sign-in avoid repository permissions. Set `GITHUB_TOKEN` if you use repository syncing.
+3. In **Google Cloud Console → Google Auth Platform**, configure the consent screen and add your test accounts while the app is in testing. Under **Clients**, create an OAuth client of type **Web application**. Add **both** Google callback URLs above to its authorized redirect URIs. Put the client ID and secret in `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Google sign-in requests `openid`, `email`, and `profile`; connecting Workspace later asks for its own Calendar, Drive, and Tasks access.
+4. Set `GITHUB_LOGIN_REDIRECT_URI`, `GITHUB_OAUTH_REDIRECT_URI`, `GOOGLE_LOGIN_REDIRECT_URI`, and `GOOGLE_OAUTH_REDIRECT_URI` to the matching registered URLs. Set `FRONTEND_URL=http://localhost:3000` and `NEXT_PUBLIC_API_URL=http://localhost:8080` for local development.
+
+Use HTTPS frontend and backend URLs in production, register those exact backend callbacks with GitHub and Google, and set `FRONTEND_URL` to the public frontend origin. Keep client secrets in `backend/.env` or your deployment secret manager; never put them in `NEXT_PUBLIC_*` variables. Connect Google Workspace from **Settings** and GitHub repositories from a project's **GitHub** section. Social sign-in links an existing account only when the provider returns a verified email. New accounts choose an organization name after the provider returns and become its Admin; teammates using an invitation link join that invitation's organization after their verified email is checked.
 
 ## Repository layout
 

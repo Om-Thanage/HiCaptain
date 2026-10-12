@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/auth';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import logo from '../../../../public/logo.png';
+import SocialSignIn from './SocialSignIn';
 
 interface RegisterForm {
   name: string;
@@ -186,6 +187,8 @@ export default function RegisterPage() {
               )}
             </motion.button>
           </form>
+
+          <SocialSignIn />
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}

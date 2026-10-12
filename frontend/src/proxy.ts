@@ -19,7 +19,7 @@ export function proxy(request: NextRequest) {
   }
 
   // If user is not authenticated and trying to access protected routes, redirect to login
-  if (!active && !publicRoutes.includes(pathname) && pathname !== '/') {
+  if (!active && !publicRoutes.includes(pathname) && !pathname.startsWith('/auth/oauth/') && pathname !== '/') {
     return NextResponse.redirect(new URL('/auth?mode=login', request.url));
   }
 
