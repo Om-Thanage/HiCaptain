@@ -4,7 +4,7 @@ HiCaptain is a project workspace for teams. The current interface follows a ligh
 
 ## What you can do
 
-- **Organizations and access:** Create an account with email and password, Google, or GitHub and become the admin of a new organization. Invite teammates by email; people with existing accounts can join directly, while new teammates create an account from the invitation link. A person can belong to multiple organizations and hold multiple roles in each one. Admins manage organization roles, and project access can be scoped to selected projects.
+- **Organizations and access:** Create an account with email and password, Google, or GitHub and become the admin of a new organization. New accounts receive a generated display name that can be edited in Settings. Invite teammates by email; people with existing accounts can join directly, while new teammates create an account from the invitation link. A person can belong to multiple organizations and hold multiple roles in each one. Admins manage organization roles, and project access can be scoped to selected projects.
 - **Projects:** Create projects with a start date that defaults to today, a tentative end date, a description, and a team. Project details show the timeline, team, Kanban board, and GitHub activity. Admins and project managers can manage the permitted project team.
 - **Tasks and team progress:** Create, assign, edit, and move tasks across the Kanban board. Track priorities, deadlines, and status from the project and workspace overview. Copy individual tasks to your Google Tasks list.
 - **Schedule and meetings:** See project deadlines, meetings, and Google Calendar events together. Connect Google Workspace to create calendar meetings with Google Meet links.

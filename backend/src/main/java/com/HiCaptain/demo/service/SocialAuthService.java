@@ -8,6 +8,7 @@ import com.HiCaptain.demo.model.User;
 import com.HiCaptain.demo.repository.SocialIdentityRepository;
 import com.HiCaptain.demo.repository.SocialLoginTicketRepository;
 import com.HiCaptain.demo.repository.UserRepository;
+import com.HiCaptain.demo.util.Usernames;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
@@ -92,23 +93,22 @@ public class SocialAuthService {
         ticket.setProvider(provider);
         ticket.setSubject(profile.subject());
         ticket.setEmail(profile.email().toLowerCase(Locale.ROOT));
-        ticket.setName(profile.name());
         ticket.setInvitationToken(invitationToken);
         tickets.save(ticket);
         return token;
     }
 
-    public record TicketPreview(String name, String email, boolean needsOrganization, String invitedOrganization) {}
+    public record TicketPreview(String email, boolean needsOrganization, String invitedOrganization) {}
     public TicketPreview preview(String token) {
         SocialLoginTicket ticket = validTicket(token);
         if (ticket.getInvitationToken() != null) {
             var invite = organizations.preview(ticket.getInvitationToken());
             if (!invite.email().equalsIgnoreCase(ticket.getEmail()))
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This account does not match the invitation email");
-            return new TicketPreview(ticket.getName(), ticket.getEmail(), false, invite.organizationName());
+            return new TicketPreview(ticket.getEmail(), false, invite.organizationName());
         }
         Optional<User> user = findUser(ticket);
-        return new TicketPreview(ticket.getName(), ticket.getEmail(),
+        return new TicketPreview(ticket.getEmail(),
                 user.isEmpty() || organizations.membershipsFor(user.get().getId()).isEmpty(), null);
     }
 
@@ -157,7 +157,7 @@ public class SocialAuthService {
 
     private User createUser(SocialLoginTicket ticket) {
         User user = new User();
-        user.setName(ticket.getName());
+        user.setName(Usernames.generate(ticket.getEmail()));
         user.setEmail(ticket.getEmail());
         user.setPassword(passwords.encode(java.util.UUID.randomUUID().toString() + java.util.UUID.randomUUID()));
         return users.save(user);
@@ -169,7 +169,7 @@ public class SocialAuthService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sign-in link expired or already used"));
     }
 
-    private record Profile(String subject, String email, String name) {}
+    private record Profile(String subject, String email) {}
     private Profile githubProfile(String code) {
         JsonNode token = request("https://github.com/login/oauth/access_token", form("client_id", githubClientId,
                 "client_secret", githubClientSecret, "code", code, "redirect_uri", githubRedirectUri), null);
@@ -184,9 +184,7 @@ public class SocialAuthService {
             }
         }
         if (email == null || email.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A verified primary GitHub email is required");
-        String name = account.path("name").asText("");
-        if (name.isBlank()) name = account.path("login").asText();
-        return new Profile(required(account, "id"), email, name);
+        return new Profile(required(account, "id"), email);
     }
 
     private Profile googleProfile(String code) {
@@ -196,7 +194,7 @@ public class SocialAuthService {
         JsonNode account = request("https://openidconnect.googleapis.com/v1/userinfo", null, required(token, "access_token"));
         if (!account.path("email_verified").asBoolean())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A verified Google email is required");
-        return new Profile(required(account, "sub"), required(account, "email"), account.path("name").asText(required(account, "email")));
+        return new Profile(required(account, "sub"), required(account, "email"));
     }
 
     private JsonNode request(String url, String body, String accessToken) {

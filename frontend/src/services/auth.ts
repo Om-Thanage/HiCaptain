@@ -8,7 +8,7 @@ export const authService = {
     return invitation ? `${base}?invitation=${encodeURIComponent(invitation)}` : base;
   },
 
-  async socialTicket(ticket: string): Promise<{ name: string; email: string; needsOrganization: boolean; invitedOrganization?: string }> {
+  async socialTicket(ticket: string): Promise<{ email: string; needsOrganization: boolean; invitedOrganization?: string }> {
     return (await api.get('/auth/oauth/ticket', { params: { ticket } })).data;
   },
 
@@ -20,9 +20,13 @@ export const authService = {
     return response.data;
   },
 
-  async register(userData: { name: string; email: string; password: string; organizationName: string }): Promise<AuthResponse> {
+  async register(userData: { email: string; password: string; organizationName: string }): Promise<AuthResponse> {
     const response = await api.post('/auth/register', userData);
     return response.data;
+  },
+
+  async updateProfile(name: string): Promise<AuthResponse> {
+    return (await api.patch('/users/me/profile', { name })).data;
   },
 
   setToken(token: string) {

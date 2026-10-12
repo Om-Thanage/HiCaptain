@@ -14,8 +14,8 @@ export const organizationService = {
   async setRoles(id: string, userId: string, roles: Role[]): Promise<void> { await api.put(`/organizations/${id}/members/${userId}/roles`, { roles }); },
   async remove(id: string, userId: string): Promise<void> { await api.delete(`/organizations/${id}/members/${userId}`); },
   async preview(token: string): Promise<Invitation> { return (await api.get('/auth/invitations/preview', { params: { token } })).data; },
-  async registerInvited(token: string, name: string, email: string, password: string): Promise<AuthResponse> {
-    return (await api.post('/auth/invitations/register', { token, name, email, password })).data;
+  async registerInvited(token: string, email: string, password: string): Promise<AuthResponse> {
+    return (await api.post('/auth/invitations/register', { token, email, password })).data;
   },
   async accept(token: string): Promise<AuthResponse> { return (await api.post('/organizations/invitations/accept', { token })).data; },
 };

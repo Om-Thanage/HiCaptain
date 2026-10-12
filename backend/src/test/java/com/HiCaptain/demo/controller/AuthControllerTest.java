@@ -32,11 +32,12 @@ class AuthControllerTest {
         when(organizations.createOrganization(any(User.class), eq("Acme"))).thenReturn(membership);
         when(jwt.generateToken(any(User.class), eq(membership))).thenReturn("signed");
 
-        var session = controller.register(new AuthController.Registration(" Alice ", " Alice@Example.com ", "password123", "Acme"));
+        var session = controller.register(new AuthController.Registration(" Alice@Example.com ", "password123", "Acme"));
 
         var saved = org.mockito.ArgumentCaptor.forClass(User.class);
         verify(users).save(saved.capture());
         assertEquals("alice@example.com", saved.getValue().getEmail());
+        assertTrue(saved.getValue().getName().matches("alice_[0-9a-f]{6}"));
         assertNull(saved.getValue().getRole());
         assertTrue(passwords.matches("password123", saved.getValue().getPassword()));
         assertEquals("Admin", session.role());

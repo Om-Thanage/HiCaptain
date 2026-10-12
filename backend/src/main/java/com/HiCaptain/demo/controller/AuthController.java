@@ -5,6 +5,7 @@ import com.HiCaptain.demo.model.User;
 import com.HiCaptain.demo.repository.UserRepository;
 import com.HiCaptain.demo.service.JwtService;
 import com.HiCaptain.demo.service.OrganizationService;
+import com.HiCaptain.demo.util.Usernames;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -31,9 +32,9 @@ public class AuthController {
         this.passwords = passwords;
     }
 
-    public record Registration(@NotBlank String name, @Email @NotBlank String email,
+    public record Registration(@Email @NotBlank String email,
             @Size(min = 8) @NotBlank String password, @NotBlank String organizationName) {}
-    public record InvitedRegistration(@NotBlank String name, @Email @NotBlank String email,
+    public record InvitedRegistration(@Email @NotBlank String email,
             @Size(min = 8) @NotBlank String password, @NotBlank String token) {}
     public record Login(@Email @NotBlank String email, @NotBlank String password) {}
     public record Session(String token, String userId, String name, String email, String role,
@@ -41,7 +42,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public Session register(@Valid @RequestBody Registration request) {
-        User user = createUser(request.name(), request.email(), request.password());
+        User user = createUser(request.email(), request.password());
         Membership membership;
         try {
             membership = organizations.createOrganization(user, request.organizationName());
@@ -56,7 +57,7 @@ public class AuthController {
     public Session registerInvited(@Valid @RequestBody InvitedRegistration request) {
         var invitation = organizations.preview(request.token());
         if (!invitation.email().equalsIgnoreCase(request.email())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invitation email does not match");
-        User user = createUser(request.name(), request.email(), request.password());
+        User user = createUser(request.email(), request.password());
         Membership membership;
         try {
             membership = organizations.accept(request.token(), user);
@@ -83,11 +84,11 @@ public class AuthController {
         return session(user, membership);
     }
 
-    private User createUser(String name, String email, String password) {
+    private User createUser(String email, String password) {
         email = email.trim().toLowerCase(Locale.ROOT);
         if (users.existsByEmailIgnoreCase(email)) throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exists");
         User user = new User();
-        user.setName(name.trim());
+        user.setName(Usernames.generate(email));
         user.setEmail(email);
         user.setPassword(passwords.encode(password));
         try {

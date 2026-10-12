@@ -47,7 +47,6 @@ class SocialAuthServiceTest {
         ticket.setProvider("google");
         ticket.setSubject("google-user-1");
         ticket.setEmail("member@example.com");
-        ticket.setName("New Member");
         ticket.setExpiresAt(Instant.now().plusSeconds(300));
         when(tickets.findByTokenHash(any())).thenReturn(Optional.of(ticket));
         when(identities.findByProviderSubject(any())).thenReturn(Optional.empty());
@@ -75,6 +74,9 @@ class SocialAuthServiceTest {
         assertEquals("org-1", social.exchange("temporary-ticket", "My team").organizationId());
         verify(organizations).createOrganization(any(), org.mockito.Mockito.eq("My team"));
         verify(identities).save(any());
+        var saved = org.mockito.ArgumentCaptor.forClass(User.class);
+        verify(users).save(saved.capture());
+        assertTrue(saved.getValue().getName().matches("member_[0-9a-f]{6}"));
     }
 
     @Test
@@ -83,7 +85,6 @@ class SocialAuthServiceTest {
         ticket.setProvider("github");
         ticket.setSubject("12345");
         ticket.setEmail("member@example.com");
-        ticket.setName("Member");
         ticket.setExpiresAt(Instant.now().plusSeconds(300));
         User user = new User();
         user.setId("user-1");

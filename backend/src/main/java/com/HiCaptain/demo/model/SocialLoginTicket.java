@@ -15,6 +15,5 @@ public class SocialLoginTicket {
     private String provider;
     private String subject;
     private String email;
-    private String name;
     private String invitationToken;
 }

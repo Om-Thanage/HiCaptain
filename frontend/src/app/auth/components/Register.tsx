@@ -3,17 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, UserPlus, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { authService } from '@/services/auth';
 import { useAuthStore } from '@/store/auth';
 import toast from 'react-hot-toast';
-import Image from 'next/image';
-import logo from '../../../../public/logo.png';
 import SocialSignIn from './SocialSignIn';
 
 interface RegisterForm {
-  name: string;
   email: string;
   password: string;
   confirmPassword: string;
@@ -45,7 +42,6 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       const userData = {
-        name: data.name,
         email: data.email,
         password: data.password,
         organizationName: data.organizationName,
@@ -73,19 +69,8 @@ export default function RegisterPage() {
           <h2 className="text-2xl font-semibold text-center text-white mb-6">
             Create your account
           </h2>
+          <p className="text-sm text-slate-400 mb-6">We&apos;ll create a username from your email. Change it anytime in Settings.</p>
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-            {/* Username */}
-            <div>
-              <label className="block text-sm font-medium text-slate-200">Username</label>
-              <input
-                {...register('name', { required: 'Username is required' })}
-                type="text"
-                className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="Enter your username"
-              />
-              {errors.name && <p className="mt-1 text-sm text-red-400">{errors.name.message}</p>}
-            </div>
-
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-slate-200">Email</label>
@@ -96,15 +81,6 @@ export default function RegisterPage() {
                 placeholder="Enter your email"
               />
               {errors.email && <p className="mt-1 text-sm text-red-400">{errors.email.message}</p>}
-            </div>
-
-            {/* Organization */}
-            <div>
-              <label className="block text-sm font-medium text-slate-200">Organization name</label>
-              <input {...register('organizationName', { required: 'Organization name is required' })}
-                className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="Your team or company" />
-              {errors.organizationName && <p className="mt-1 text-sm text-red-400">{errors.organizationName.message}</p>}
             </div>
 
             {/* Password */}
@@ -167,6 +143,14 @@ export default function RegisterPage() {
               {errors.confirmPassword && (
                 <p className="mt-1 text-sm text-red-400">{errors.confirmPassword.message}</p>
               )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-200">Organization name</label>
+              <input {...register('organizationName', { required: 'Organization name is required' })}
+                className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                placeholder="Your team or company" />
+              {errors.organizationName && <p className="mt-1 text-sm text-red-400">{errors.organizationName.message}</p>}
             </div>
 
             {/* Submit Button */}

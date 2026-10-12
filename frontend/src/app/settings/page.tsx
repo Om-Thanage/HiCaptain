@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowUpRight, Bell, HardDrive, Github, LogOut, ShieldCheck, UsersRound } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -9,6 +9,7 @@ import { authService } from '@/services/auth';
 import { Organization, organizationService } from '@/services/organization';
 import api from '@/lib/api';
 import type { User } from '@/types';
+import { useAuthStore } from '@/store/auth';
 import styles from './settings.module.css';
 
 type Connection = { connected: boolean; detail?: string } | null;
@@ -19,6 +20,8 @@ export default function SettingsPage() {
   const [github, setGithub] = useState<Connection>(null);
   const [calendar, setCalendar] = useState<Connection>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState('');
+  const setToken = useAuthStore(state => state.setToken);
 
   useEffect(() => {
     const googleResult = new URLSearchParams(window.location.search).get('google');
@@ -26,6 +29,7 @@ export default function SettingsPage() {
     if (googleResult === 'error') toast.error('Google Workspace connection failed');
     const currentUser = authService.getUserFromToken();
     setUser(currentUser);
+    setDisplayName(currentUser?.name || '');
     organizationService.list().then(items => setOrganization(items.find(item => item.id === currentUser?.organizationId) || null)).catch(() => {});
     if (!currentUser) return;
     if (currentUser.roles?.some(role => role === 'Admin' || role === 'ProjectManager' || role === 'Developer')) {
@@ -33,6 +37,21 @@ export default function SettingsPage() {
     }
     api.get('/api/google-calendar/auth/status', { params: { userId: currentUser.id } }).then(response => setCalendar({ connected: !!response.data })).catch(() => setCalendar(null));
   }, []);
+
+  async function saveProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = displayName.trim();
+    if (!name || name === user?.name) return;
+    setBusy('profile');
+    try {
+      const session = await authService.updateProfile(name);
+      authService.setToken(session.token);
+      setToken(session.token);
+      setUser(authService.getUserFromToken());
+      toast.success('Display name updated');
+    } catch { toast.error('Could not update your display name'); }
+    finally { setBusy(null); }
+  }
 
   async function connectGithub() {
     setBusy('github');
@@ -69,10 +88,11 @@ export default function SettingsPage() {
   const roleNames = user?.roles?.map(role => role === 'ProjectManager' ? 'Project manager' : role).join(' · ') || 'Member';
 
   return <DashboardLayout><div className={styles.page}>
-    <section className={styles.hero}><div><span className={styles.kicker}>YOUR SPACE</span><h1>Make this workspace yours.</h1><p>View your account, check connected tools, and find the right place to manage your team.</p></div><div className={styles.heroArt} aria-hidden="true"><span>✦</span><span>◉</span><span>✳</span></div></section>
+    <section className={styles.hero}><div><span className={styles.kicker}>YOUR SPACE</span><h1>Make this workspace yours.</h1><p>Edit your profile, check connected tools, and find the right place to manage your team.</p></div><div className={styles.heroArt} aria-hidden="true"><span>✦</span><span>◉</span><span>✳</span></div></section>
     <div className={styles.grid}>
       <section className={styles.card}><div className={styles.cardHeading}><span className={`${styles.icon} ${styles.purple}`}><UsersRound size={21} /></span><div><span className={styles.kicker}>ACCOUNT</span><h2>Your profile</h2></div></div>
         <div className={styles.identity}><span className={styles.avatar}>{user?.name?.charAt(0).toUpperCase() || '?'}</span><div><strong>{user?.name || 'Your account'}</strong><span>{user?.email || 'Loading account…'}</span></div></div>
+        <form className={styles.profileForm} onSubmit={saveProfile}><label htmlFor="display-name">Display name</label><div><input id="display-name" required maxLength={80} value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="Your display name" /><button type="submit" disabled={busy === 'profile' || !displayName.trim() || displayName.trim() === user?.name}>{busy === 'profile' ? 'Saving…' : 'Save name'}</button></div><p>Your initial name is based on your email. You can change it here anytime.</p></form>
         <div className={styles.info}><span>Workspace</span><strong>{organization?.name || 'Your organization'}</strong></div><div className={styles.info}><span>Your roles</span><strong>{roleNames}</strong></div>
         <p className={styles.note}>Your organization admin manages roles and access for this workspace.</p>
         {user?.roles?.includes('Admin') && <Link className={styles.textLink} href="/users">Manage team access <ArrowUpRight size={16} /></Link>}
