@@ -10,6 +10,7 @@ import { authService } from '@/services/auth';
 import { Project } from '@/types';
 import toast from 'react-hot-toast';
 import ProjectKanban from './kanban/ProjectKanban';
+import ProjectGit from './ProjectGit';
 import styles from './detail.module.css';
 
 const date = (value?: string) => value ? new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set';
@@ -37,6 +38,7 @@ export default function ProjectDetailPage() {
         <div><UsersRound size={20} /><span><small>PROJECT TEAM</small><strong>{project.developerIds?.length || 0} developers</strong></span>{canManageAccess && <Link href={`/projects/${id}/access`}>Manage team <ArrowUpRight size={15} /></Link>}</div>
       </div>
       <ProjectKanban project={project} />
+      {(user?.roles || (user?.role ? [user.role] : [])).some(role => role === 'Admin' || role === 'ProjectManager' || role === 'Developer') && <ProjectGit projectId={id} />}
     </>}
   </div></DashboardLayout>;
 }

@@ -115,7 +115,7 @@ public class NotificationService {
 
         Notification notification = createNotification(
             userId, title, message, "info", "github", "commit", sourceId,
-            "/git", projectId, "normal"
+            projectId == null ? "/projects" : "/projects/" + projectId, projectId, "normal"
         );
         
         notification.setRepositoryFullName(repositoryFullName);

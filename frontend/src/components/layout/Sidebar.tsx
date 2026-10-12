@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ArrowUpRight, Bell, CalendarDays, Cloud, GitBranch, Layers3,
+  ArrowUpRight, Bell, CalendarDays, Cloud, Layers3,
   LayoutDashboard, MessagesSquare, Plus, UsersRound,
   type LucideIcon,
 } from 'lucide-react';
@@ -21,7 +21,6 @@ const sections: Array<{ title: string; items: Destination[] }> = [
     { label: 'Schedule', href: '/schedule', icon: CalendarDays },
     { label: 'Project files', href: '/storage', icon: Cloud },
     { label: 'Feedback', href: '/feedback', icon: MessagesSquare, roles: ['Admin', 'ProjectManager', 'Client'] },
-    { label: 'Git activity', href: '/git', icon: GitBranch, roles: ['Admin', 'ProjectManager', 'Developer'] },
     { label: 'Notifications', href: '/notifications', icon: Bell },
   ] },
 ];
