@@ -22,7 +22,8 @@ The original audit examined `work` at `e9d78bb`. Remediation targets the existin
 | A15 browser session lifecycle | Verified and regression covered | HTTPS Secure/SameSite cookie policy, token-aligned expiry, malformed/expired token cleanup, correct auth routes and SSR guard. The SPA bearer remains JavaScript-readable; backend JWT validation is the authorization boundary. No XSS exploit was established by the audit. |
 | Webhooks | Fixed | Bounded public receiver verifies HMAC before persistence; content-based deduplication, idempotent commit/PR/issue persistence, and stale-event protection. Creation restricts destinations to this backend callback and hides signing secrets. |
 | Fabricated fallback data | Fixed | Feedback and notifications show visible retry errors instead of fake records. Notification caches are scoped to organization/user and cleared on sign-out; recipients must belong to the active organization. |
-| Completion gaps | Pending | Verify settings, integrations, notification claims, tests, licensing, and missing agent delivery. |
+| Product/settings/docs | Resolved on revamped | Real profile/password endpoints; removed fake preference controls and obsolete analytics/invoice/payment surfaces. Current backend guide replaces stale claims; SMTP/rate-limit settings forwarded in Docker. MIT license added. |
+| Missing agent delivery | Pending | Earlier uncommitted agent implementation was not present on the remote branch; it must be restored and verified before this gap is closed. |
 
 ## Quality gates
 

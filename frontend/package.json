@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "oxlint --react-plugin --nextjs-plugin --jsx-a11y-plugin src",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/test-notification-cache.cjs"
+    "test": "node scripts/test-notification-cache.cjs && node scripts/test-session-lifecycle.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^6.0.2",
