@@ -11,7 +11,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class SocialLoginTicket {
     @Id private String id;
     @Indexed(unique = true) private String tokenHash;
-    @Indexed(expireAfter = "0s") private Instant expiresAt;
+    @org.springframework.data.mongodb.core.mapping.Field("purgeAt")
+    @Indexed(name="social_ticket_expiration", expireAfter = "0s") private Instant expiresAt;
     private String provider;
     private String subject;
     private String email;

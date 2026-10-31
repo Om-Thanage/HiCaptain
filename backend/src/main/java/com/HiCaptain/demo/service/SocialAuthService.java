@@ -166,7 +166,7 @@ public class SocialAuthService {
 
     private SocialLoginTicket validTicket(String token) {
         if (token == null || token.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing sign-in ticket");
-        return tickets.findByTokenHash(hash(token)).filter(t -> t.getExpiresAt().isAfter(Instant.now()))
+        return tickets.findByTokenHash(hash(token)).filter(t -> t.getExpiresAt() != null && t.getExpiresAt().isAfter(Instant.now()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sign-in link expired or already used"));
     }
 

@@ -17,7 +17,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class OAuthFlowService {
     @Document("oauth_flows")
-    public record Flow(@Id String id, String provider, String browserHash, @Indexed(expireAfter="0s") Instant expiresAt) {}
+    public record Flow(@Id String id, String provider, String browserHash,
+            @org.springframework.data.mongodb.core.mapping.Field("purgeAt") @Indexed(name="oauth_flow_expiration", expireAfter="0s") Instant expiresAt) {}
     private final MongoTemplate mongo;
     public OAuthFlowService(MongoTemplate mongo) { this.mongo = mongo; }
     public void bind(String state, String provider, HttpServletRequest request, HttpServletResponse response) {
