@@ -45,6 +45,7 @@ jobs:
           java-version: 17
           cache: maven
       - run: bash ./mvnw --batch-mode test
+      - run: python docker/test-compose.py
 
   agent-worker:
     runs-on: ubuntu-latest

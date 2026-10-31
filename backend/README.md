@@ -22,7 +22,8 @@ Account profile changes and password changes are available in Settings. Password
 
 ## Configuration and deployment
 
-- [Main setup and OAuth callbacks](../README.md)
+- [Render deployment, frontend connection and exact OAuth callbacks](../README.md#deploy-the-backend-to-the-existing-render-service)
+- [Render environment template](.env.render.example) — use the `prod` profile, a reachable MongoDB URI, and explicit frontend CORS origins. Render supplies `PORT`.
 - [Existing Docker database migration](docker/README.md)
 - [Google credential rotation](../docs/audits/credential-rotation.md)
 - [Backend dependency/index compatibility](../docs/audits/backend-upgrade.md)
