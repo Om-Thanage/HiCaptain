@@ -56,6 +56,8 @@ Requirements: Java 17, Node.js compatible with Next.js 16, npm, and MongoDB. Ext
 
 ## OAuth setup
 
+Authentication endpoints are limited to 120 attempts per TCP peer per minute by default (`AUTH_RATE_LIMIT_MAX`, `AUTH_RATE_LIMIT_WINDOW_SECONDS`). The application does not trust arbitrary forwarded-IP headers. Configure trusted proxy address handling at your gateway/container boundary when deploying behind a proxy; add a shared gateway rate limit for multiple backend replicas. Passwords must be 8–72 UTF-8 bytes.
+
 Register these backend callback URLs with the providers for local development:
 
 - GitHub sign-in and repository integration: `http://localhost:8080/api/auth/github/callback`

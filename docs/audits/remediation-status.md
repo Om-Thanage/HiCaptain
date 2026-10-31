@@ -17,6 +17,6 @@ The original audit examined `work` at `e9d78bb`. Remediation targets the existin
 | A11 session revocation | Fixed | Current account and membership checks plus per-user session versions. Password change verifies the old password and atomically invalidates previous sessions; Settings uses the real endpoint. |
 | A12 database deployment defaults | Fixed; existing-volume migration documented | No published MongoDB port, required non-default passwords and a separate database-scoped application user. Compose resolution and initializer syntax checks pass. |
 | A13 payment trust | Resolved by removal | Billing APIs and UI removed on revamped. |
-| A14 identity / abuse controls | Partial | Unique normalized email exists; throttling remains. |
+| A14 identity / abuse controls | Fixed | Unique normalized email plus bounded registration/password inputs, UTF-8 BCrypt byte limits, and bounded per-peer authentication throttling. Callback requests are excluded; spoofed forwarded headers cannot bypass the filter. |
 | A15 browser session lifecycle | Under verification | Expiry-aware cookies and auth routes exist. |
 | Completion gaps | Pending | Verify settings, integrations, webhooks, notification claims, tests, licensing, and missing agent delivery. |

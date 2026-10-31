@@ -24,6 +24,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     @Bean
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<com.HiCaptain.demo.security.AuthRateLimitFilter> authenticationRateLimit(
+            @org.springframework.beans.factory.annotation.Value("${AUTH_RATE_LIMIT_MAX:120}") int maximum,
+            @org.springframework.beans.factory.annotation.Value("${AUTH_RATE_LIMIT_WINDOW_SECONDS:60}") int seconds) {
+        var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(new com.HiCaptain.demo.security.AuthRateLimitFilter(maximum, seconds));
+        registration.setOrder(-101);
+        return registration;
+    }
+
+    @Bean
     public JwtAuthFilter jwtAuthFilter(JwtService jwtService, UserService userService, OrganizationService organizationService) {
         return new JwtAuthFilter(jwtService, userService, organizationService);
     }

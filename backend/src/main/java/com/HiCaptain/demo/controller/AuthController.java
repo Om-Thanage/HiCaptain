@@ -32,11 +32,11 @@ public class AuthController {
         this.passwords = passwords;
     }
 
-    public record Registration(@Email @NotBlank String email,
-            @Size(min = 8) @NotBlank String password, @NotBlank String organizationName) {}
-    public record InvitedRegistration(@Email @NotBlank String email,
-            @Size(min = 8) @NotBlank String password, @NotBlank String token) {}
-    public record Login(@Email @NotBlank String email, @NotBlank String password) {}
+    public record Registration(@Email @NotBlank @Size(max=254) String email,
+            @Size(min = 8, max=72) @NotBlank String password, @NotBlank @Size(max=120) String organizationName) {}
+    public record InvitedRegistration(@Email @NotBlank @Size(max=254) String email,
+            @Size(min = 8, max=72) @NotBlank String password, @NotBlank @Size(max=256) String token) {}
+    public record Login(@Email @NotBlank @Size(max=254) String email, @NotBlank @Size(max=200) String password) {}
     public record Session(String token, String userId, String name, String email, String role,
             String organizationId, java.util.Set<com.HiCaptain.demo.util.Role> roles) {}
 
@@ -85,6 +85,8 @@ public class AuthController {
     }
 
     private User createUser(String email, String password) {
+        if (password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must fit within 72 UTF-8 bytes");
         email = email.trim().toLowerCase(Locale.ROOT);
         if (users.existsByEmailIgnoreCase(email)) throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exists");
         User user = new User();
