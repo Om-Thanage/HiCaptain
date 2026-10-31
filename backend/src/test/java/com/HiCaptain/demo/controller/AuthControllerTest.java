@@ -22,6 +22,27 @@ class AuthControllerTest {
     private final BCryptPasswordEncoder passwords = new BCryptPasswordEncoder();
     private final AuthController controller = new AuthController(users, organizations, jwt, passwords);
 
+    @Test void publicRegistrationCannotOverwriteAnAccountOrChooseItsGlobalRole() throws Exception {
+        when(users.save(any(User.class))).thenAnswer(call -> {
+            User candidate = call.getArgument(0);
+            assertNull(candidate.getId());
+            assertNull(candidate.getRole());
+            candidate.setId("new-account");
+            return candidate;
+        });
+        Membership membership = member(Set.of(Role.Admin));
+        membership.setUserId("new-account");
+        when(organizations.createOrganization(any(), eq("New workspace"))).thenReturn(membership);
+        when(jwt.generateToken(any(), any())).thenReturn("session");
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller).build();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/auth/register")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content("{\"id\":\"victim\",\"role\":\"Admin\",\"email\":\"new@example.com\",\"password\":\"password123\",\"organizationName\":\"New workspace\"}"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+        verify(users, never()).findById("victim");
+        verify(organizations).createOrganization(argThat(user -> "new-account".equals(user.getId())), eq("New workspace"));
+    }
+
     @Test void signupCreatesAdminMembershipAndHashesPassword() {
         when(users.save(any(User.class))).thenAnswer(call -> {
             User user = call.getArgument(0);
