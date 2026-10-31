@@ -5,7 +5,7 @@ The original audit examined `work` at `e9d78bb`. Remediation targets the existin
 | Finding | Status | Evidence / remaining work |
 | --- | --- | --- |
 | A01 registration privilege / identity injection | Fixed in branch; regression added | Registration DTO excludes identity and role; only a new organization grants Admin membership. HTTP regression attempts to supply a victim ID and global role. |
-| A02 destructive initialization | Under verification | Existing branch restricts seeding to demo profile. |
+| A02 destructive initialization | Fixed and regression covered | Explicit demo profile plus database name ending in `_demo`; refusal occurs before any database operation. |
 | A03 vulnerable dependencies | Pending | Upgrade and rerun advisory checks. |
 | A04 tracked Google credential | Pending | Remove remaining tracked credential resources; provider rotation requires owner action. |
 | A05 password disclosure / plaintext creation | Under verification | Safe model serialization and membership views exist; admin creation route was removed. |

@@ -37,11 +37,14 @@ public class DataInitializer {
     private final OrganizationRepository organizationRepository;
     private final MembershipRepository membershipRepository;
     private String demoOrganizationId;
+    @org.springframework.beans.factory.annotation.Value("${spring.data.mongodb.database:hicaptain}")
+    private String database;
 
     @Bean
     @Profile("demo") // Explicit opt-in: never wipe a normal development database
     public CommandLineRunner initializeData() {
         return args -> {
+            if (!database.endsWith("_demo")) throw new IllegalStateException("Demo initialization requires a dedicated database ending in _demo");
             // Clear existing data
             log.info("Clearing existing data...");
             taskRepository.deleteAll();
