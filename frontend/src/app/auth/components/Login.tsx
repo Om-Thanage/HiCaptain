@@ -43,8 +43,8 @@ export default function Login() {
       <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-slate-200">Email</label>
-          <input
+          <label className="block text-sm font-medium text-slate-200" htmlFor="login-components-field-1">Email</label>
+          <input id="login-components-field-1"
             {...register('email', { required: 'Email is required' })}
             type="text"
             className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -55,9 +55,9 @@ export default function Login() {
 
         {/* Password */}
         <div>
-          <label className="block text-sm font-medium text-slate-200">Password</label>
+          <label className="block text-sm font-medium text-slate-200" htmlFor="login-components-field-2">Password</label>
           <div className="relative">
-            <input
+            <input id="login-components-field-2"
               {...register('password', { required: 'Password is required' })}
               type={showPassword ? 'text' : 'password'}
               className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none pr-10"

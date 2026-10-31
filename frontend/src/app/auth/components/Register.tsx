@@ -73,8 +73,8 @@ export default function RegisterPage() {
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-slate-200">Email</label>
-              <input
+              <label className="block text-sm font-medium text-slate-200" htmlFor="register-components-field-1">Email</label>
+              <input id="register-components-field-1"
                 {...register('email', { required: 'Email is required' })}
                 type="text"
                 className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -85,9 +85,9 @@ export default function RegisterPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-slate-200">Password</label>
+              <label className="block text-sm font-medium text-slate-200" htmlFor="register-components-field-2">Password</label>
               <div className="relative">
-                <input
+                <input id="register-components-field-2"
                   {...register('password', {
                     required: 'Password is required',
                     minLength: { value: 8, message: 'Minimum 8 characters' },
@@ -115,11 +115,11 @@ export default function RegisterPage() {
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-sm font-medium text-slate-200">
+              <label className="block text-sm font-medium text-slate-200" htmlFor="register-components-field-3">
                 Confirm Password
               </label>
               <div className="relative">
-                <input
+                <input id="register-components-field-3"
                   {...register('confirmPassword', {
                     required: 'Please confirm your password',
                     validate: (value) => value === password || 'Passwords do not match',
@@ -146,8 +146,8 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-200">Organization name</label>
-              <input {...register('organizationName', { required: 'Organization name is required' })}
+              <label className="block text-sm font-medium text-slate-200" htmlFor="register-components-field-4">Organization name</label>
+              <input id="register-components-field-4" {...register('organizationName', { required: 'Organization name is required' })}
                 className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
                 placeholder="Your team or company" />
               {errors.organizationName && <p className="mt-1 text-sm text-red-400">{errors.organizationName.message}</p>}

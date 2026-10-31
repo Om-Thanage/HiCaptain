@@ -6,7 +6,7 @@ The original audit examined `work` at `e9d78bb`. Remediation targets the existin
 | --- | --- | --- |
 | A01 registration privilege / identity injection | Fixed in branch; regression added | Registration DTO excludes identity and role; only a new organization grants Admin membership. HTTP regression attempts to supply a victim ID and global role. |
 | A02 destructive initialization | Fixed and regression covered | Explicit demo profile plus database name ending in `_demo`; refusal occurs before any database operation. |
-| A03 vulnerable dependencies | Runtime fixed; tooling advisories remain | Next 16.4.3, Axios 1.21, Zod 4.6.7 and patched runtime transitives. Clean install/build pass; production npm audit reports zero. Development-only matcher advisories are tracked separately. |
+| A03 vulnerable dependencies | All npm advisories resolved | Updated runtime dependencies and replaced the vulnerable obsolete lint toolchain with Oxlint. Full npm audit reports zero; lint, typecheck, clean install and production build pass. Backend baseline upgrade is tracked separately. |
 | A04 tracked Google credential | Code fixed; owner rotation required | Removed bundled secret, ignored local credential resource, added artifact regression and rotation instructions. Only the Google project owner can rotate the secret. |
 | A05 password disclosure / plaintext creation | Fixed and regression covered | Password/session internals are excluded from serialization; safe membership DTOs are returned; legacy raw user creation route is absent. |
 | A06 object authorization | Fixed and regression covered | Project-scoped services verified. Removed implicit access grants through task assignment; task assignees must be existing project developers, task author cannot be spoofed, and developers cannot rewrite other members' time logs. |
@@ -22,3 +22,7 @@ The original audit examined `work` at `e9d78bb`. Remediation targets the existin
 | Webhooks | Fixed | Bounded public receiver verifies HMAC before persistence; content-based deduplication, idempotent commit/PR/issue persistence, and stale-event protection. Creation restricts destinations to this backend callback and hides signing secrets. |
 | Fabricated fallback data | Fixed | Feedback and notifications show visible retry errors instead of fake records. Notification caches are scoped to organization/user and cleared on sign-out; recipients must belong to the active organization. |
 | Completion gaps | Pending | Verify settings, integrations, notification claims, tests, licensing, and missing agent delivery. |
+
+## Quality gates
+
+Oxlint enforces correctness, React/Next/TypeScript rules and associated form labels. React Compiler recommendations and existing non-blocking interaction advisories remain warnings because the compiler is not enabled; they are not silently disabled. TypeScript, cache-isolation tests, production build, and a full npm advisory check run in CI.

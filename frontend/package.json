@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "oxlint --react-plugin --nextjs-plugin --jsx-a11y-plugin src",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/test-notification-cache.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^6.0.2",
@@ -29,8 +31,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9.39.5",
-    "eslint-config-next": "^16.4.3",
+    "oxlint": "^1.90.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
