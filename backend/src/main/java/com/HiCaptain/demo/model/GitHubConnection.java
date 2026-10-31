@@ -29,11 +29,13 @@ public class GitHubConnection {
     private String githubAvatarUrl;
     
     // Authentication
-    private String accessToken; // Encrypted OAuth token
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String accessToken;
     private String tokenType = "Bearer";
     private String[] scopes; // Permissions granted
     private LocalDateTime tokenExpiresAt;
-    private String refreshToken; // If available
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String refreshToken;
     
     // Connection status
     private boolean active = true;
