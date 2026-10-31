@@ -19,6 +19,8 @@ public class NotificationService {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired private OrganizationService organizations;
+    @Autowired private ProjectService projects;
 
     /**
      * Create a new notification
@@ -35,6 +37,7 @@ public class NotificationService {
             String projectId,
             String priority) {
 
+        organizations.membership(organizations.currentOrgId(), userId);
         // Get username
         String username = userRepository.findById(userId)
             .map(user -> user.getName())
@@ -42,6 +45,8 @@ public class NotificationService {
 
         Notification notification = new Notification();
         notification.setUserId(userId);
+        notification.setOrganizationId(projectId == null ? organizations.currentOrgId() :
+                projects.getById(projectId).orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND)).getOrganizationId());
         notification.setUsername(username);
         notification.setTitle(title);
         notification.setMessage(message);
@@ -111,7 +116,7 @@ public class NotificationService {
 
         Notification notification = createNotification(
             userId, title, message, "info", "github", "commit", sourceId,
-            "/git", projectId, "normal"
+            projectId == null ? "/projects" : "/projects/" + projectId, projectId, "normal"
         );
         
         notification.setRepositoryFullName(repositoryFullName);
@@ -183,6 +188,7 @@ public class NotificationService {
             notifications = notificationRepository.findByUserIdAndDismissedFalseOrderByCreatedAtDesc(userId);
         }
         
+        notifications = notifications.stream().filter(this::belongsToActiveOrganization).toList();
         // Apply limit
         if (limit > 0 && notifications.size() > limit) {
             notifications = notifications.subList(0, limit);
@@ -195,14 +201,14 @@ public class NotificationService {
      * Get notifications by category
      */
     public List<Notification> getUserNotificationsByCategory(String userId, String category) {
-        return notificationRepository.findByUserIdAndCategoryOrderByCreatedAtDesc(userId, category);
+        return notificationRepository.findByUserIdAndCategoryOrderByCreatedAtDesc(userId, category).stream().filter(this::belongsToActiveOrganization).toList();
     }
 
     /**
      * Get unread notification count
      */
     public long getUnreadNotificationCount(String userId) {
-        return notificationRepository.countByUserIdAndReadFalse(userId);
+        return getUserNotifications(userId, true, 0).size();
     }
 
     /**
@@ -218,6 +224,7 @@ public class NotificationService {
             if (!notification.getUserId().equals(userId)) {
                 throw new RuntimeException("Notification not found or access denied");
             }
+            if (!belongsToActiveOrganization(notification)) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
             
             if (!notification.isRead()) {
                 notification.setRead(true);
@@ -236,12 +243,12 @@ public class NotificationService {
         List<Notification> unreadNotifications = 
             notificationRepository.findByUserIdAndReadFalseOrderByCreatedAtDesc(userId);
         
-        unreadNotifications.forEach(notification -> {
+        unreadNotifications.stream().filter(this::belongsToActiveOrganization).forEach(notification -> {
             notification.setRead(true);
             notification.setReadAt(LocalDateTime.now());
         });
-        
-        notificationRepository.saveAll(unreadNotifications);
+
+        notificationRepository.saveAll(unreadNotifications.stream().filter(this::belongsToActiveOrganization).toList());
     }
 
     /**
@@ -257,6 +264,7 @@ public class NotificationService {
             if (!notification.getUserId().equals(userId)) {
                 throw new RuntimeException("Notification not found or access denied");
             }
+            if (!belongsToActiveOrganization(notification)) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
             
             if (!notification.isDismissed()) {
                 notification.setDismissed(true);
@@ -321,12 +329,19 @@ public class NotificationService {
      * Get notification statistics for admin dashboard
      */
     public Map<String, Object> getNotificationStats() {
-        long totalNotifications = notificationRepository.count();
+        long totalNotifications = notificationRepository.findAll().stream().filter(this::belongsToActiveOrganization).count();
         
         // This is a simplified version - you can expand with more detailed stats
         return Map.of(
             "totalNotifications", totalNotifications,
             "timestamp", LocalDateTime.now()
         );
+    }
+
+    private boolean belongsToActiveOrganization(Notification notification) {
+        if (notification.getOrganizationId() != null) {
+            return notification.getOrganizationId().equals(organizations.currentOrgId());
+        }
+        return notification.getProjectId() != null && projects.getById(notification.getProjectId()).isPresent();
     }
 }

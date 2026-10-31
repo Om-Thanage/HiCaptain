@@ -5,6 +5,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 // Create axios instance
 const api = axios.create({
+  withCredentials: true,
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -34,7 +35,7 @@ api.interceptors.response.use(
       Cookies.remove('token');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      window.location.href = '/auth?mode=login';
     }
     return Promise.reject(error);
   }

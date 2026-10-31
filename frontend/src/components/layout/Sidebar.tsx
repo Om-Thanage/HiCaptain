@@ -1,174 +1,60 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
-  Home,
-  FolderKanban,
-  BarChart3,
-  FileText,
-  MessageCircle,
-  Calendar,
-  GitBranch,
-  Bell,
-  Settings,
-  Users,
-  LogOut,
+  ArrowUpRight, Bell, CalendarDays, Cloud, Layers3,
+  LayoutDashboard, MessagesSquare, Plus, UsersRound,
+  type LucideIcon,
 } from 'lucide-react';
 import { authService } from '@/services/auth';
+import { Role } from '@/types';
 
-// Function to define navigation items by role
-const getNavigationByRole = (role: string) => {
-  const baseNavigation = [{ name: 'Dashboard', href: '/dashboard', icon: Home }];
-
-  switch (role) {
-    case 'Admin':
-      return [
-        ...baseNavigation,
-        { name: 'Users', href: '/users', icon: Users },
-        { name: 'Projects', href: '/projects', icon: FolderKanban },
-        { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-        { name: 'Invoices', href: '/invoices', icon: FileText },
-        { name: 'Feedback', href: '/feedback', icon: MessageCircle },
-        { name: 'Schedule', href: '/schedule', icon: Calendar },
-        { name: 'Git', href: '/git', icon: GitBranch },
-        { name: 'Notifications', href: '/notifications', icon: Bell },
-        { name: 'Settings', href: '/settings', icon: Settings },
-      ];
-    case 'ProjectManager':
-      return [
-        ...baseNavigation,
-        { name: 'Projects', href: '/projects', icon: FolderKanban },
-        { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-        { name: 'Schedule', href: '/schedule', icon: Calendar },
-        { name: 'Feedback', href: '/feedback', icon: MessageCircle },
-        { name: 'Invoices', href: '/invoices', icon: FileText },
-        { name: 'Git', href: '/git', icon: GitBranch },
-        { name: 'Notifications', href: '/notifications', icon: Bell },
-        { name: 'Settings', href: '/settings', icon: Settings },
-      ];
-    case 'Developer':
-      return [
-        ...baseNavigation,
-        { name: 'Projects', href: '/projects', icon: FolderKanban },
-        { name: 'Schedule', href: '/schedule', icon: Calendar },
-        { name: 'Git', href: '/git', icon: GitBranch },
-        { name: 'Notifications', href: '/notifications', icon: Bell },
-        { name: 'Settings', href: '/settings', icon: Settings },
-      ];
-    case 'Client':
-      return [
-        ...baseNavigation,
-        { name: 'Projects', href: '/projects', icon: FolderKanban },
-        { name: 'Invoices', href: '/invoices', icon: FileText },
-        { name: 'Feedback', href: '/feedback', icon: MessageCircle },
-        { name: 'Schedule', href: '/schedule', icon: Calendar },
-        { name: 'Notifications', href: '/notifications', icon: Bell },
-        { name: 'Settings', href: '/settings', icon: Settings },
-      ];
-    default:
-      return baseNavigation;
-  }
-};
+type Destination = { label: string; href: string; icon: LucideIcon; roles?: Role[] };
+const sections: Array<{ title: string; items: Destination[] }> = [
+  { title: 'WORKSPACE', items: [
+    { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+    { label: 'Projects', href: '/projects', icon: Layers3 },
+    { label: 'Team members', href: '/users', icon: UsersRound, roles: ['Admin'] },
+  ] },
+  { title: 'COLLABORATE', items: [
+    { label: 'Schedule', href: '/schedule', icon: CalendarDays },
+    { label: 'Project files', href: '/storage', icon: Cloud },
+    { label: 'Feedback', href: '/feedback', icon: MessagesSquare, roles: ['Admin', 'ProjectManager', 'Client'] },
+    { label: 'Notifications', href: '/notifications', icon: Bell },
+  ] },
+];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const user = authService.getUserFromToken();
-  const role = user?.role || '';
+  const roles = new Set(user?.roles || (user?.role ? [user.role] : []));
+  const canCreateProject = roles.has('Admin') || roles.has('ProjectManager');
 
-  const navigation = getNavigationByRole(role);
-
-  const handleLogout = () => {
-    authService.logout();
-  };
-
-  return (
-    <motion.div
-      initial={{ x: -100, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      transition={{ type: 'spring', stiffness: 80, damping: 15 }}
-      className="
-        relative top-1/2 left-6
-        w-20 h-full 
-        bg-slate-800/70 backdrop-blur-xl 
-        border border-slate-700/40 
-        shadow-xl rounded-3xl 
-        flex flex-col items-center justify-between 
-        py-6 z-40 my-4
-      "
-    >
-      {/* Logo */}
-      <motion.div
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.2, type: 'spring' }}
-      >
-        <img
-          src="/logo.png"
-          alt="HiCaptain logo"
-          width={50}
-          height={50}
-          className="object-contain shadow-md"
-        />
-      </motion.div>
-
-      {/* Navigation */}
-      <nav className="flex-1 flex flex-col space-y-3 mt-6">
-        {navigation.map((item, i) => {
-          const isActive =
-            pathname === item.href || pathname.startsWith(item.href + '/');
-          const Icon = item.icon;
-          return (
-            <motion.div
-              key={item.name}
-              initial={{ scale: 0, opacity: 0, y: 10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 + i * 0.07, type: 'spring', stiffness: 100 }}
-            >
-              <Link
-                href={item.href}
-                className={`
-                  flex items-center justify-center 
-                  w-12 h-12 rounded-full 
-                  transition-all duration-200 
-                  ${isActive
-                    ? 'bg-blue-500 text-white shadow-md shadow-blue-500/40'
-                    : 'bg-slate-700/40 text-slate-300 hover:bg-slate-600/60 hover:text-white'}
-                  group relative
-                `}
-              >
-                <motion.div whileHover={{ scale: 1.2 }}>
-                  <Icon className="w-5 h-5" />
-                </motion.div>
-                <span className="absolute left-16 bg-slate-900 text-slate-100 px-2 py-1 rounded-md text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none border border-slate-700">
-                  {item.name}
-                </span>
-              </Link>
-            </motion.div>
-          );
+  return <aside className="hc-sidebar">
+    <Link href="/dashboard" className="hc-brand" aria-label="HiCaptain dashboard">
+      <span className="hc-brand-mark">✦</span>
+      <span>HiCaptain<span className="hc-brand-dot">.</span></span>
+    </Link>
+    <nav className="hc-sidebar-nav" aria-label="Main navigation">
+      {sections.map(section => <div className="hc-nav-group" key={section.title}>
+        <span className="hc-sidebar-caption">{section.title}</span>
+        {section.items.filter(item => !item.roles || item.roles.some(role => roles.has(role))).map(({ label, href, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(href + '/');
+          return <Link key={href} href={href} title={label} aria-label={label} aria-current={active ? 'page' : undefined} className={`hc-nav-link ${active ? 'is-active' : ''}`}>
+            <span className="hc-nav-icon"><Icon size={18} strokeWidth={active ? 2.3 : 1.9} /></span>
+            <span className="hc-nav-label">{label}</span>
+            {active && <span className="hc-nav-active-mark" aria-hidden="true" />}
+          </Link>;
         })}
-      </nav>
-
-      {/* Logout */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={handleLogout}
-        className="
-          flex items-center justify-center 
-          w-12 h-12 rounded-full 
-          bg-red-900/20 text-red-400 
-          hover:bg-red-900/40 hover:text-red-300 
-          transition-all duration-200 group relative
-          mt-3
-        "
-      >
-        <LogOut className="w-5 h-5" />
-        <span className="absolute left-16 bg-slate-900 text-slate-100 px-2 py-1 rounded-md text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none border border-slate-700">
-          Logout
-        </span>
-      </motion.button>
-    </motion.div>
-  );
+      </div>)}
+    </nav>
+    <div className="hc-sidebar-bottom"><div className="hc-help-card">
+      <span className="hc-help-spark" aria-hidden="true">✳</span>
+      <span className="hc-help-eyebrow">YOUR NEXT MOVE</span>
+      <strong>Make good work happen.</strong>
+      <p>Bring your team, tasks, and files together.</p>
+      <Link href={canCreateProject ? '/projects/new' : '/projects'}>{canCreateProject ? <><Plus size={15} /> New project</> : <>Open projects <ArrowUpRight size={15} /></>}</Link>
+    </div></div>
+  </aside>;
 }

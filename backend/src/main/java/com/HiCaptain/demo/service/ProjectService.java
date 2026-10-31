@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.HashSet;
+import com.HiCaptain.demo.util.Role;
 
 @Slf4j
 @Service
@@ -21,23 +22,48 @@ public class ProjectService {
     private final ProjectRepository projectRepo;
     private final TaskRepository taskRepo;
     private final UserRepository userRepo;
+    private final OrganizationService organizations;
 
-    public ProjectService(ProjectRepository projectRepo, TaskRepository taskRepo, UserRepository userRepo) {
+    public ProjectService(ProjectRepository projectRepo, TaskRepository taskRepo, UserRepository userRepo, OrganizationService organizations) {
         this.projectRepo = projectRepo;
         this.taskRepo = taskRepo;
         this.userRepo = userRepo;
+        this.organizations = organizations;
     }
 
     public List<Project> getAll() {
-        return projectRepo.findAll();
+        String orgId = organizations.currentOrgId();
+        String userId = organizations.currentUserId();
+        Set<Role> roles = organizations.membership(orgId, userId).getRoles();
+        return projectRepo.findAll().stream().filter(p -> canAccess(p, orgId, userId, roles)).toList();
     }
 
     public Optional<Project> getById(String id) {
-        return projectRepo.findById(id);
+        if (id == null) return Optional.empty();
+        String orgId = organizations.currentOrgId();
+        String userId = organizations.currentUserId();
+        Set<Role> roles = organizations.membership(orgId, userId).getRoles();
+        return projectRepo.findById(id).filter(p -> canAccess(p, orgId, userId, roles));
+    }
+
+    public boolean canAccess(Project project, String orgId, String userId, Set<Role> roles) {
+        if (project == null || !orgId.equals(project.getOrganizationId())) return false;
+        return roles.contains(Role.Admin)
+                || roles.contains(Role.ProjectManager) && userId.equals(project.getProjectManagerId())
+                || roles.contains(Role.Developer) && project.getDeveloperIds() != null && project.getDeveloperIds().contains(userId)
+                || roles.contains(Role.Client) && userId.equals(project.getClientId());
     }
 
     public Project create(Project project) {
         log.debug("Creating project: {}", project.getName());
+        project.setId(null);
+        project.setOrganizationId(organizations.currentOrgId());
+        project.setGoogleDriveFolderId(null);
+        project.setGoogleDriveOwnerUserId(null);
+        project.setGoogleDrivePermissionIds(null);
+        validateMember(project.getClientId(), Role.Client);
+        validateMember(project.getProjectManagerId(), Role.ProjectManager);
+        if (project.getDeveloperIds() != null) project.getDeveloperIds().forEach(id -> validateMember(id, Role.Developer));
         Project saved = projectRepo.save(project);
         String projectId = saved.getId();
         log.debug("Project saved with ID: {}", projectId);
@@ -89,15 +115,21 @@ public class ProjectService {
     }
 
     public Project update(String id, Project project) {
-        if (!projectRepo.existsById(id))
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");
+        Project existing = getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
         project.setId(id);
+        project.setOrganizationId(organizations.currentOrgId());
+        project.setGoogleDriveFolderId(existing.getGoogleDriveFolderId());
+        project.setGoogleDriveOwnerUserId(existing.getGoogleDriveOwnerUserId());
+        project.setGoogleDrivePermissionIds(existing.getGoogleDrivePermissionIds());
+        validateMember(project.getClientId(), Role.Client);
+        validateMember(project.getProjectManagerId(), Role.ProjectManager);
+        if (project.getDeveloperIds() != null) project.getDeveloperIds().forEach(userId -> validateMember(userId, Role.Developer));
         return projectRepo.save(project);
     }
 
     public void delete(String id) {
         log.debug("Attempting to delete project: {}", id);
-        Optional<Project> projectOpt = projectRepo.findById(id);
+        Optional<Project> projectOpt = getById(id);
         if (projectOpt.isEmpty()) {
             log.warn("Project not found for deletion: {}", id);
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found");
@@ -112,13 +144,13 @@ public class ProjectService {
     }
 
     public Project addDeveloper(String projectId, String developerId) {
-        Project project = projectRepo.findById(projectId)
+        Project project = getById(projectId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
 
         User developer = userRepo.findById(developerId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Developer not found"));
 
-        if (developer.getRole() == null || !"Developer".equals(developer.getRole().toString())) {
+        if (!organizations.membership(organizations.currentOrgId(), developerId).getRoles().contains(com.HiCaptain.demo.util.Role.Developer)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User is not a Developer");
         }
 
@@ -136,5 +168,10 @@ public class ProjectService {
         userRepo.save(developer);
 
         return project;
+    }
+
+    private void validateMember(String userId, Role role) {
+        if (userId != null && !userId.isBlank() && !organizations.membership(organizations.currentOrgId(), userId).getRoles().contains(role))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Member does not have the required organization role");
     }
 }

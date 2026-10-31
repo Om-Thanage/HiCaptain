@@ -23,6 +23,20 @@ public class GitHubOAuthService {
 
     @Autowired
     private WebClient.Builder webClientBuilder;
+    @Autowired private JwtService jwtService;
+    @Autowired private ProviderTokenCipher tokenCipher;
+
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    public void encryptLegacyConnections() {
+        for (GitHubConnection connection : connectionRepository.findAll()) {
+            String stored = connection.getAccessToken();
+            if (stored != null && !stored.isBlank() && !tokenCipher.isEncrypted(stored)) {
+                connection.setAccessToken(tokenCipher.encrypt(stored));
+                connection.setRefreshToken(null); // Legacy refresh credentials were never supported by this integration.
+                connectionRepository.save(connection);
+            }
+        }
+    }
 
     /**
      * Step 1: Generate GitHub OAuth authorization URL (like Vercel's "Connect GitHub" button)
@@ -41,7 +55,7 @@ public class GitHubOAuthService {
                 .queryParam("client_id", oauthConfig.getClientId())
                 .queryParam("redirect_uri", oauthConfig.getRedirectUri())
                 .queryParam("scope", String.join(",", oauthConfig.getScopes()))
-                .queryParam("state", state + ":" + userId) // Include user ID in state
+                .queryParam("state", state)
                 .queryParam("allow_signup", "true")
                 .build()
                 .toUriString();
@@ -53,11 +67,7 @@ public class GitHubOAuthService {
     public GitHubConnection handleCallback(String code, String state) {
         try {
             // Parse state to get user ID
-            String[] stateParts = state.split(":");
-            if (stateParts.length != 2) {
-                throw new RuntimeException("Invalid state parameter");
-            }
-            String userId = stateParts[1];
+            String userId = jwtService.verifyOAuthState(state, "github");
 
             // Exchange authorization code for access token
             JsonNode tokenResponse = exchangeCodeForToken(code);
@@ -152,7 +162,7 @@ public class GitHubOAuthService {
         connection.setGithubAvatarUrl(userInfo.get("avatar_url").asText());
 
         // Update token information
-        connection.setAccessToken(accessToken); // TODO: Encrypt this
+        connection.setAccessToken(tokenCipher.encrypt(accessToken));
         connection.setTokenType(tokenType);
         connection.setScopes(scopes);
         connection.setActive(true);
@@ -207,6 +217,20 @@ public class GitHubOAuthService {
         return connectionRepository.findByUserIdAndActive(userId, true);
     }
 
+    public String accessToken(String userId) {
+        GitHubConnection connection = getUserConnection(userId).orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.CONFLICT, "Connect GitHub in Settings first"));
+        String stored = connection.getAccessToken();
+        if (stored == null || stored.isBlank()) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Reconnect GitHub");
+        if (!tokenCipher.isEncrypted(stored)) {
+            // Migrate existing connections on use; encryption failures never fall back to plaintext writes.
+            connection.setAccessToken(tokenCipher.encrypt(stored));
+            connectionRepository.save(connection);
+            return stored;
+        }
+        return tokenCipher.decrypt(stored);
+    }
+
     /**
      * Check if user has access to a specific repository
      */
@@ -230,6 +254,8 @@ public class GitHubOAuthService {
         if (connection.isPresent()) {
             GitHubConnection conn = connection.get();
             conn.setActive(false);
+            conn.setAccessToken(null);
+            conn.setRefreshToken(null);
             conn.setLastUsedAt(LocalDateTime.now());
             connectionRepository.save(conn);
         }

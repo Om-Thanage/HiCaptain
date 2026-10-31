@@ -3,20 +3,18 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, UserPlus, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { authService } from '@/services/auth';
-import { User, Role } from '@/types';
+import { useAuthStore } from '@/store/auth';
 import toast from 'react-hot-toast';
-import Image from 'next/image';
-import logo from '../../../../public/logo.png';
+import SocialSignIn from './SocialSignIn';
 
 interface RegisterForm {
-  name: string;
   email: string;
   password: string;
   confirmPassword: string;
-  role: Role;
+  organizationName: string;
 }
 
 export default function RegisterPage() {
@@ -24,6 +22,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const setToken = useAuthStore((state) => state.setToken);
 
   const {
     register,
@@ -42,17 +41,17 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
-      const userData: Omit<User, 'id'> = {
-        name: data.name,
+      const userData = {
         email: data.email,
         password: data.password,
-        role: data.role,
-        taskIds: [],
+        organizationName: data.organizationName,
       };
 
-      await authService.register(userData);
-      toast.success('Account created successfully!');
-      router.push('/auth?mode=login');
+      const session = await authService.register(userData);
+      authService.setToken(session.token);
+      setToken(session.token);
+      toast.success('Your organization is ready');
+      router.push('/dashboard');
     } catch (error: any) {
       toast.error(error.response?.data || 'Registration failed');
     } finally {
@@ -70,23 +69,12 @@ export default function RegisterPage() {
           <h2 className="text-2xl font-semibold text-center text-white mb-6">
             Create your account
           </h2>
+          <p className="text-sm text-slate-400 mb-6">We&apos;ll create a username from your email. Change it anytime in Settings.</p>
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-            {/* Username */}
-            <div>
-              <label className="block text-sm font-medium text-slate-200">Username</label>
-              <input
-                {...register('name', { required: 'Username is required' })}
-                type="text"
-                className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="Enter your username"
-              />
-              {errors.name && <p className="mt-1 text-sm text-red-400">{errors.name.message}</p>}
-            </div>
-
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-slate-200">Email</label>
-              <input
+              <label className="block text-sm font-medium text-slate-200" htmlFor="register-components-field-1">Email</label>
+              <input id="register-components-field-1"
                 {...register('email', { required: 'Email is required' })}
                 type="text"
                 className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -95,30 +83,14 @@ export default function RegisterPage() {
               {errors.email && <p className="mt-1 text-sm text-red-400">{errors.email.message}</p>}
             </div>
 
-            {/* Role */}
-            <div>
-              <label className="block text-sm font-medium text-slate-200">Role</label>
-              <select
-                {...register('role', { required: 'Role is required' })}
-                className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option value="">Select your role</option>
-                <option value="Admin">Admin</option>
-                <option value="ProjectManager">Project Manager</option>
-                <option value="Developer">Developer</option>
-                <option value="Client">Client</option>
-              </select>
-              {errors.role && <p className="mt-1 text-sm text-red-400">{errors.role.message}</p>}
-            </div>
-
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-slate-200">Password</label>
+              <label className="block text-sm font-medium text-slate-200" htmlFor="register-components-field-2">Password</label>
               <div className="relative">
-                <input
+                <input id="register-components-field-2"
                   {...register('password', {
                     required: 'Password is required',
-                    minLength: { value: 6, message: 'Minimum 6 characters' },
+                    minLength: { value: 8, message: 'Minimum 8 characters' },
                   })}
                   type={showPassword ? 'text' : 'password'}
                   className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none pr-10"
@@ -143,11 +115,11 @@ export default function RegisterPage() {
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-sm font-medium text-slate-200">
+              <label className="block text-sm font-medium text-slate-200" htmlFor="register-components-field-3">
                 Confirm Password
               </label>
               <div className="relative">
-                <input
+                <input id="register-components-field-3"
                   {...register('confirmPassword', {
                     required: 'Please confirm your password',
                     validate: (value) => value === password || 'Passwords do not match',
@@ -173,6 +145,14 @@ export default function RegisterPage() {
               )}
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-slate-200" htmlFor="register-components-field-4">Organization name</label>
+              <input id="register-components-field-4" {...register('organizationName', { required: 'Organization name is required' })}
+                className="mt-1 w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                placeholder="Your team or company" />
+              {errors.organizationName && <p className="mt-1 text-sm text-red-400">{errors.organizationName.message}</p>}
+            </div>
+
             {/* Submit Button */}
             <motion.button
               whileHover={{ scale: 1.03 }}
@@ -191,6 +171,8 @@ export default function RegisterPage() {
               )}
             </motion.button>
           </form>
+
+          <SocialSignIn />
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}

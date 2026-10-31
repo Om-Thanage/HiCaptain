@@ -2,169 +2,33 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { projectService } from '@/services/project';
+import { authService } from '@/services/auth';
 import { Project } from '@/types';
-import { Plus, Calendar, Users, FolderKanban } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, Layers3, Plus, UsersRound } from 'lucide-react';
 import toast from 'react-hot-toast';
+import styles from './projects.module.css';
+
+const date = (value?: string) => value ? new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set';
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const roles = authService.getUserFromToken()?.roles || [];
+  const canManage = roles.includes('Admin') || roles.includes('ProjectManager');
 
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const data = await projectService.getAll();
-        setProjects(data);
-      } catch (error) {
-        toast.error('Failed to fetch projects');
-        console.error('Error fetching projects:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProjects();
+    projectService.getAll().then(setProjects).catch(() => toast.error('Could not load projects')).finally(() => setLoading(false));
   }, []);
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return 'text-green-300 bg-green-900/30 border border-green-800 shadow-[0_0_10px_rgba(34,197,94,0.3)]';
-      case 'in-progress':
-        return 'text-blue-300 bg-blue-900/30 border border-blue-800 shadow-[0_0_10px_rgba(59,130,246,0.3)]';
-      case 'pending':
-        return 'text-yellow-300 bg-yellow-900/30 border border-yellow-800 shadow-[0_0_10px_rgba(234,179,8,0.3)]';
-      case 'on-hold':
-        return 'text-slate-300 bg-slate-900/30 border border-slate-700 shadow-[0_0_8px_rgba(148,163,184,0.25)]';
-      default:
-        return 'text-slate-300 bg-slate-900/30 border border-slate-700 shadow-[0_0_8px_rgba(148,163,184,0.25)]';
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  return (
-    <DashboardLayout>
-      <div className="space-y-8 pl-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-100">Projects</h1>
-            <p className="text-slate-400 mt-2">Manage and track your projects</p>
-          </div>
-          <Link
-            href="/projects/new"
-            className="inline-flex items-center px-4 py-2 bg-slate-900 border-2 text-white rounded-lg transition-all duration-200 shadow-lg shadow-slate-950"
-          >
-            
-            New Project <Plus className="w-5 h-5 ml-2" />
-          </Link>
-        </div>
-
-        {/* Projects Grid */}
-        {projects.length > 0 ? (
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            initial="hidden"
-            animate="visible"
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: {
-                opacity: 1,
-                y: 0,
-                transition: { staggerChildren: 0.1 },
-              },
-            }}
-          >
-            {projects.map((project) => (
-              <motion.div
-                key={project.id}
-                className="backdrop-blur-xl bg-linear-to-br from-slate-800/80 to-slate-900/70 rounded-2xl border border-slate-700/60 p-6 shadow-lg hover:shadow-blue-900/20 transition-all duration-300"
-                whileHover={{ scale: 1.03 }}
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  visible: { opacity: 1, y: 0 },
-                }}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center">
-                    <div>
-                      <h3 className="text-lg font-semibold text-slate-100">{project.name}</h3>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 transition-all duration-300 ${getStatusColor(
-                          project.status
-                        )}`}
-                      >
-                        {project.status}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <p className="text-slate-400 mb-5 line-clamp-3 text-sm">
-                  {project.description || 'No description provided.'}
-                </p>
-
-                <div className="space-y-2 text-sm text-slate-400/90">
-                  <div className="flex items-center">
-                    <Calendar className="w-4 h-4 mr-2 text-slate-500" />
-                    <span>Start: {formatDate(project.startDate)}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Calendar className="w-4 h-4 mr-2 text-slate-500" />
-                    <span>End: {formatDate(project.endDate)}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Users className="w-4 h-4 mr-2 text-slate-500" />
-                    <span>{project.developerIds.length} developers</span>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex space-x-2">
-                  <Link
-                    href={`/projects/${project.id}`}
-                    className="flex-1 text-center px-3 py-2 rounded-lg bg-slate-900 border-2 shadow-slate-950 shadow-lg text-white transition-all duration-200"
-                  >
-                    View Details
-                  </Link>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        ) : (
-          <div className="text-center py-16">
-            <FolderKanban className="mx-auto h-12 w-12 text-slate-500" />
-            <h3 className="mt-3 text-lg font-medium text-slate-100">No projects yet</h3>
-            <p className="mt-1 text-sm text-slate-400">
-              Start by creating your first project to begin tracking progress.
-            </p>
-            <div className="mt-6">
-              <Link
-                href="/projects/new"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 shadow-md"
-              >
-                
-                New Project <Plus className="w-5 h-5 mr-2" />
-              </Link>
-            </div>
-          </div>
-        )}
-      </div>
-    </DashboardLayout>
-  );
+  return <DashboardLayout><div className={styles.page}>
+    <div className={styles.heading}><div><span className={styles.kicker}>YOUR WORK, ORGANIZED</span><h1>Projects that move things forward.</h1><p>Keep your team, dates, and next steps together.</p></div>{canManage && <Link href="/projects/new" className={styles.primary}><Plus size={18} /> New project</Link>}</div>
+    {loading ? <div className={styles.empty}>Loading projects…</div> : projects.length ? <div className={styles.grid}>{projects.map((project, index) => <article key={project.id} className={styles.card}>
+      <div className={styles.cardTop}><span className={`${styles.mark} ${styles[`mark${index % 3}`]}`}><Layers3 size={22} /></span><span className={styles.status}>{project.status.replace(/-/g, ' ')}</span></div>
+      <h3>{project.name}</h3><p>{project.description || 'No description yet.'}</p>
+      <div className={styles.meta}><span><CalendarDays size={15} /> {date(project.startDate)} – {date(project.endDate)}</span><span><UsersRound size={15} /> {project.developerIds?.length || 0} developers</span></div>
+      <div className={styles.cardActions}><Link href={`/projects/${project.id}`}>Open project <ArrowUpRight size={16} /></Link></div>
+    </article>)}</div> : <div className={styles.empty}><Layers3 size={31} /><h3>No projects yet</h3><p>Create a project to start planning with your team.</p>{canManage && <Link href="/projects/new" className={styles.primary}><Plus size={17} /> New project</Link>}</div>}
+  </div></DashboardLayout>;
 }

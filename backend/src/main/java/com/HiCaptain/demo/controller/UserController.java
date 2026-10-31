@@ -1,63 +1,60 @@
 package com.HiCaptain.demo.controller;
 
-import com.HiCaptain.demo.model.User;
-import com.HiCaptain.demo.service.UserService;
+import com.HiCaptain.demo.repository.UserRepository;
+import com.HiCaptain.demo.service.OrganizationService;
 import com.HiCaptain.demo.util.Role;
-import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/users")
-@CrossOrigin(origins = "http://localhost:3000")
 public class UserController {
-    private final UserService svc;
+    private final OrganizationService organizations;
+    private final UserRepository users;
+    private final AuthController auth;
+    @org.springframework.beans.factory.annotation.Autowired private com.HiCaptain.demo.service.AccountSecurityService security;
+    public UserController(OrganizationService organizations, UserRepository users, AuthController auth) {
+        this.organizations = organizations;
+        this.users = users;
+        this.auth = auth;
+    }
 
-    public UserController(UserService svc) { this.svc = svc; }
+    public record ProfileRequest(@NotBlank @Size(max = 80) String name) {}
+    public record PasswordRequest(@NotBlank @Size(max=200) String currentPassword, @NotBlank @Size(min=8, max=72) String newPassword) {}
+
+    @PostMapping("/me/password")
+    public AuthController.Session changePassword(@Valid @RequestBody PasswordRequest request) {
+        String id = organizations.currentUserId();
+        var user = security.changePassword(id, request.currentPassword(), request.newPassword());
+        return auth.session(user, organizations.membership(organizations.currentOrgId(), id));
+    }
+
+    @PatchMapping("/me/profile")
+    public AuthController.Session updateProfile(@Valid @RequestBody ProfileRequest request) {
+        String userId = organizations.currentUserId();
+        var user = users.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        user.setName(request.name().trim());
+        user = users.save(user);
+        return auth.session(user, organizations.membership(organizations.currentOrgId(), userId));
+    }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client')")
-    public ResponseEntity<List<User>> getAll(@RequestParam(value = "role", required = false) String role) {
-        if (role == null || role.isBlank()) {
-            return ResponseEntity.ok(svc.getAll());
-        }
-        try {
-            Role r = Role.valueOf(role);
-            return ResponseEntity.ok(svc.getByRole(r));
-        } catch (IllegalArgumentException ex) {
-            // If invalid role is provided, return 400
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        }
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
+    public List<OrganizationService.MemberView> getAll(@RequestParam(required = false) Role role) {
+        return organizations.members(organizations.currentOrgId()).stream()
+                .filter(member -> role == null || member.roles().contains(role)).toList();
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('Admin')")
-    public ResponseEntity<User> getById(@PathVariable String id) {
-        return svc.getById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
-    }
-
-    @PostMapping
-    @PreAuthorize("hasAuthority('Admin')")
-    public ResponseEntity<User> create(@RequestBody User user) {
-        User created = svc.create(user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
-    }
-
-    @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('Admin')")
-    public ResponseEntity<User> update(@PathVariable String id, @RequestBody User user) {
-        return ResponseEntity.ok(svc.update(id, user));
-    }
-
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('Admin')")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
-        svc.delete(id);
-        return ResponseEntity.noContent().build();
+    public OrganizationService.MemberView getById(@PathVariable String id) {
+        return getAll(null).stream().filter(member -> member.id().equals(id)).findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 }

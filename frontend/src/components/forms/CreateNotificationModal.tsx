@@ -160,7 +160,6 @@ export default function CreateNotificationModal({ isOpen, onClose, onNotificatio
     { value: 'task', label: 'Task' },
     { value: 'project', label: 'Project' },
     { value: 'meeting', label: 'Meeting' },
-    { value: 'payment', label: 'Payment' },
     { value: 'announcement', label: 'Announcement' },
     { value: 'reminder', label: 'Reminder' },
   ];
@@ -222,11 +221,11 @@ export default function CreateNotificationModal({ isOpen, onClose, onNotificatio
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Recipient */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-2" htmlFor="createnotificationmodal-forms-field-1">
                     <User className="w-4 h-4 inline mr-2" />
                     Recipient *
                   </label>
-                  <select
+                  <select id="createnotificationmodal-forms-field-1"
                     name="userId"
                     value={formData.userId}
                     onChange={handleInputChange}
@@ -244,11 +243,11 @@ export default function CreateNotificationModal({ isOpen, onClose, onNotificatio
 
                 {/* Title */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-2" htmlFor="createnotificationmodal-forms-field-2">
                     <FileText className="w-4 h-4 inline mr-2" />
                     Title *
                   </label>
-                  <input
+                  <input id="createnotificationmodal-forms-field-2"
                     type="text"
                     name="title"
                     value={formData.title}
@@ -261,10 +260,10 @@ export default function CreateNotificationModal({ isOpen, onClose, onNotificatio
 
                 {/* Message */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-2" htmlFor="createnotificationmodal-forms-field-3">
                     Message *
                   </label>
-                  <textarea
+                  <textarea id="createnotificationmodal-forms-field-3"
                     name="message"
                     value={formData.message}
                     onChange={handleInputChange}
@@ -278,10 +277,10 @@ export default function CreateNotificationModal({ isOpen, onClose, onNotificatio
                 {/* Type, Category, Priority */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-slate-300 mb-2" htmlFor="createnotificationmodal-forms-field-4">
                       Type
                     </label>
-                    <select
+                    <select id="createnotificationmodal-forms-field-4"
                       name="type"
                       value={formData.type}
                       onChange={handleInputChange}
@@ -295,10 +294,10 @@ export default function CreateNotificationModal({ isOpen, onClose, onNotificatio
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-slate-300 mb-2" htmlFor="createnotificationmodal-forms-field-5">
                       Category
                     </label>
-                    <select
+                    <select id="createnotificationmodal-forms-field-5"
                       name="category"
                       value={formData.category}
                       onChange={handleInputChange}
@@ -312,10 +311,10 @@ export default function CreateNotificationModal({ isOpen, onClose, onNotificatio
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-slate-300 mb-2" htmlFor="createnotificationmodal-forms-field-6">
                       Priority
                     </label>
-                    <select
+                    <select id="createnotificationmodal-forms-field-6"
                       name="priority"
                       value={formData.priority}
                       onChange={handleInputChange}
@@ -332,11 +331,11 @@ export default function CreateNotificationModal({ isOpen, onClose, onNotificatio
 
                 {/* Optional: Project Association */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-2" htmlFor="createnotificationmodal-forms-field-7">
                     <Users className="w-4 h-4 inline mr-2" />
                     Related Project (Optional)
                   </label>
-                  <select
+                  <select id="createnotificationmodal-forms-field-7"
                     name="projectId"
                     value={formData.projectId}
                     onChange={handleInputChange}
@@ -353,10 +352,10 @@ export default function CreateNotificationModal({ isOpen, onClose, onNotificatio
 
                 {/* Optional: Source URL */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-2" htmlFor="createnotificationmodal-forms-field-8">
                     Action URL (Optional)
                   </label>
-                  <input
+                  <input id="createnotificationmodal-forms-field-8"
                     type="url"
                     name="sourceUrl"
                     value={formData.sourceUrl}

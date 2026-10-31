@@ -1,664 +1,191 @@
-# HiCaptain - Full-Stack Project Management System
+# HiCaptain
 
-<div align="center">
+An open-source project workspace for human teams and AI assistants. Organize projects, tasks, people, meetings, files, and GitHub activity with organization-scoped access and human review of AI proposals.
 
-![HiCaptain Logo](frontend/public/logo.png)
+**Website:** [hicaptain.dev](https://hicaptain.dev) · **Backend:** [blueprint-dev.onrender.com](https://blueprint-dev.onrender.com) · **License:** [MIT](LICENSE)
 
-**A comprehensive project management platform with GitHub & Google Calendar integration**
-
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.2-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![Next.js](https://img.shields.io/badge/Next.js-16.2.12-black.svg)](https://nextjs.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-7.0-green.svg)](https://www.mongodb.com/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
-[Features](#-features) • [Tech Stack](#-tech-stack) • [Installation](#-installation) • [Documentation](#-documentation) • [Deployment](#-deployment)
-
-</div>
-
----
-
-## Table of Contents
-
-- [Overview](#-overview)
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Architecture](#-architecture)
-- [Prerequisites](#-prerequisites)
-- [Installation](#-installation)
-  - [Backend Setup](#backend-setup)
-  - [Frontend Setup](#frontend-setup)
-  - [Docker Setup](#docker-setup)
-- [Configuration](#-configuration)
-- [Running the Application](#-running-the-application)
-- [API Documentation](#-api-documentation)
-- [Project Structure](#-project-structure)
-- [License](#-license)
-
----
-
-## Overview
-
-HiCaptain is a modern, full-stack project management system designed for software development teams. It provides comprehensive tools for managing projects, tasks, team members, and integrations with popular development tools like GitHub and Google Calendar.
-
-### Key Highlights
-
-**Role-Based Access Control** - Admin, Project Manager, Developer, and Client roles with granular permissions  
-**Real-Time Analytics** - Track project progress, team performance, and resource allocation  
-**GitHub Integration** - Sync repositories, track commits, and monitor pull requests  
-**Google Calendar Sync** - Manage meetings and deadlines seamlessly  
-**Multi-Channel Notifications** - Email, SMS, Push, and In-App notifications  
-**Invoice & Payment Management** - Generate invoices and track payments  
-**Time Tracking** - Log hours spent on tasks and projects  
-**Responsive Design** - Works on desktop, tablet, and mobile devices  
-
----
+The website is the planned production frontend. The backend URL is the existing Render service supplied by the maintainer; its deployed revision may differ from this branch. Merging updates that service only when Render is configured to deploy the target branch.
 
 ## Features
 
-### Core Features
+- **Organizations and people:** Create a workspace as its Admin, invite teammates by email, join multiple organizations, and hold multiple roles. New accounts get an editable generated display name. Existing accounts can be added directly; new teammates register through an expiring invitation link.
+- **Project planning:** Set a team, description, start date, and tentative end date. New projects default to today and 30 days later. Manage tasks through Kanban with priorities, deadlines, and developer assignments. Admins manage organization roles; assigned project managers manage permitted developer access.
+- **Google Workspace:** View Calendar events, create meetings with Meet links, select a personal My Drive folder for project files, and refresh folder sharing. Copy tasks to your own Google Tasks list. This does not require a Workspace shared drive; task copying is not bidirectional synchronization.
+- **GitHub:** Connect your own account, link repositories to a project, and view development activity from project details. Optional signed webhooks persist supported repository events.
+- **AI teammates:** Configure OpenAI or Ollama planners/researchers with your own keys or hardware. Assign work from a project or Kanban task, refine proposals, and approve tasks and shared decisions. Runs check current access, retain bounded project context, and record token usage and estimated costs. [Worker setup and limits](agent-worker/README.md).
+- **Account and communication:** Edit your profile, change your password, sign out from the profile menu, and use project feedback and in-app notifications.
 
-#### User Management
-- User registration and authentication with JWT
-- Role-based access control (RBAC)
-- User profile management
-- Password encryption with BCrypt
+AI teammates do not execute code or browse the web. Analytics, invoicing, and payments are not part of the current product.
 
-#### Project Management
-- Create and manage multiple projects
-- Assign team members to projects
-- Track project status and progress
-- Set start and end dates
-- Client assignment and management
+## Stack and layout
 
-#### Task Management
-- Create tasks with priorities (Low, Medium, High, Critical)
-- Set deadlines and track progress
-- Assign tasks to team members
-- Task categories (Frontend, Backend, Mobile, QA, etc.)
-- Estimated vs actual hours tracking
+| Directory | Implementation |
+| --- | --- |
+| [`frontend/`](frontend/) | Next.js 16, React 19, TypeScript, CSS Modules/Tailwind, Lucide icons |
+| [`backend/`](backend/) | Java 17, Spring Boot 3.5, Spring Security/JWT, MongoDB, SMTP and integration clients |
+| [`agent-worker/`](agent-worker/) | Optional Python 3.12/LangGraph worker with MongoDB checkpoints; OpenAI or Ollama |
+| [`.github/workflows/checks.yml`](.github/workflows/checks.yml) | Frontend, backend, worker tests and dependency checks; no automatic deployment job |
 
-####  Time Logging
-- Log time spent on tasks
-- Track billable and non-billable hours
-- Generate time reports
-- Export time logs
+```mermaid
+flowchart LR
+    Browser[Next.js frontend] --> API[Spring Boot API]
+    API <--> DB[(MongoDB)]
+    API --> Tools[Google APIs / GitHub / SMTP]
+    Worker[Optional LangGraph worker] <-->|Assignments and proposals| API
+    Worker --> Model[OpenAI or Ollama]
+    Worker -->|Checkpoints| DB
+```
 
-#### Analytics & Reporting
-- Real-time project analytics
-- Developer productivity metrics
-- Project progress tracking
-- Task completion rates
-- Time utilization reports
+## Local development
 
-
-### Integration Features
-
-####  GitHub Integration
-- OAuth authentication with GitHub
-- Repository management
-- Commit tracking
-- Pull request monitoring
-- Webhook support for real-time updates
-- Branch and issue tracking
-
-####  Google Calendar Integration
-- OAuth authentication with Google
-- Calendar event synchronization
-- Meeting scheduling
-- Deadline reminders
-- Two-way sync
-
-### Advanced Features
-
-####  Financial Management
-- Invoice generation
-- Payment tracking
-- Payment status management
-- Client billing
-
-####  Feedback System
-- Client feedback collection
-- Developer feedback submission
-- Feedback status tracking
-- Rating system
-
-####  Security
-- JWT token-based authentication
-- Refresh token support
-- Role-based authorization
-- CORS configuration
-- Secure password hashing
-- Environment variable management
-
-
-
----
-
-##  Tech Stack
+Requirements: **Node.js 22**, **Java 17 JDK**, and **MongoDB**. Python 3.12 is needed only for AI execution. External integrations are optional until used.
 
 ### Backend
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **Spring Boot** | 3.3.2 | Backend framework |
-| **Java** | 17 | Programming language |
-| **MongoDB** | 7.0 | NoSQL database |
-| **Spring Security** | 6.3.1 | Authentication & authorization |
-| **JWT (jjwt)** | 0.11.5 | Token-based authentication |
-| **Lombok** | Latest | Reduce boilerplate code |
-| **SpringDoc OpenAPI** | 2.3.0 | API documentation (Swagger) |
-| **Maven** | 3.9+ | Build tool |
+```bash
+cp backend/.env.example backend/.env
+cd backend
+bash ./mvnw spring-boot:run
+```
+
+Before starting, set `MONGODB_URI`, `MONGODB_DATABASE`, and `JWT_SECRET` in `backend/.env`. Use a reachable MongoDB instance and an application user with access to that database. A local URI is `mongodb://localhost:27017/hicaptain`.
+
+Generate a base64-encoded 32-byte secret with either command:
+
+```bash
+openssl rand -base64 32
+```
+
+```powershell
+python -c "import base64, secrets; print(base64.b64encode(secrets.token_bytes(32)).decode())"
+```
+
+Generate separate values for JWT signing and the Google/provider encryption keys. Keep existing encryption keys unchanged when upgrading a database with connected accounts. Rotating the JWT secret signs out existing sessions. Never commit real `.env` files.
+
+On Windows, set `JAVA_HOME` to the JDK directory **without** `\bin`, add `%JAVA_HOME%\bin` to `PATH`, and run `./mvnw.cmd spring-boot:run` from `backend`.
 
 ### Frontend
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **Next.js** | 16.2.12 | React framework |
-| **React** | 19.2.8 | UI library |
-| **TypeScript** | 5.x | Type-safe JavaScript |
-| **Tailwind CSS** | 4.x | Utility-first CSS framework |
-| **Zustand** | 5.0.1 | State management |
-| **React Hook Form** | 7.53.2 | Form validation |
-| **Zod** | 3.23.8 | Schema validation |
-| **Axios** | 1.7.7 | HTTP client |
-| **Recharts** | 2.12.7 | Data visualization |
-| **Framer Motion** | 11.18.2 | Animations |
-| **Lucide React** | 0.454.0 | Icon library |
-
-### DevOps & Tools
-
-| Technology | Purpose |
-|------------|---------|
-| **Docker** | Containerization |
-| **Docker Compose** | Multi-container orchestration |
-| **AWS EC2** | Cloud deployment |
-| **MongoDB Atlas** | Cloud database |
-| **GitHub Actions** | CI/CD pipeline |
-| **Swagger UI** | API testing & documentation |
-
----
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         Client Layer                         │
-│  (Next.js Frontend - React Components, State Management)    │
-└────────────────────┬────────────────────────────────────────┘
-                     │ HTTP/REST API
-                     │
-┌────────────────────▼────────────────────────────────────────┐
-│                    Application Layer                         │
-│        (Spring Boot Backend - Controllers, Services)         │
-├──────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │   Security  │  │  Integration │  │  Analytics   │      │
-│  │   (JWT)     │  │  (GitHub/GCal)│  │  Service     │      │
-│  └─────────────┘  └──────────────┘  └──────────────┘      │
-└────────────────────┬────────────────────────────────────────┘
-                     │ MongoDB Driver
-                     │
-┌────────────────────▼────────────────────────────────────────┐
-│                     Data Layer                               │
-│              (MongoDB - Collections & Indexes)               │
-└──────────────────────────────────────────────────────────────┘
-```
-
----
-
-##  Prerequisites
-
-Before you begin, ensure you have the following installed:
-
-### For Backend Development
-- **Java 17** or higher ([Download](https://www.oracle.com/java/technologies/downloads/))
-- **Maven 3.9+** ([Download](https://maven.apache.org/download.cgi))
-- **MongoDB 7.0+** ([Download](https://www.mongodb.com/try/download/community)) or MongoDB Atlas account
-
-### For Frontend Development
-- **Node.js 18+** ([Download](https://nodejs.org/))
-- **npm** or **yarn** (comes with Node.js)
-
-### For Docker Deployment
-- **Docker Desktop** ([Download](https://www.docker.com/products/docker-desktop))
-- **Docker Compose** (included with Docker Desktop)
-
-### Optional Tools
-- **Postman** or **Insomnia** for API testing
-- **MongoDB Compass** for database visualization
-- **IntelliJ IDEA** or **VS Code** as IDE
-
-
-
----
-
-##  Installation
-
-### Backend Setup
-
-#### 1. Clone the Repository
-
 ```bash
-git clone https://github.com/Om-Thanage/HiCaptain
-cd hicaptain/backend
+cd frontend
+cp .env.example .env.local
+npm ci
+npm run dev
 ```
 
-#### 2. Configure Environment Variables
+Open `http://localhost:3000`. The local template uses `NEXT_PUBLIC_API_URL=http://localhost:8080`. Create an organization, then invite teammates from the team page. SMTP must be configured before invitations can be delivered.
 
-Create a `.env` file in the `backend` directory:
+## Deploy the backend to the existing Render service
 
-```bash
-# MongoDB Configuration
-MONGODB_URI=mongodb://localhost:27017/hicaptain
+Production API origin: **`https://blueprint-dev.onrender.com`**.
+
+1. In the existing Render web service, confirm the connected repository is this repository and the deployment branch is the branch you intend to merge into, normally `main`. Enable automatic deployment if you want merges to deploy automatically.
+2. Use **Docker** with **Root Directory `backend`**, **Dockerfile Path `./Dockerfile`**, and the backend directory as the Docker build context. The Dockerfile builds the Java application and runs it as a non-root user; no separate build/start command is needed for this setup.
+3. In **Environment**, add the values from [`backend/.env.render.example`](backend/.env.render.example). Replace every `REPLACE_*` value. Use **`SPRING_PROFILES_ACTIVE=prod`**, not `demo` or `docker` for this setup. Render supplies `PORT`; the application reads it automatically. Remove any old `SERVER_PORT` variable because Spring treats it as an explicit port override.
+4. Point `MONGODB_URI` at a reachable MongoDB service, such as Atlas, and set the actual `MONGODB_DATABASE`. Use an application database user and allow the Render service's outbound addresses in your database network rules. The hostname `mongodb` from local Compose does not resolve on this standalone Render service.
+   Remove stale callback overrides (`GITHUB_OAUTH_REDIRECT_URI`, `GOOGLE_LOGIN_REDIRECT_URI`, `GOOGLE_OAUTH_REDIRECT_URI`) unless they match the production URLs below. If the service already has `SPRING_DATA_MONGODB_URI` or `SPRING_DATA_MONGODB_DATABASE`, update them too or remove them in favor of the template variables; Spring gives these direct property overrides priority.
+5. Set **Health Check Path `/`**. After merging, deploy the new commit if automatic deployments are disabled. Confirm the deploy log reports the intended commit and a successful Spring startup.
+6. Open the API root. It should return JSON containing `"status":"running"`. This checks the API process; test registration, invitations and configured integrations separately.
+
+Core values for this deployment:
+
+```dotenv
+SPRING_PROFILES_ACTIVE=prod
+MONGODB_URI=REPLACE_WITH_YOUR_MONGODB_CONNECTION_STRING
 MONGODB_DATABASE=hicaptain
-
-# Security - JWT
-JWT_SECRET=your_super_secret_jwt_key_min_32_characters_long
-
-# GitHub Integration (Optional)
-GITHUB_TOKEN=your_github_token
-GITHUB_API_BASE_URL=https://api.github.com
-GITHUB_OAUTH_CLIENT_ID=your_github_oauth_client_id
-GITHUB_OAUTH_CLIENT_SECRET=your_github_oauth_client_secret
-GITHUB_OAUTH_REDIRECT_URI=http://localhost:8080/api/auth/github/callback
-GITHUB_OAUTH_SCOPES=repo,read:user,user:email,admin:repo_hook
-
-# Google Calendar Integration (Optional)
-GOOGLE_CALENDAR_CREDENTIALS_FILE_PATH=/credentials.json
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_REDIRECT_URI=http://localhost:8080/api/calendar/callback
-
-# Server Configuration
-SERVER_PORT=8080
-
-# CORS Configuration
-CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
+JWT_SECRET=REPLACE_WITH_BASE64_32_BYTE_SIGNING_KEY
+BACKEND_URL=https://blueprint-dev.onrender.com
+FRONTEND_URL=https://hicaptain.dev
+CORS_ALLOWED_ORIGINS=https://hicaptain.dev,https://www.hicaptain.dev
 ```
 
-#### 3. Install Dependencies
+The complete Render template includes stable encryption keys, OAuth, SMTP, and optional worker settings. OAuth credentials are optional for email/password sign-in. SMTP is required for invitations. Provider keys for AI inference are entered by an organization admin in Settings; they are not frontend environment variables.
+
+The `prod` profile enables forwarded HTTPS headers and reduces application/security logging to INFO. Normal startup preserves data. Demo seeding requires the explicit `demo` profile and a disposable database ending in `_demo`.
+
+## Deploy the frontend
+
+On Vercel, or your existing Next.js host:
+
+- Set the project root to **`frontend`**, use Node.js 22, install with `npm ci`, and build with `npm run build`.
+- Set this **frontend** environment variable for the production deployment:
+
+  ```dotenv
+  NEXT_PUBLIC_API_URL=https://blueprint-dev.onrender.com
+  ```
+
+- Add `hicaptain.dev` as the custom domain and configure its DNS using the values supplied by your host. If using `www`, add that domain too and redirect it to the canonical domain.
+- Redeploy after changing `NEXT_PUBLIC_API_URL`: Next.js includes this value at build time. Never put JWT secrets, OAuth client secrets, database passwords, or model keys in `NEXT_PUBLIC_*` variables.
+
+If using a preview or temporary frontend URL, add its **exact origin** to `CORS_ALLOWED_ORIGINS`. Set `FRONTEND_URL` to the intended canonical frontend so invitation and OAuth-return links go to the right site. Origins have no path or trailing slash. Credentialed requests do not support a wildcard allowlist.
+
+## OAuth and invitation email setup
+
+### Production callback URLs
+
+Register these exact values with the providers:
+
+| Provider / purpose | Authorized callback |
+| --- | --- |
+| GitHub sign-in and repository connection | `https://blueprint-dev.onrender.com/api/auth/github/callback` |
+| Google sign-in | `https://blueprint-dev.onrender.com/auth/oauth/google/callback` |
+| Google Workspace connection | `https://blueprint-dev.onrender.com/api/google-calendar/auth/callback` |
+
+For local development, replace the Render origin with `http://localhost:8080`. Local Compose exposes the API on `http://localhost:8081`; its registered callbacks must use that port instead. Callback scheme, host, port, path and trailing slash must match exactly.
+
+### GitHub
+
+Create **one GitHub OAuth App** under Settings → Developer settings → OAuth Apps. Use `https://hicaptain.dev` as the homepage and the GitHub callback above. Set `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET` on the backend. Sign-in requests identity scopes; connecting repository access requests the configured repository/webhook scopes. No deployment-wide GitHub personal access token is required.
+
+Optional webhooks require `GITHUB_WEBHOOK_SECRET` of at least 32 random characters. Register the HTTPS callback `https://blueprint-dev.onrender.com/api/github/webhook` with that same secret. Generate a secret with `openssl rand -hex 32`. The receiver verifies HMAC signatures and deduplicates supported events.
+
+### Google
+
+Create an OAuth client of type **Web application** in Google Cloud Console / Google Auth Platform. Add **both** Google callback URLs above to Authorized redirect URIs. Use `https://hicaptain.dev` as the frontend origin where the client configuration requests a JavaScript origin. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on the backend, enable Calendar/Drive/Tasks APIs, and configure the consent screen. Add your test accounts while the app is in testing; broader use may require Google's publishing/verification process.
+
+Google sign-in requests identity only. **Connect Google Workspace** separately asks for Calendar, Drive and Tasks together. Preserve `GOOGLE_TOKEN_ENCRYPTION_KEY` for existing connections. A Google `redirect_uri_mismatch` means the authorization request's exact `redirect_uri` is missing from that same OAuth client's registered redirects.
+
+OAuth connection flows use a browser-binding cookie. Some browsers block cross-site cookies between `hicaptain.dev` and `onrender.com`. For reliable operation with those browsers, add **`api.hicaptain.dev`** as a custom domain on Render, then change `BACKEND_URL`, `NEXT_PUBLIC_API_URL`, and registered callback URLs to that origin and redeploy both services. Keep `FRONTEND_URL=https://hicaptain.dev` and the frontend CORS allowlist unchanged. Do this only once the API domain and TLS are configured.
+
+### SMTP
+
+Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM` using your provider's actual values. The template uses authenticated STARTTLS on port 587; confirm your Render plan and SMTP provider permit that connection. `SMTP_FROM` must be an allowed/verified sender. Invitations contain links based on `FRONTEND_URL` and fail visibly if delivery fails.
+
+## Optional AI worker and self-hosting
+
+Deploy the Python worker separately to execute AI assignments. Set the same random `AGENT_WORKER_SECRET` in the backend and worker, point `HICAPTAIN_API_URL` at the backend, and connect the worker to the same MongoDB database for checkpoints. Without a worker, queued assignments will not execute. See [agent-worker/README.md](agent-worker/README.md) for setup, permissions, model support and usage accounting.
+
+A cloud worker cannot reach Ollama running on your personal computer through `localhost`. Use a deliberately reachable Ollama origin allowed by `AGENT_OLLAMA_ALLOWED_ORIGINS`, or use OpenAI with your own key.
+
+For local/container hosting, configure `backend/.env` and run from `backend`:
 
 ```bash
-mvn clean install
+docker compose up --build -d
+# Include the optional worker:
+docker compose --profile agents up --build -d
 ```
 
-#### 4. Run the Application
+Compose includes the backend, private MongoDB and optional worker; run/deploy the frontend separately. Supply the required MongoDB root and application passwords. Existing volumes need the [application-user migration](backend/docker/README.md); do not delete production volumes to apply it. Keep existing encryption keys stable. Rotate any previously exposed Google client secret using the [rotation guide](docs/audits/credential-rotation.md).
+
+## Verification
+
+[GitHub Actions](.github/workflows/checks.yml) runs these checks on pushes and pull requests:
 
 ```bash
-mvn spring-boot:run
-```
-
-The backend will start at `http://localhost:8080`
-
-#### 5. Verify Installation
-
-Open your browser and go to:
-- API Root: http://localhost:8080/
-- Swagger UI: http://localhost:8080/swagger-ui.html
-- API Docs: http://localhost:8080/v3/api-docs
-
-### Frontend Setup
-
-#### 1. Navigate to Frontend Directory
-
-```bash
-cd ../frontend
-```
-
-#### 2. Install Dependencies
-
-```bash
-npm install
-# or
-yarn install
-```
-
-#### 3. Configure Environment Variables (Optional)
-
-Create a `.env.local` file in the `frontend` directory:
-
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:8080
-```
-
-#### 4. Run the Development Server
-
-```bash
-npm run dev
-# or
-yarn dev
-```
-
-The frontend will start at `http://localhost:3000`
-
-#### 5. Build for Production
-
-```bash
+# frontend/
+npm run lint
+npm run typecheck
+npm test
 npm run build
-npm start
-# or
-yarn build
-yarn start
+npm audit
+
+# backend/ — use an isolated test MongoDB, never production
+bash ./mvnw test
+python docker/test-compose.py
+
+# agent-worker/ — after installing requirements.lock
+python -m unittest -v
 ```
 
-### Docker Setup
 
-#### Option 1: Backend Only (Using Docker Hub Image)
-
-```bash
-# Pull the image
-docker pull yourdockerhubusername/hicaptain-backend:latest
-
-# Create .env file with your configuration
-nano .env
-
-# Run the container
-docker run -d \
-  --name hicaptain-backend \
-  -p 8080:8080 \
-  --env-file .env \
-  --restart unless-stopped \
-  yourdockerhubusername/hicaptain-backend:latest
-```
-
-#### Option 2: Build Docker Image Locally
-
-```bash
-cd backend
-
-# Build the image
-docker build -t hicaptain-backend:latest .
-
-# Run the container
-docker run -d \
-  --name hicaptain-backend \
-  -p 8080:8080 \
-  --env-file .env \
-  --restart unless-stopped \
-  hicaptain-backend:latest
-```
-
----
-
-## ⚙️ Configuration
-
-### MongoDB Setup
-
-#### Option 1: Local MongoDB
-
-Install MongoDB locally and ensure it's running on `localhost:27017`
-
-```bash
-# Start MongoDB
-mongod
-
-# Or using systemctl (Linux)
-sudo systemctl start mongod
-```
-
-#### Option 2: MongoDB Atlas (Recommended)
-
-1. Go to https://www.mongodb.com/cloud/atlas
-2. Create a free cluster (M0)
-3. Create a database user
-4. Whitelist your IP address (or use 0.0.0.0/0 for all IPs)
-5. Get the connection string and update `.env`:
-
-```bash
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/hicaptain
-```
-
-### GitHub OAuth Setup (Optional)
-
-1. Go to GitHub Settings → Developer Settings → OAuth Apps
-2. Click "New OAuth App"
-3. Fill in the details:
-   - Application name: `HiCaptain`
-   - Homepage URL: `http://localhost:3000`
-   - Authorization callback URL: `http://localhost:8080/api/auth/github/callback`
-4. Copy the Client ID and Client Secret to your `.env` file
-
-### Google Calendar Setup (Optional)
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project
-3. Enable Google Calendar API
-4. Create OAuth 2.0 credentials
-5. Download the credentials JSON file
-6. Update `.env` with Client ID and Client Secret
-
----
-
-##  Running the Application
-
-### Development Mode
-
-**Terminal 1 - Backend:**
-```bash
-cd backend
-mvn spring-boot:run
-```
-
-**Terminal 2 - Frontend:**
-```bash
-cd frontend
-npm run dev
-```
-
-**Terminal 3 - MongoDB (if local):**
-```bash
-mongod
-```
-
-### Production Mode
-
-**Backend:**
-```bash
-cd backend
-mvn clean package
-java -jar target/demo-0.0.1-SNAPSHOT.jar
-```
-
-**Frontend:**
-```bash
-cd frontend
-npm run build
-npm start
-```
-
-### Docker Mode
-
-```bash
-cd backend
-docker-compose up -d
-```
-
-### Accessing the Application
-
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8080
-- **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **API Docs**: http://localhost:8080/v3/api-docs
-
-### Default Credentials
-
-The application comes with seeded test users:
-
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | sarah.mitchell@hicaptain.com | admin123 |
-| Project Manager | michael.chen@hicaptain.com | pm123 |
-| Developer | emma.thompson@hicaptain.com | dev123 |
-| Client | robert.anderson@techcorp.com | client123 |
-
----
-
-##  API Documentation
-
-### Swagger UI
-
-Interactive API documentation is available at: http://localhost:8080/swagger-ui.html
-
-### Key Endpoints
-
-#### Authentication
-- `POST /auth/register` - Register a new user
-- `POST /auth/login` - Login and get JWT token
-
-#### Users
-- `GET /users` - Get all users (Admin, PM, Client only)
-- `GET /users/{id}` - Get user by ID (Admin only)
-- `PUT /users/{id}` - Update user (Admin only)
-- `DELETE /users/{id}` - Delete user (Admin only)
-
-#### Projects
-- `GET /api/projects` - Get all projects
-- `POST /api/projects` - Create project (Admin, PM only)
-- `GET /api/projects/{id}` - Get project by ID
-- `PUT /api/projects/{id}` - Update project (Admin, PM only)
-- `DELETE /api/projects/{id}` - Delete project (Admin, PM only)
-
-#### Tasks
-- `GET /api/tasks` - Get all tasks
-- `POST /api/tasks` - Create task (Admin, PM only)
-- `GET /api/tasks/{id}` - Get task by ID
-- `PUT /api/tasks/{id}` - Update task (Admin, PM, Dev)
-- `DELETE /api/tasks/{id}` - Delete task (Admin, PM only)
-
-#### Analytics
-- `GET /api/analytics/overview` - Get analytics overview
-- `GET /api/analytics/project/{projectId}` - Get project analytics
-- `GET /api/analytics/developer/{userId}` - Get developer analytics
-
-#### GitHub
-- `GET /api/github/repositories` - Get user repositories
-- `GET /api/github/commits/{repoName}` - Get repository commits
-- `GET /api/github/pull-requests/{repoName}` - Get pull requests
-
-#### Google Calendar
-- `GET /api/google-calendar/events` - Get calendar events
-- `POST /api/google-calendar/events` - Create calendar event
-- `PUT /api/google-calendar/events/{eventId}` - Update event
-
-For complete API documentation, visit the Swagger UI.
-
-
-
----
-
-### Backend Testing
-
-Run tests:
-```bash
-cd backend
-mvn test
-```
-
-### Frontend Testing
-
-```bash
-cd frontend
-npm run test
-```
-
-### API Testing with cURL
-
-**Test Authentication:**
-```bash
-# Login
-curl -X POST http://localhost:8080/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"sarah.mitchell@hicaptain.com","password":"admin123"}'
-
-# Use the token
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:8080/users
-```
-
----
-
-##  Project Structure
-
-```
-hicaptain/
-├── backend/                    # Spring Boot Backend
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/com/HiCaptain/demo/
-│   │   │   │   ├── config/           # Configuration classes
-│   │   │   │   ├── controller/       # REST controllers
-│   │   │   │   ├── dto/              # Data Transfer Objects
-│   │   │   │   ├── exception/        # Custom exceptions
-│   │   │   │   ├── model/            # MongoDB entities
-│   │   │   │   ├── repository/       # MongoDB repositories
-│   │   │   │   ├── security/         # JWT & Security
-│   │   │   │   ├── service/          # Business logic
-│   │   │   │   └── util/             # Utility classes
-│   │   │   └── resources/
-│   │   │       └── application.properties
-│   │   └── test/                     # Test files
-│   ├── Dockerfile                    # Docker configuration
-│   ├── docker-compose.yml            # Docker Compose setup
-│   ├── pom.xml                       # Maven dependencies
-│   └── .env                          # Environment variables
-│
-├── frontend/                   # Next.js Frontend
-│   ├── src/
-│   │   ├── app/                      # Next.js App Router
-│   │   │   ├── auth/                 # Authentication pages
-│   │   │   ├── dashboard/            # Dashboard pages
-│   │   │   ├── projects/             # Project pages
-│   │   │   ├── analytics/            # Analytics pages
-│   │   │   └── layout.tsx            # Root layout
-│   │   ├── components/               # React components
-│   │   │   ├── dashboard/            # Dashboard components
-│   │   │   ├── forms/                # Form components
-│   │   │   └── layout/               # Layout components
-│   │   ├── services/                 # API service calls
-│   │   ├── store/                    # Zustand state management
-│   │   ├── types/                    # TypeScript types
-│   │   └── lib/                      # Utility functions
-│   ├── public/                       # Static assets
-│   ├── package.json                  # npm dependencies
-│   ├── tailwind.config.js            # Tailwind CSS config
-│   └── tsconfig.json                 # TypeScript config
-│
-├── .github/                    # GitHub workflows
-├── README.md                   # This file
-└── .gitignore                  # Git ignore rules
-```
-
----
-
-##  Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow the existing code style
-- Write meaningful commit messages
-- Add tests for new features
-- Update documentation as needed
-- Ensure all tests pass before submitting PR
-
----
-
-##  License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-**⭐ Star this repo if you find it helpful!**
-
-</div>
+Released under the [MIT license](LICENSE). See the [backend guide](backend/README.md) and [agent guide](agent-worker/README.md) for implementation details.

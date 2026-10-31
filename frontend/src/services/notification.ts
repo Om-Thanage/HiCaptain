@@ -1,11 +1,17 @@
 import api from '@/lib/api';
+import { authService } from './auth';
+
+function cacheKey() {
+  const user = authService.getUserFromToken();
+  return user ? `cached_notifications:${user.organizationId}:${user.id}` : null;
+}
 
 export interface NotificationData {
   id: string;
   userId: string;
   title: string;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error' | 'task' | 'meeting' | 'payment' | 'system';
+  type: 'info' | 'success' | 'warning' | 'error' | 'task' | 'meeting' | 'system';
   category: string;
   source: string;
   actionUrl?: string;
@@ -172,7 +178,7 @@ export const notificationService = {
   // Local storage helpers for offline functionality
   cacheNotifications: (notifications: NotificationData[]) => {
     try {
-      localStorage.setItem('cached_notifications', JSON.stringify(notifications));
+      const key = cacheKey(); if (key) localStorage.setItem(key, JSON.stringify(notifications));
     } catch (error) {
       console.error('Error caching notifications:', error);
     }
@@ -180,7 +186,7 @@ export const notificationService = {
 
   getCachedNotifications: (): NotificationData[] => {
     try {
-      const cached = localStorage.getItem('cached_notifications');
+      const key = cacheKey(); const cached = key ? localStorage.getItem(key) : null;
       return cached ? JSON.parse(cached) : [];
     } catch (error) {
       console.error('Error getting cached notifications:', error);
@@ -190,6 +196,7 @@ export const notificationService = {
 
   clearCache: () => {
     try {
+      const key = cacheKey(); if (key) localStorage.removeItem(key);
       localStorage.removeItem('cached_notifications');
     } catch (error) {
       console.error('Error clearing notification cache:', error);
@@ -221,7 +228,6 @@ export const notificationService = {
       error: '❌',
       task: '📋',
       meeting: '📅',
-      payment: '💰',
       system: '⚙️',
       info: 'ℹ️'
     };
@@ -235,7 +241,6 @@ export const notificationService = {
       error: { bg: 'bg-red-900/10', border: 'border-l-red-500', text: 'text-red-400' },
       task: { bg: 'bg-blue-900/10', border: 'border-l-blue-500', text: 'text-blue-400' },
       meeting: { bg: 'bg-purple-900/10', border: 'border-l-purple-500', text: 'text-purple-400' },
-      payment: { bg: 'bg-green-900/10', border: 'border-l-green-500', text: 'text-green-400' },
       system: { bg: 'bg-slate-900/10', border: 'border-l-slate-500', text: 'text-slate-400' },
       info: { bg: 'bg-blue-900/10', border: 'border-l-blue-500', text: 'text-blue-400' }
     };

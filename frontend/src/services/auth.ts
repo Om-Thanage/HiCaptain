@@ -3,29 +3,57 @@ import { AuthRequest, AuthResponse, User } from '@/types';
 import Cookies from 'js-cookie';
 
 export const authService = {
+  socialStartUrl(provider: 'google' | 'github', invitation?: string) {
+    const base = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/auth/oauth/${provider}/start`;
+    return invitation ? `${base}?invitation=${encodeURIComponent(invitation)}` : base;
+  },
+
+  async socialTicket(ticket: string): Promise<{ email: string; needsOrganization: boolean; invitedOrganization?: string }> {
+    return (await api.get('/auth/oauth/ticket', { params: { ticket } })).data;
+  },
+
+  async socialExchange(ticket: string, organizationName?: string): Promise<AuthResponse> {
+    return (await api.post('/auth/oauth/exchange', { ticket, organizationName })).data;
+  },
   async login(credentials: AuthRequest): Promise<AuthResponse> {
     const response = await api.post('/auth/login', credentials);
     return response.data;
   },
 
-  async register(userData: Omit<User, 'id'>): Promise<User> {
+  async register(userData: { email: string; password: string; organizationName: string }): Promise<AuthResponse> {
     const response = await api.post('/auth/register', userData);
     return response.data;
   },
 
+  async updateProfile(name: string): Promise<AuthResponse> {
+    return (await api.patch('/users/me/profile', { name })).data;
+  },
+  async changePassword(currentPassword: string, newPassword: string): Promise<AuthResponse> {
+    return (await api.post('/users/me/password', { currentPassword, newPassword })).data;
+  },
+
   setToken(token: string) {
-    Cookies.set('token', token, { expires: 7 }); // 7 days
+    const expiry = this.getClaims<{ exp: number }>(token).exp;
+    Cookies.set('token', token, { expires: new Date(expiry * 1000), sameSite: 'lax', secure: window.location.protocol === 'https:' });
     localStorage.setItem('token', token);
   },
 
   getToken(): string | null {
-    return Cookies.get('token') || localStorage.getItem('token');
+    if (typeof window === 'undefined') return null;
+    const token = Cookies.get('token') || localStorage.getItem('token');
+    if (!token) return null;
+    try {
+      if (this.getClaims<{ exp: number }>(token).exp * 1000 > Date.now()) return token;
+    } catch {}
+    this.clearToken();
+    return null;
   },
 
   clearToken() {
     Cookies.remove('token');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    Object.keys(localStorage).filter(key => key.startsWith('cached_notifications')).forEach(key => localStorage.removeItem(key));
   },
 
   // DERIVED USER (decode from JWT)
@@ -38,6 +66,8 @@ export const authService = {
         id: payload.userId || '',
         name: payload.sub || '',
         role: payload.role || 'Developer',
+        roles: payload.roles || [payload.role || 'Developer'],
+        organizationId: payload.organizationId,
         email: payload.email || '',
         taskIds: [],
       };

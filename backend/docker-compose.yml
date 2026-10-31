@@ -1,19 +1,18 @@
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:7.0
     container_name: hicaptain-mongodb
     restart: unless-stopped
-    ports:
-    - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password}
-      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-hicaptain}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Set a strong MongoDB root password}
+      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE:-hicaptain}
+      MONGO_APP_USERNAME: ${MONGO_APP_USERNAME:-hicaptain}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?Set a separate application database password}
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/10-app-user.js:ro
     networks:
       - hicaptain-network
     healthcheck:
@@ -35,20 +34,36 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
     
     # MongoDB connection
-      SPRING_DATA_MONGODB_URI:  mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-password}@mongodb:27017/${MONGO_DATABASE:-hicaptain}?authSource=admin
+      SPRING_DATA_MONGODB_URI:  mongodb://${MONGO_APP_USERNAME:-hicaptain}:${MONGO_APP_PASSWORD:?Set a separate application database password}@mongodb:27017/${MONGODB_DATABASE:-hicaptain}?authSource=${MONGODB_DATABASE:-hicaptain}
     
     # JWT Secret
-      JWT_SECRET: ${JWT_SECRET}
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-hicaptain}
+      JWT_SECRET: ${JWT_SECRET:?Set a strong JWT signing secret}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
 
-    # GitHub Integration
-      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
-      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+    # Public callback origin must match the OAuth provider's registered URLs.
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:8081}
+      GITHUB_OAUTH_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:-}
+      GITHUB_OAUTH_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:-}
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
     
-    # Google Calendar Integration
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+    # Google Workspace Integration
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_TOKEN_ENCRYPTION_KEY: ${GOOGLE_TOKEN_ENCRYPTION_KEY:-}
+      PROVIDER_TOKEN_ENCRYPTION_KEY: ${PROVIDER_TOKEN_ENCRYPTION_KEY:-${GOOGLE_TOKEN_ENCRYPTION_KEY:-}}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      SMTP_HOST: ${SMTP_HOST:-localhost}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      AGENT_WORKER_SECRET: ${AGENT_WORKER_SECRET:-}
+      AGENT_OLLAMA_ALLOWED_ORIGINS: ${AGENT_OLLAMA_ALLOWED_ORIGINS:-http://ollama:11434,http://host.docker.internal:11434}
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-120}
+      AUTH_RATE_LIMIT_WINDOW_SECONDS: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:-60}
 
     # Application settings
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
@@ -64,6 +79,28 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  agent-worker:
+    profiles: [agents]
+    build:
+      context: ../agent-worker
+    restart: unless-stopped
+    environment:
+      HICAPTAIN_API_URL: http://backend:8080
+      AGENT_WORKER_SECRET: ${AGENT_WORKER_SECRET:-}
+      MONGODB_URI: mongodb://${MONGO_APP_USERNAME:-hicaptain}:${MONGO_APP_PASSWORD:?Set a separate application database password}@mongodb:27017/${MONGODB_DATABASE:-hicaptain}?authSource=${MONGODB_DATABASE:-hicaptain}
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-hicaptain}
+      LANGSMITH_TRACING: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    cap_drop: [ALL]
+    tmpfs: [/tmp]
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - hicaptain-network
 
 volumes:
   mongodb_data:

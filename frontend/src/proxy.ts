@@ -3,18 +3,23 @@ import type { NextRequest } from 'next/server';
 
 export function proxy(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
+  let active = false;
+  if (token) {
+    try { active = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).exp * 1000 > Date.now(); }
+    catch { active = false; }
+  }
   const { pathname } = request.nextUrl;
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/auth'];
+  const publicRoutes = ['/auth', '/invite'];
   
   // If user is authenticated and trying to access login/register, redirect to dashboard
-  if (token && publicRoutes.includes(pathname)) {
+  if (active && pathname === '/auth') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   // If user is not authenticated and trying to access protected routes, redirect to login
-  if (!token && !publicRoutes.includes(pathname) && pathname !== '/') {
+  if (!active && !publicRoutes.includes(pathname) && !pathname.startsWith('/auth/oauth/') && pathname !== '/') {
     return NextResponse.redirect(new URL('/auth?mode=login', request.url));
   }
 

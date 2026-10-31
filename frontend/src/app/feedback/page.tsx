@@ -17,6 +17,7 @@ interface FeedbackFormData {
 export default function FeedbackPage() {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingFeedback, setEditingFeedback] = useState<Feedback | null>(null);
   const [formData, setFormData] = useState<FeedbackFormData>({
@@ -33,32 +34,14 @@ export default function FeedbackPage() {
   }, []);
 
   const fetchFeedbacks = async () => {
-    setLoading(true);
+    setLoading(true); setLoadError(false);
     try {
       const data = await feedbackService.getAll();
       setFeedbacks(data);
     } catch (error) {
       console.error('Error fetching feedback:', error);
       toast.error('Failed to fetch feedback');
-      // Fallback to mock data for demonstration
-      setFeedbacks([
-        {
-          id: '1',
-          content: 'Great work on the project! The team delivered everything on time and the quality exceeded our expectations.',
-          rating: 5,
-          projectId: 'project-1',
-          clientId: 'client-1',
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: '2',
-          content: 'Good progress overall, but there were some communication issues that need to be addressed.',
-          rating: 3,
-          projectId: 'project-2',
-          clientId: 'client-2',
-          createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-        }
-      ]);
+      setFeedbacks([]); setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -192,6 +175,7 @@ export default function FeedbackPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {loadError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-900">Could not load feedback. <button type="button" onClick={fetchFeedbacks}>Retry</button></div>}
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -385,10 +369,10 @@ export default function FeedbackPage() {
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 {/* Project ID */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-2" htmlFor="page-feedback-field-1">
                     Project ID *
                   </label>
-                  <input
+                  <input id="page-feedback-field-1"
                     type="text"
                     value={formData.projectId}
                     onChange={(e) => setFormData(prev => ({ ...prev, projectId: e.target.value }))}
@@ -405,10 +389,10 @@ export default function FeedbackPage() {
 
                 {/* Client ID */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-2" htmlFor="page-feedback-field-2">
                     Client ID *
                   </label>
-                  <input
+                  <input id="page-feedback-field-2"
                     type="text"
                     value={formData.clientId}
                     onChange={(e) => setFormData(prev => ({ ...prev, clientId: e.target.value }))}
@@ -425,9 +409,9 @@ export default function FeedbackPage() {
 
                 {/* Rating */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <p id="feedback-rating-label" className="block text-sm font-medium text-slate-300 mb-2">
                     Rating *
-                  </label>
+                  </p>
                   <div className="flex items-center space-x-2">
                     <div className="flex items-center">
                       {[1, 2, 3, 4, 5].map((star) => (
@@ -459,10 +443,10 @@ export default function FeedbackPage() {
 
                 {/* Content */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label htmlFor="page-feedback-field-3" className="block text-sm font-medium text-slate-300 mb-2">
                     Feedback Content *
                   </label>
-                  <textarea
+                  <textarea id="page-feedback-field-3"
                     value={formData.content}
                     onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
                     rows={5}

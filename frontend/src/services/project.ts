@@ -1,5 +1,6 @@
 import api from '@/lib/api';
 import { Project } from '@/types';
+import { Role } from '@/types';
 
 export const projectService = {
   async getAll(): Promise<Project[]> {
@@ -29,5 +30,8 @@ export const projectService = {
   async addDeveloper(projectId: string, developerId: string): Promise<Project> {
     const response = await api.post(`/projects/${projectId}/developers/${developerId}`);
     return response.data;
-  }
+  },
+  async setAccess(projectId: string, userId: string, role: Role, enabled: boolean): Promise<Project> {
+    return (await api.put(`/projects/${projectId}/members/${userId}/access`, { role, enabled })).data;
+  },
 };

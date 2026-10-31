@@ -41,7 +41,7 @@ EXPOSE 8080
 
 # Health check using curl
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-CMD curl -f http://localhost:8080/ || exit 1
+CMD curl -f "http://localhost:${SERVER_PORT:-${PORT:-8080}}/" || exit 1
 
 # JVM optimization flags for containerized environments
 ENTRYPOINT ["java", \

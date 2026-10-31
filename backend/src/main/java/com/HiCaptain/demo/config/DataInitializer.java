@@ -3,9 +3,13 @@ package com.HiCaptain.demo.config;
 import com.HiCaptain.demo.model.Project;
 import com.HiCaptain.demo.model.Task;
 import com.HiCaptain.demo.model.User;
+import com.HiCaptain.demo.model.Organization;
+import com.HiCaptain.demo.model.Membership;
 import com.HiCaptain.demo.repository.ProjectRepository;
 import com.HiCaptain.demo.repository.TaskRepository;
 import com.HiCaptain.demo.repository.UserRepository;
+import com.HiCaptain.demo.repository.OrganizationRepository;
+import com.HiCaptain.demo.repository.MembershipRepository;
 import com.HiCaptain.demo.util.Role;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,16 +34,24 @@ public class DataInitializer {
     private final ProjectRepository projectRepository;
     private final TaskRepository taskRepository;
     private final PasswordEncoder passwordEncoder;
+    private final OrganizationRepository organizationRepository;
+    private final MembershipRepository membershipRepository;
+    private String demoOrganizationId;
+    @org.springframework.beans.factory.annotation.Value("${spring.data.mongodb.database:hicaptain}")
+    private String database;
 
     @Bean
-    @Profile("!prod") // Don't run in production
+    @Profile("demo") // Explicit opt-in: never wipe a normal development database
     public CommandLineRunner initializeData() {
         return args -> {
+            if (!database.endsWith("_demo")) throw new IllegalStateException("Demo initialization requires a dedicated database ending in _demo");
             // Clear existing data
             log.info("Clearing existing data...");
             taskRepository.deleteAll();
             projectRepository.deleteAll();
             userRepository.deleteAll();
+            membershipRepository.deleteAll();
+            organizationRepository.deleteAll();
             log.info("Database cleared.");
 
             // Create users with realistic data
@@ -99,6 +111,17 @@ public class DataInitializer {
             );
 
             log.info("Created {} users", 7);
+            Organization organization = new Organization();
+            organization.setName("HiCaptain Demo");
+            organization.setOwnerUserId(admin.getId());
+            demoOrganizationId = organizationRepository.save(organization).getId();
+            for (User user : List.of(admin, pm, dev1, dev2, dev3, client1, client2)) {
+                Membership membership = new Membership();
+                membership.setOrganizationId(demoOrganizationId);
+                membership.setUserId(user.getId());
+                membership.setRoles(java.util.Set.of(user.getRole()));
+                membershipRepository.save(membership);
+            }
 
             // Create realistic projects
             log.info("Creating projects...");
@@ -359,6 +382,7 @@ public class DataInitializer {
                                  String projectManagerId, String createdBy, List<String> developerIds) {
         Project project = new Project();
         project.setName(name);
+        project.setOrganizationId(demoOrganizationId);
         project.setDescription(description);
         project.setStatus(status);
         project.setStartDate(startDate);
@@ -369,9 +393,7 @@ public class DataInitializer {
         project.setDeveloperIds(developerIds);
         project.setTaskIds(new ArrayList<>());
         project.setFeedbackIds(new ArrayList<>());
-        project.setInvoiceIds(new ArrayList<>());
         project.setMeetingIds(new ArrayList<>());
-        project.setPaymentIds(new ArrayList<>());
         project.setTimeLogIds(new ArrayList<>());
         return projectRepository.save(project);
     }

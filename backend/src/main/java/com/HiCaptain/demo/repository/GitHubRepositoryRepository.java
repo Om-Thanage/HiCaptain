@@ -10,6 +10,7 @@ import java.util.Optional;
 @Repository
 public interface GitHubRepositoryRepository extends MongoRepository<GitHubRepository, String> {
     List<GitHubRepository> findByProjectId(String projectId);
+    List<GitHubRepository> findByFullName(String fullName);
     Optional<GitHubRepository> findByGithubRepoId(String githubRepoId);
     List<GitHubRepository> findByOwnerLogin(String ownerLogin);
     List<GitHubRepository> findByLanguage(String language);

@@ -20,6 +20,7 @@ public class Notification {
     
     // Target user
     private String userId;
+    private String organizationId;
     private String username;
     
     // Notification content

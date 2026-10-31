@@ -14,6 +14,8 @@ import java.util.Optional;
 
 @Service
 public class FeedbackService {
+    @org.springframework.beans.factory.annotation.Autowired private OrganizationService organizations;
+    @org.springframework.beans.factory.annotation.Autowired private ProjectService projects;
     private final FeedbackRepository repo;
     private final ProjectRepository projectRepo;
 
@@ -22,11 +24,15 @@ public class FeedbackService {
         this.projectRepo = projectRepo;
     }
 
-    public List<Feedback> getAll() { return repo.findAll(); }
+    public List<Feedback> getAll() { return repo.findAll().stream().filter(item -> projects.getById(item.getProjectId()).isPresent()).toList(); }
 
-    public Optional<Feedback> getById(String id) { return repo.findById(id); }
+    public Optional<Feedback> getById(String id) { return repo.findById(id).filter(item -> projects.getById(item.getProjectId()).isPresent()); }
 
     public Feedback create(Feedback f) {
+        requireProject(f.getProjectId());
+        f.setUserId(organizations.currentUserId());
+        requireMember(f.getUserId());
+        f.setId(null);
         Feedback saved = repo.save(f);
         if (saved.getProjectId() != null) {
             projectRepo.findById(saved.getProjectId()).ifPresent(p -> {
@@ -43,11 +49,13 @@ public class FeedbackService {
     }
 
     public Feedback update(String id, Feedback f) {
-        Feedback existing = repo.findById(id)
+        Feedback existing = getById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Feedback not found"));
 
         String oldProjectId = existing.getProjectId();
         String newProjectId = f.getProjectId();
+        requireProject(newProjectId);
+        requireMember(f.getUserId());
 
         f.setId(id);
         Feedback saved = repo.save(f);
@@ -79,7 +87,7 @@ public class FeedbackService {
     }
 
     public void delete(String id) {
-        Feedback existing = repo.findById(id)
+        Feedback existing = getById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Feedback not found"));
 
         repo.deleteById(id);
@@ -93,5 +101,13 @@ public class FeedbackService {
                 }
             });
         }
+    }
+
+    private void requireProject(String id) {
+        projects.getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+    }
+
+    private void requireMember(String id) {
+        if (id != null && !id.isBlank()) organizations.membership(organizations.currentOrgId(), id);
     }
 }

@@ -28,6 +28,8 @@ public class ProjectRepositoryAccessService {
 
     @Autowired
     private GitHubOAuthService githubOAuthService;
+    @Autowired private ProjectService projects;
+    @Autowired private OrganizationService organizations;
 
     /**
      * Grant repository access to a project with specific team members
@@ -43,7 +45,7 @@ public class ProjectRepositoryAccessService {
             LocalDateTime scheduleEndDate) {
 
         // Verify project exists
-        Optional<Project> project = projectRepository.findById(projectId);
+        Optional<Project> project = projects.getById(projectId);
         if (project.isEmpty()) {
             throw new RuntimeException("Project not found: " + projectId);
         }
@@ -54,10 +56,13 @@ public class ProjectRepositoryAccessService {
             throw new RuntimeException("Granting user not found: " + grantedByUserId);
         }
 
-        String userRole = grantingUser.get().getRole().toString();
-        if (!userRole.equals("Admin") && !userRole.equals("ProjectManager")) {
+        if (!grantedByUserId.equals(organizations.currentUserId())) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN);
+        var roles = organizations.membership(organizations.currentOrgId(), grantedByUserId).getRoles();
+        if (!roles.contains(com.HiCaptain.demo.util.Role.Admin) && !roles.contains(com.HiCaptain.demo.util.Role.ProjectManager)) {
             throw new RuntimeException("Only Admins and Project Managers can grant repository access");
         }
+        if (authorizedUserIds != null) authorizedUserIds.forEach(id -> organizations.membership(organizations.currentOrgId(), id));
+        if (assignedDeveloperIds != null) assignedDeveloperIds.forEach(id -> organizations.membership(organizations.currentOrgId(), id));
 
         // Check if granting user has access to this repository
         boolean hasGitHubAccess = githubOAuthService.hasRepositoryAccess(grantedByUserId, repositoryFullName);
@@ -116,6 +121,7 @@ public class ProjectRepositoryAccessService {
      * Check if a user has access to a repository within a project context
      */
     public boolean hasProjectRepositoryAccess(String userId, String projectId, String repositoryFullName) {
+        if (projects.getById(projectId).isEmpty()) return false;
         return accessRepository.existsByProjectIdAndRepositoryFullNameAndAuthorizedUserIdsContaining(
             projectId, repositoryFullName, userId);
     }
@@ -124,6 +130,7 @@ public class ProjectRepositoryAccessService {
      * Get all repositories accessible for a project
      */
     public List<ProjectRepositoryAccess> getProjectRepositories(String projectId) {
+        requireProject(projectId);
         return accessRepository.findByProjectIdAndActive(projectId, true);
     }
 
@@ -131,14 +138,14 @@ public class ProjectRepositoryAccessService {
      * Get all projects a user has repository access to
      */
     public List<ProjectRepositoryAccess> getUserAccessibleRepositories(String userId) {
-        return accessRepository.findByAuthorizedUserIdsContaining(userId);
+        return accessRepository.findByAuthorizedUserIdsContaining(userId).stream().filter(a -> projects.getById(a.getProjectId()).isPresent()).toList();
     }
 
     /**
      * Get repositories assigned to a specific developer
      */
     public List<ProjectRepositoryAccess> getDeveloperAssignedRepositories(String developerId) {
-        return accessRepository.findByAssignedDeveloperIdsContaining(developerId);
+        return accessRepository.findByAssignedDeveloperIdsContaining(developerId).stream().filter(a -> projects.getById(a.getProjectId()).isPresent()).toList();
     }
 
     /**
@@ -157,6 +164,9 @@ public class ProjectRepositoryAccessService {
         }
 
         ProjectRepositoryAccess access = accessOpt.get();
+        requireProject(access.getProjectId());
+        if (authorizedUserIds != null) authorizedUserIds.forEach(id -> organizations.membership(organizations.currentOrgId(), id));
+        if (assignedDeveloperIds != null) assignedDeveloperIds.forEach(id -> organizations.membership(organizations.currentOrgId(), id));
         access.setAuthorizedUserIds(authorizedUserIds);
         access.setAssignedDeveloperIds(assignedDeveloperIds);
         access.setMonitoringEnabled(monitoringEnabled);
@@ -170,14 +180,16 @@ public class ProjectRepositoryAccessService {
      * Revoke repository access for a project
      */
     public void revokeRepositoryAccess(String projectId, String repositoryFullName, String revokedByUserId) {
+        requireProject(projectId);
         // Verify revoking user has permission
         Optional<User> revokingUser = userRepository.findById(revokedByUserId);
         if (revokingUser.isEmpty()) {
             throw new RuntimeException("Revoking user not found: " + revokedByUserId);
         }
 
-        String userRole = revokingUser.get().getRole().toString();
-        if (!userRole.equals("Admin") && !userRole.equals("ProjectManager")) {
+        if (!revokedByUserId.equals(organizations.currentUserId())) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN);
+        var roles = organizations.membership(organizations.currentOrgId(), revokedByUserId).getRoles();
+        if (!roles.contains(com.HiCaptain.demo.util.Role.Admin) && !roles.contains(com.HiCaptain.demo.util.Role.ProjectManager)) {
             throw new RuntimeException("Only Admins and Project Managers can revoke repository access");
         }
 
@@ -210,6 +222,7 @@ public class ProjectRepositoryAccessService {
         }
 
         ProjectRepositoryAccess access = accessOpt.get();
+        requireProject(access.getProjectId());
         access.setScheduleType(scheduleType);
         access.setScheduleStartDate(scheduleStartDate);
         access.setScheduleEndDate(scheduleEndDate);
@@ -224,6 +237,10 @@ public class ProjectRepositoryAccessService {
      * Get repositories that need monitoring (for background jobs)
      */
     public List<ProjectRepositoryAccess> getRepositoriesForMonitoring() {
-        return accessRepository.findByMonitoringEnabledAndActive(true, true);
+        return accessRepository.findByMonitoringEnabledAndActive(true, true).stream().filter(a -> projects.getById(a.getProjectId()).isPresent()).toList();
+    }
+
+    private void requireProject(String id) {
+        projects.getById(id).orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Project not found"));
     }
 }

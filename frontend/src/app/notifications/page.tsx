@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import CreateNotificationModal from '@/components/forms/CreateNotificationModal';
@@ -9,17 +9,14 @@ import { authService } from '@/services/auth';
 import { 
   Bell, 
   Check, 
-  X, 
   AlertCircle, 
   Info, 
   CheckCircle, 
   Clock, 
-  Users, 
   Calendar,
   FileText,
   Settings,
   Trash2,
-  Filter,
   RefreshCw,
   Plus
 } from 'lucide-react';
@@ -29,6 +26,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread' | 'important'>('all');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -55,7 +53,7 @@ export default function NotificationsPage() {
   }, []);
 
   const loadNotifications = async () => {
-    setLoading(true);
+    setLoading(true); setLoadError('');
     try {
       const response = await notificationService.getNotifications(false, 100);
       setNotifications(response.notifications);
@@ -63,50 +61,15 @@ export default function NotificationsPage() {
       
       // Cache notifications for offline access
       notificationService.cacheNotifications(response.notifications);
+      return true;
     } catch (error) {
       console.error('Error loading notifications:', error);
       toast.error('Failed to load notifications');
       
-      // Try to load from cache
-      const cachedNotifications = notificationService.getCachedNotifications();
-      if (cachedNotifications.length > 0) {
-        setNotifications(cachedNotifications);
-        toast('Showing cached notifications', { icon: 'ℹ️' });
-      } else {
-        // Fallback to mock data
-        setNotifications([
-          {
-            id: '1',
-            userId: 'user1',
-            title: 'New Task Assignment',
-            message: 'You have been assigned to work on "User Authentication Module"',
-            type: 'task',
-            category: 'work',
-            source: 'system',
-            priority: 'high',
-            isRead: false,
-            isDismissed: false,
-            createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-            updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-            relatedId: 'task-123'
-          },
-          {
-            id: '2',
-            userId: 'user1',
-            title: 'Meeting Reminder',
-            message: 'Sprint Planning Meeting starts in 30 minutes',
-            type: 'meeting',
-            category: 'meeting',
-            source: 'calendar',
-            priority: 'high',
-            isRead: false,
-            isDismissed: false,
-            createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-            updatedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString()
-          }
-        ]);
-        setUnreadCount(2);
-      }
+      const cached = notificationService.getCachedNotifications();
+      setNotifications(cached); setUnreadCount(cached.filter(item => !item.isRead).length);
+      setLoadError(cached.length ? 'Live notifications are unavailable. Showing cached results.' : 'Could not load notifications.');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -115,9 +78,8 @@ export default function NotificationsPage() {
   const refreshNotifications = async () => {
     setRefreshing(true);
     try {
-      await loadNotifications();
-      toast.success('Notifications refreshed');
-    } catch (error) {
+      if (await loadNotifications()) toast.success('Notifications refreshed');
+    } catch {
       toast.error('Failed to refresh notifications');
     } finally {
       setRefreshing(false);
@@ -136,8 +98,6 @@ export default function NotificationsPage() {
         return <FileText className="w-5 h-5 text-blue-400" />;
       case 'meeting':
         return <Calendar className="w-5 h-5 text-purple-400" />;
-      case 'payment':
-        return <CheckCircle className="w-5 h-5 text-green-400" />;
       case 'system':
         return <Settings className="w-5 h-5 text-slate-400" />;
       default:
@@ -245,6 +205,7 @@ export default function NotificationsPage() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
+        {loadError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-900">{loadError} <button type="button" onClick={loadNotifications}>Retry</button></div>}
         {/* Header */}
         <motion.div
           className="space-y-5"

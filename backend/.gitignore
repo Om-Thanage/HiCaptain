@@ -4,6 +4,9 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 .env
+.env.*
+!.env.example
+!.env.render.example
 ### STS ###
 .apt_generated
 .classpath
@@ -33,3 +36,6 @@ build/
 .vscode/
 
 .env.production
+
+# OAuth credentials are supplied through the environment, never bundled.
+src/main/resources/credentials.json

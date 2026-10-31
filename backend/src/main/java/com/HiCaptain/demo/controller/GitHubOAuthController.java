@@ -4,14 +4,19 @@ import com.HiCaptain.demo.model.GitHubConnection;
 import com.HiCaptain.demo.service.GitHubOAuthService;
 import com.HiCaptain.demo.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/api/auth/github")
@@ -24,6 +29,13 @@ public class GitHubOAuthController {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private SocialAuthController socialAuthController;
+    @Autowired private com.HiCaptain.demo.service.OAuthFlowService flows;
+
+    @Value("${app.frontend-url:http://localhost:3000}")
+    private String frontendUrl;
+
     /**
      * Step 1: Initiate GitHub OAuth (like Vercel's "Connect GitHub" button)
      * Frontend calls this endpoint when user clicks "Connect GitHub"
@@ -31,7 +43,7 @@ public class GitHubOAuthController {
     @PostMapping("/connect")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public ResponseEntity<Map<String, String>> initiateGitHubOAuth(
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("Authorization") String authHeader, HttpServletRequest request, HttpServletResponse servletResponse) {
         
         try {
             // Extract user ID from JWT token
@@ -39,10 +51,11 @@ public class GitHubOAuthController {
             String userId = jwtService.extractUserId(token);
             
             // Generate random state for security
-            String state = java.util.UUID.randomUUID().toString();
+            String state = jwtService.generateOAuthState(userId, "github");
             
             // Get GitHub OAuth authorization URL
             String authUrl = oauthService.getAuthorizationUrl(userId, state);
+            flows.bind(state, "github", request, servletResponse);
             
             Map<String, String> response = new HashMap<>();
             response.put("authUrl", authUrl);
@@ -68,30 +81,47 @@ public class GitHubOAuthController {
      */
     @GetMapping("/callback")
     public RedirectView handleGitHubCallback(
-            @RequestParam String code,
-            @RequestParam String state,
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String state,
             @RequestParam(required = false) String error,
-            @RequestParam(required = false, name = "error_description") String errorDescription) {
+            @RequestParam(required = false, name = "error_description") String errorDescription,
+            HttpServletRequest request, HttpServletResponse response) {
+
+        boolean socialSignIn = false;
+        if (state != null) {
+            try {
+                jwtService.verifyOAuthState(state, "social-github");
+                socialSignIn = true;
+            } catch (RuntimeException ignored) {
+                // Repository authorization has its own signed state and callback handling.
+            }
+        }
+        if (socialSignIn) return socialAuthController.callback("github", code, state, error, request, response);
         
         try {
+            flows.consume(state, "github", request, response);
             if (error != null) {
                 // User denied access or other error occurred
-                return new RedirectView("http://localhost:3000/git?error=" + error + 
-                                      "&error_description=" + (errorDescription != null ? errorDescription : ""));
+                return new RedirectView(frontendUrl + "/git?error=" + encode(error) +
+                                      "&error_description=" + encode(errorDescription));
             }
             
             // Exchange code for access token and create connection
             GitHubConnection connection = oauthService.handleCallback(code, state);
             
             // Redirect back to frontend with success message
-            return new RedirectView("http://localhost:3000/git?connected=true&username=" + 
-                                  connection.getGithubUsername());
+            return new RedirectView(frontendUrl + "/git?connected=true&username=" +
+                                  encode(connection.getGithubUsername()));
             
         } catch (Exception e) {
             // Redirect back to frontend with error message
-            return new RedirectView("http://localhost:3000/git?error=oauth_failed&message=" + 
-                                  e.getMessage());
+            return new RedirectView(frontendUrl + "/git?error=oauth_failed&message=" +
+                                  encode(e.getMessage()));
         }
+    }
+
+    private String encode(String value) {
+        return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 
     /**

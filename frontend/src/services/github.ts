@@ -84,7 +84,7 @@ export const githubService = {
       } else {
         return status.error || 'GitHub account not connected. Click "Connect GitHub" to authorize access.';
       }
-    } catch (error) {
+    } catch {
       console.warn('GitHub OAuth service not available');
       return 'GitHub integration is not available';
     }

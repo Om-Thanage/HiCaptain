@@ -1,356 +1,124 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Mail, Plus, ShieldCheck, UsersRound, X } from 'lucide-react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { userService } from '@/services/user';
 import { authService } from '@/services/auth';
-import { User, Role } from '@/types';
-import {
-  Users,
-  Shield,
-  Code,
-  Briefcase,
-  UserCheck,
-  Trash,
-  Pencil,
-} from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Member, organizationService } from '@/services/organization';
+import { Role } from '@/types';
+import { Project } from '@/types';
+import { projectService } from '@/services/project';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '@/store/auth';
+import styles from './users.module.css';
+
+const roles: Role[] = ['Admin', 'ProjectManager', 'Developer', 'Client'];
+const roleLabel: Record<Role, string> = { Admin: 'Admin', ProjectManager: 'Project manager', Developer: 'Developer', Client: 'Client' };
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
+  const user = authService.getUserFromToken();
+  const orgId = user?.organizationId;
+  const isAdmin = user?.roles?.includes('Admin');
+  const isManager = user?.roles?.includes('ProjectManager');
+  const [members, setMembers] = useState<Member[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectIds, setProjectIds] = useState<string[]>([]);
+  const [projectRole, setProjectRole] = useState<Role>('Developer');
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [hydrated, setHydrated] = useState(false);
+  const [email, setEmail] = useState('');
+  const [inviteRoles, setInviteRoles] = useState<Role[]>(['Developer']);
+  const [draftRoles, setDraftRoles] = useState<Record<string, Role[]>>({});
+  const [busy, setBusy] = useState(false);
+  const setToken = useAuthStore(state => state.setToken);
 
-  // inline edit state
-  const [editingUserId, setEditingUserId] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<Role>('Client');
-  const [savingId, setSavingId] = useState<string | null>(null);
-
+  async function refresh() {
+    if (!orgId) { setLoading(false); return; }
+    try { setMembers(await organizationService.members(orgId)); setDraftRoles({}); }
+    catch { toast.error('Could not load members'); }
+    finally { setLoading(false); }
+  }
+  useEffect(() => { refresh(); }, [orgId]);
+  useEffect(() => { if (isAdmin || isManager) projectService.getAll().then(setProjects).catch(() => {}); }, [orgId]);
+  const assignableProjects = isAdmin ? projects : projects.filter(project => project.projectManagerId === user?.id);
   useEffect(() => {
-    setCurrentUser(authService.getUserFromToken());
-    setHydrated(true);
-  }, []);
+    const requested = new URLSearchParams(window.location.search).get('projectId');
+    if (requested && assignableProjects.some(project => project.id === requested)) setProjectIds([requested]);
+  }, [projects]);
+  const availableProjectRoles = roles.filter(role => role !== 'Admin' && inviteRoles.includes(role) && (isAdmin || role === 'Developer'));
+  const selectedProjectRole = availableProjectRoles.includes(projectRole) ? projectRole : availableProjectRoles[0];
 
-  useEffect(() => {
-    if (!hydrated) return;
-    if (currentUser?.role !== 'Admin') {
-      toast.error('Access denied. Admin privileges required.');
-      setLoading(false);
-      return;
-    }
-    const fetchUsers = async () => {
-      try {
-        const data = await userService.getAll();
-        setUsers(data);
-      } catch (error) {
-        toast.error('Failed to fetch users');
-        console.error('Error fetching users:', error);
-      } finally {
-        setLoading(false);
+  function toggle(role: Role, selected: Role[], update: (next: Role[]) => void) {
+    update(selected.includes(role) ? selected.filter(item => item !== role) : [...selected, role]);
+  }
+
+  async function invite(event: React.FormEvent) {
+    event.preventDefault();
+    if (!orgId || !inviteRoles.length || (!isAdmin && !projectIds.length) || (projectIds.length && !selectedProjectRole)) return;
+    setBusy(true);
+    try {
+      const result = await organizationService.invite(orgId, email.trim(), inviteRoles, projectIds, projectIds.length ? selectedProjectRole : undefined);
+      toast.success(result.added ? 'Existing account added to your organization' : 'Invitation email sent');
+      setEmail('');
+      await refresh();
+    } catch (cause: any) { toast.error(cause.response?.data?.detail || 'Could not send invitation'); }
+    finally { setBusy(false); }
+  }
+
+  async function changeRoles(member: Member, next: Role[]) {
+    if (!orgId || !next.length) return;
+    try {
+      await organizationService.setRoles(orgId, member.id, next);
+      await refresh();
+      if (member.id === user?.id) {
+        const session = await organizationService.switchTo(orgId);
+        authService.setToken(session.token);
+        setToken(session.token);
+        window.location.reload();
       }
-    };
-    fetchUsers();
-  }, [currentUser, hydrated]);
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'Admin':
-        return <Shield className="w-5 h-5 text-red-400" />;
-      case 'ProjectManager':
-        return <Briefcase className="w-5 h-5 text-blue-400" />;
-      case 'Developer':
-        return <Code className="w-5 h-5 text-green-400" />;
-      case 'Client':
-        return <UserCheck className="w-5 h-5 text-purple-400" />;
-      default:
-        return <Users className="w-5 h-5 text-gray-400" />;
+      toast.success('Roles updated');
     }
-  };
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'Admin':
-        return 'text-red-400 bg-red-900/30';
-      case 'ProjectManager':
-        return 'text-blue-400 bg-blue-900/30';
-      case 'Developer':
-        return 'text-green-400 bg-green-900/30';
-      case 'Client':
-        return 'text-purple-400 bg-purple-900/30';
-      default:
-        return 'text-gray-400 bg-gray-800/50';
-    }
-  };
-
-  const getRoleStats = () => {
-    const stats = users.reduce((acc, user) => {
-      acc[user.role] = (acc[user.role] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    return {
-      total: users.length,
-      admins: stats.Admin || 0,
-      managers: stats.ProjectManager || 0,
-      developers: stats.Developer || 0,
-      clients: stats.Client || 0,
-    };
-  };
-
-  // start edit
-  const startEdit = (user: User) => {
-    setEditingUserId(user.id);
-    setSelectedRole(user.role);
-  };
-
-  // cancel edit
-  const cancelEdit = () => {
-    setEditingUserId(null);
-  };
-
-  // save role change
-  const saveRole = async (userId: string) => {
-    try {
-      setSavingId(userId);
-      console.log(`Updating user ${userId} role to ${selectedRole}`);
-      
-      // Only send the role field for update
-      const updated = await userService.update(userId, { role: selectedRole });
-      console.log('Update response:', updated);
-      
-      setUsers((prev) => 
-        prev.map((u) => 
-          u.id === userId 
-            ? { ...u, role: updated.role }
-            : u
-        )
-      );
-      toast.success(`Role updated to ${selectedRole}`);
-      setEditingUserId(null);
-    } catch (err: any) {
-      console.error('Error updating role:', err);
-      const errorMessage = err?.response?.data?.message || 'Failed to update role';
-      toast.error(errorMessage);
-    } finally {
-      setSavingId(null);
-    }
-  };
-
-  // delete user
-  const deleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-    try {
-      setSavingId(userId);
-      await userService.delete(userId);
-      setUsers((prev) => prev.filter((u) => u.id !== userId));
-      toast.success('User deleted');
-    } catch (err) {
-      console.error('Error deleting user:', err);
-      toast.error('Failed to delete user');
-    } finally {
-      setSavingId(null);
-    }
-  };
-
-  if (!hydrated) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        </div>
-      </DashboardLayout>
-    );
+    catch (cause: any) { toast.error(cause.response?.data?.detail || 'Could not update roles'); }
   }
 
-  if (currentUser?.role !== 'Admin') {
-    return (
-      <DashboardLayout>
-        <div className="text-center py-12 text-gray-300">
-          <Shield className="mx-auto h-12 w-12 text-gray-500" />
-          <h3 className="mt-2 text-sm font-medium">Access Denied</h3>
-          <p className="mt-1 text-sm text-gray-500">You need admin privileges to view this page.</p>
-        </div>
-      </DashboardLayout>
-    );
+  async function remove(member: Member) {
+    if (!orgId || !confirm(`Remove ${member.name} from this organization?`)) return;
+    try { await organizationService.remove(orgId, member.id); await refresh(); toast.success('Member removed'); }
+    catch (cause: any) { toast.error(cause.response?.data?.detail || 'Could not remove member'); }
   }
 
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  return <DashboardLayout><div className={styles.page}>
+    <div className={styles.heading}>
+      <div><span className={styles.kicker}>PEOPLE & PERMISSIONS</span><h1>Your team, all in one place.</h1><p>Invite teammates and choose what they can do in this organization.</p></div>
+      <div className={styles.count}><span className={styles.countIcon}><UsersRound size={20} /></span><span><strong>{members.length}</strong><small>{members.length === 1 ? 'team member' : 'team members'}</small></span></div>
+    </div>
 
-  const stats = getRoleStats();
-
-  return (
-    <DashboardLayout>
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
-        className="space-y-6 pl-6 pb-8"
-      >
-        {/* Simple Header (kept minimal per request) */}
-        <div>
-          <h1 className="text-3xl font-extrabold text-white">Users</h1>
-          <p className="text-slate-400 mt-1">Manage system users and their roles</p>
-        </div>
-
-        {/* Top Stats - glossy cards to match AdminDashboard style */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-          {[
-            { label: 'Total Users', value: stats.total, icon: <Users className="h-8 w-8 text-gray-200" /> },
-            { label: 'Admins', value: stats.admins, icon: <Shield className="h-8 w-8 text-red-300" /> },
-            { label: 'Managers', value: stats.managers, icon: <Briefcase className="h-8 w-8 text-blue-300" /> },
-            { label: 'Developers', value: stats.developers, icon: <Code className="h-8 w-8 text-green-300" /> },
-            { label: 'Clients', value: stats.clients, icon: <UserCheck className="h-8 w-8 text-purple-300" /> },
-          ].map((card, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 * index, duration: 0.35 }}
-              className="bg-linear-to-r from-slate-800/70 to-slate-900/50 text-white p-5 rounded-2xl shadow-lg border border-white/6 hover:shadow-2xl hover:scale-[1.01] transition-all"
-            >
-              <div className="flex items-center gap-4">
-                <div className="p-2 rounded-lg">{card.icon}</div>
-                <div>
-                  <p className="text-sm text-slate-300">{card.label}</p>
-                  <p className="text-2xl font-bold mt-1">{card.value}</p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Users Table */}
-        {users.length > 0 ? (
-          <div className="rounded-2xl border border-slate-700/60 bg-linear-to-br from-slate-800/55 to-slate-900/40 backdrop-blur-md overflow-hidden shadow-lg">
-            <div className="px-6 py-4 border-b border-slate-700/50">
-              <h3 className="text-lg font-semibold text-slate-100">All Users</h3>
+    <div className={styles.grid}>
+      <section className={styles.membersCard} aria-labelledby="members-title">
+        <div className={styles.cardHeading}><div><span className={styles.sectionKicker}>THE PEOPLE</span><h2 id="members-title">Organization members</h2></div><span className={styles.memberCount}>{members.length} members</span></div>
+        {loading ? <p className={styles.empty}>Loading your team…</p> : members.length === 0 ? <p className={styles.empty}>No members yet. Invite someone to get started.</p> : <div className={styles.memberList}>{members.map((member, index) => {
+          const selected = draftRoles[member.id] || member.roles;
+          const changed = draftRoles[member.id] && (selected.length !== member.roles.length || selected.some(role => !member.roles.includes(role)));
+          return <div className={styles.member} key={member.id}>
+            <div className={styles.identity}><span className={`${styles.avatar} ${styles[`avatar${index % 3}`]}`}>{member.name?.charAt(0).toUpperCase() || '?'}</span><div><strong>{member.name} {member.id === user?.id && <span className={styles.you}>You</span>}</strong><span>{member.email}</span></div></div>
+            <div className={styles.memberControls}>
+              <div className={styles.roleList} aria-label={`Roles for ${member.name}`}>{roles.map(role => isAdmin ? <label key={role} className={`${styles.role} ${selected.includes(role) ? styles.selectedRole : ''}`}><input type="checkbox" checked={selected.includes(role)} onChange={() => toggle(role, selected, next => setDraftRoles(current => ({ ...current, [member.id]: next })))} />{roleLabel[role]}</label> : member.roles.includes(role) ? <span key={role} className={`${styles.role} ${styles.selectedRole}`}>{roleLabel[role]}</span> : null)}</div>
+              {isAdmin && <div className={styles.memberActions}>{changed && <button type="button" className={styles.saveButton} disabled={!selected.length} onClick={() => changeRoles(member, selected)}>Save roles</button>}{member.id !== user?.id && <button type="button" className={styles.removeButton} onClick={() => remove(member)} aria-label={`Remove ${member.name}`}><X size={15} /> Remove</button>}</div>}
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-700">
-                <thead className="bg-slate-800/60">
-                  <tr>
-                    {['User', 'Role', 'Tasks Assigned', 'Actions'].map((heading) => (
-                      <th
-                        key={heading}
-                        className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider"
-                      >
-                        {heading}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-700">
-                  {users.map((user) => (
-                    <motion.tr
-                      key={user.id}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.25 }}
-                      className="hover:bg-slate-800/60 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center">
-                            <span className="text-gray-200 font-medium text-sm">{user.name.charAt(0).toUpperCase()}</span>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-white">{user.name}</div>
-                            <div className="text-sm text-slate-400">ID: {user.id}</div>
-                          </div>
-                        </div>
-                      </td>
+          </div>;
+        })}</div>}
+      </section>
 
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          {/* {getRoleIcon(user.role)} */}
-                          {editingUserId === user.id ? (
-                            <select
-                              className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-200 text-xs"
-                              value={selectedRole}
-                              onChange={(e) => setSelectedRole(e.target.value as Role)}
-                              disabled={savingId === user.id}
-                            >
-                              <option value="Admin">Admin</option>
-                              <option value="ProjectManager">Project Manager</option>
-                              <option value="Developer">Developer</option>
-                              <option value="Client">Client</option>
-                            </select>
-                          ) : (
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(
-                                user.role
-                              )}`}
-                            >
-                              {user.role}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{user.taskIds.length || 0} tasks</td>
-
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        {editingUserId === user.id ? (
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => saveRole(user.id)}
-                              disabled={savingId === user.id}
-                              className="text-emerald-300 hover:text-emerald-200 transition-colors"
-                            >
-                              {savingId === user.id ? 'Saving...' : 'Save'}
-                            </button>
-                            <button
-                              onClick={cancelEdit}
-                              disabled={savingId === user.id}
-                              className="text-slate-300 hover:text-slate-200 transition-colors"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-4">
-                            <button
-                              onClick={() => startEdit(user)}
-                              className="flex items-center gap-2 text-blue-300 hover:text-blue-200 transition-colors"
-                            >
-                              <Pencil className="w-4 h-4" />
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              onClick={() => deleteUser(user.id)}
-                              disabled={savingId === user.id}
-                              className="flex items-center gap-2 text-red-300 hover:text-red-200 transition-colors"
-                            >
-                              <Trash className="w-4 h-4" />
-                              <span>Delete</span>
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-12 text-slate-400">
-            <Users className="mx-auto h-12 w-12 text-slate-500" />
-            <h3 className="mt-2 text-sm font-medium">No users</h3>
-            <p className="mt-1 text-sm text-slate-500">No users found in the system.</p>
-          </div>
-        )}
-      </motion.div>
-    </DashboardLayout>
-  );
+      <aside className={styles.side}>
+        {(isAdmin || isManager) ? <form onSubmit={invite} className={styles.inviteCard}>
+          <span className={styles.inviteIcon}><Mail size={22} /></span><span className={styles.sectionKicker}>GROW YOUR TEAM</span><h2>Invite a teammate</h2><p>Send an email invitation, then choose the roles they&apos;ll have when they join.</p>
+          <label className={styles.fieldLabel} htmlFor="invite-email">Email address</label><input id="invite-email" required type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="teammate@example.com" className={styles.emailInput} />
+          <span className={styles.fieldLabel}>Assign roles</span><div className={styles.inviteRoles}>{roles.filter(role => isAdmin || role === 'Developer').map(role => <label key={role} className={`${styles.role} ${inviteRoles.includes(role) ? styles.selectedRole : ''}`}><input type="checkbox" checked={inviteRoles.includes(role)} onChange={() => toggle(role, inviteRoles, setInviteRoles)} />{roleLabel[role]}</label>)}</div>
+          <span className={styles.fieldLabel}>Project access {isManager && !isAdmin && '(choose at least one)'}</span><div className={styles.projectChoices}>{assignableProjects.map(project => <label key={project.id}><input type="checkbox" checked={projectIds.includes(project.id)} onChange={() => setProjectIds(current => current.includes(project.id) ? current.filter(id => id !== project.id) : [...current, project.id])} />{project.name}</label>)}{!assignableProjects.length && <p>No projects available for invitations.</p>}</div>
+          {projectIds.length > 0 && isAdmin && <label className={styles.fieldLabel}>Access as<select className={styles.projectRole} value={selectedProjectRole || ''} onChange={event => setProjectRole(event.target.value as Role)}><option value="" disabled>Choose a role</option>{availableProjectRoles.map(role => <option key={role} value={role}>{roleLabel[role]}</option>)}</select></label>}
+          <button type="submit" disabled={busy || !inviteRoles.length || (!isAdmin && !projectIds.length) || (projectIds.length > 0 && !selectedProjectRole)} className={styles.inviteButton}><Plus size={17} />{busy ? 'Sending…' : 'Send invitation'}</button>
+        </form> : <div className={styles.inviteCard}><span className={styles.inviteIcon}><UsersRound size={22} /></span><h2>Work better together</h2><p>Ask an organization admin to invite more people or update team roles.</p></div>}
+        <div className={styles.tip}><ShieldCheck size={19} /><p>People can belong to more than one organization and hold multiple roles in each.</p></div>
+      </aside>
+    </div>
+  </div></DashboardLayout>;
 }

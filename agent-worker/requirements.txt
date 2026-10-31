@@ -1,0 +1,6 @@
+# Direct dependencies; install the complete pinned resolution in requirements.lock.
+langgraph==1.2.19
+langgraph-checkpoint-mongodb==0.5.1
+httpx==0.28.1
+pydantic==2.14.2
+python-dotenv==1.2.4

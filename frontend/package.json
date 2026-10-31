@@ -6,22 +6,23 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "oxlint --react-plugin --nextjs-plugin --jsx-a11y-plugin src",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/test-notification-cache.cjs && node scripts/test-session-lifecycle.cjs"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.9.1",
-    "axios": "^1.7.7",
+    "@hookform/resolvers": "^6.0.2",
+    "axios": "^1.21.0",
     "date-fns": "^4.1.0",
     "framer-motion": "^11.18.2",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.454.0",
-    "next": "^16.2.12",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "react-hook-form": "^7.53.2",
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-hook-form": "^7.91.0",
     "react-hot-toast": "^2.4.1",
-    "recharts": "^2.12.7",
-    "zod": "^3.23.8",
+    "zod": "^4.6.7",
     "zustand": "^5.0.1"
   },
   "devDependencies": {
@@ -30,8 +31,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.0.0",
+    "oxlint": "^1.90.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

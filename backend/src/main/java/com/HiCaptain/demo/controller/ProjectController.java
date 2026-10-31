@@ -3,6 +3,8 @@ package com.HiCaptain.demo.controller;
 import com.HiCaptain.demo.model.Project;
 import com.HiCaptain.demo.model.User;
 import com.HiCaptain.demo.service.ProjectService;
+import com.HiCaptain.demo.service.OrganizationService;
+import com.HiCaptain.demo.util.Role;
 import com.HiCaptain.demo.repository.UserRepository;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -23,10 +25,12 @@ public class ProjectController {
 
     private final ProjectService svc;
     private final UserRepository userRepo;
+    private final OrganizationService organizations;
 
-    public ProjectController(ProjectService svc, UserRepository userRepo) {
+    public ProjectController(ProjectService svc, UserRepository userRepo, OrganizationService organizations) {
         this.svc = svc;
         this.userRepo = userRepo;
+        this.organizations = organizations;
     }
 
     @GetMapping
@@ -36,26 +40,23 @@ public class ProjectController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         // Now auth.getName() returns the userId directly from JWT token
         String userId = auth.getName();
-        String role = auth.getAuthorities().iterator().next().getAuthority();
-        log.debug("User {} with role {} requesting all projects", userId, role);
+        boolean admin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("Admin"));
+        log.debug("User {} requesting all projects", userId);
 
         List<Project> all = svc.getAll();
-        if ("Admin".equals(role)) {
+        if (admin) {
             log.info("Admin user {} retrieved {} projects", userId, all.size());
             return ResponseEntity.ok(all);
         }
 
         List<Project> filtered = all.stream().filter(p -> {
             if (p == null) return false;
-            return switch (role) {
-                case "ProjectManager" -> userId.equals(p.getProjectManagerId());
-                case "Developer" -> p.getDeveloperIds() != null && p.getDeveloperIds().contains(userId);
-                case "Client" -> userId.equals(p.getClientId());
-                default -> false;
-            };
+            return (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ProjectManager")) && userId.equals(p.getProjectManagerId())) ||
+                   (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("Developer")) && p.getDeveloperIds() != null && p.getDeveloperIds().contains(userId)) ||
+                   (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("Client")) && userId.equals(p.getClientId()));
         }).toList();
 
-        log.info("User {} with role {} retrieved {} filtered projects", userId, role, filtered.size());
+        log.info("User {} retrieved {} filtered projects", userId, filtered.size());
         return ResponseEntity.ok(filtered);
     }
 
@@ -64,18 +65,18 @@ public class ProjectController {
     public ResponseEntity<List<Project>> getMyProjects() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String userId = auth.getName();
-        String role = auth.getAuthorities().iterator().next().getAuthority();
+        boolean admin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("Admin"));
 
         List<Project> all = svc.getAll();
-        if ("Admin".equals(role)) {
+        if (admin) {
             return ResponseEntity.ok(all);
         }
 
         List<Project> filtered = all.stream().filter(p -> {
             if (p == null) return false;
-            return ("ProjectManager".equals(role) && userId.equals(p.getProjectManagerId())) ||
-                   ("Developer".equals(role) && p.getDeveloperIds() != null && p.getDeveloperIds().contains(userId)) ||
-                   ("Client".equals(role) && userId.equals(p.getClientId()));
+            return (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ProjectManager")) && userId.equals(p.getProjectManagerId())) ||
+                   (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("Developer")) && p.getDeveloperIds() != null && p.getDeveloperIds().contains(userId)) ||
+                   (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("Client")) && userId.equals(p.getClientId()));
         }).toList();
 
         return ResponseEntity.ok(filtered);
@@ -86,17 +87,17 @@ public class ProjectController {
     public ResponseEntity<Project> getById(@PathVariable String id) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String userId = auth.getName();
-        String role = auth.getAuthorities().iterator().next().getAuthority();
+        boolean admin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("Admin"));
 
         return svc.getById(id)
                 .map(p -> {
-                    if ("Admin".equals(role)) {
+                    if (admin) {
                         return ResponseEntity.ok(p);
                     }
                     boolean allowed =
-                            ("ProjectManager".equals(role) && userId.equals(p.getProjectManagerId())) ||
-                            ("Developer".equals(role) && p.getDeveloperIds() != null && p.getDeveloperIds().contains(userId)) ||
-                            ("Client".equals(role) && userId.equals(p.getClientId()));
+                            (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ProjectManager")) && userId.equals(p.getProjectManagerId())) ||
+                            (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("Developer")) && p.getDeveloperIds() != null && p.getDeveloperIds().contains(userId)) ||
+                            (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("Client")) && userId.equals(p.getClientId()));
                     return allowed ? ResponseEntity.ok(p) : new ResponseEntity<Project>(HttpStatus.FORBIDDEN);
                 })
                 .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
@@ -108,12 +109,14 @@ public class ProjectController {
         log.debug("Creating new project: {}", p.getName());
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String currentUserId = auth.getName();
-        String currentUserRole = auth.getAuthorities().iterator().next().getAuthority();
+        String currentUserRole = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("Admin")) ? "Admin" : "ProjectManager";
 
         // If a Project Manager is creating and projectManagerId is not set, auto-assign to self
         if ("ProjectManager".equals(currentUserRole) && (p.getProjectManagerId() == null || p.getProjectManagerId().isBlank())) {
             p.setProjectManagerId(currentUserId);
         }
+        if ("ProjectManager".equals(currentUserRole) && (!currentUserId.equals(p.getProjectManagerId()) || p.getClientId() != null && !p.getClientId().isBlank()))
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN, "Only an Admin can assign client or project manager access");
 
         // Set createdBy as "<Role> : <username>"
         String username = userRepo.findById(currentUserId)
@@ -129,19 +132,40 @@ public class ProjectController {
     @PostMapping("/{projectId}/developers/{developerId}")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<Project> addDeveloperToProject(@PathVariable String projectId, @PathVariable String developerId) {
-        Project updated = svc.addDeveloper(projectId, developerId);
+        Project updated = organizations.setProjectAccess(projectId, developerId, Role.Developer, true);
         return ResponseEntity.ok(updated);
+    }
+
+    public record AccessRequest(Role role, boolean enabled) {}
+
+    @PutMapping("/{projectId}/members/{userId}/access")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
+    public Project setAccess(@PathVariable String projectId, @PathVariable String userId, @RequestBody AccessRequest request) {
+        return organizations.setProjectAccess(projectId, userId, request.role(), request.enabled());
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<Project> update(@PathVariable String id, @Valid @RequestBody Project p) {
+        var existing = svc.getById(id).orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND));
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean admin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("Admin"));
+        if (!admin && (!auth.getName().equals(existing.getProjectManagerId())
+                || !java.util.Objects.equals(existing.getClientId(), p.getClientId())
+                || !java.util.Objects.equals(existing.getProjectManagerId(), p.getProjectManagerId())
+                || !java.util.Objects.equals(existing.getDeveloperIds(), p.getDeveloperIds())))
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN, "Only an Admin can change project access here");
         return ResponseEntity.ok(svc.update(id, p));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<Void> delete(@PathVariable String id) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean admin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("Admin"));
+        if (!admin && !auth.getName().equals(svc.getById(id)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(HttpStatus.NOT_FOUND)).getProjectManagerId()))
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN);
         svc.delete(id);
         return ResponseEntity.noContent().build();
     }

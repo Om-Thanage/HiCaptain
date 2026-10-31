@@ -3,15 +3,17 @@ package com.HiCaptain.demo.controller;
 import com.HiCaptain.demo.service.GoogleCalendarService;
 import com.google.api.services.calendar.model.CalendarListEntry;
 import com.google.api.services.calendar.model.Event;
+import com.google.api.client.util.DateTime;
+import java.time.Instant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -22,14 +24,20 @@ public class GoogleCalendarController {
 
     @Autowired
     private GoogleCalendarService googleCalendarService;
+    @Autowired private com.HiCaptain.demo.service.JwtService jwtService;
+    @Autowired private com.HiCaptain.demo.service.OAuthFlowService flows;
+    @Value("${app.frontend-url:http://localhost:3000}") private String frontendUrl;
 
     @GetMapping("/auth/url")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
-    public ResponseEntity<String> getAuthorizationUrl(@RequestParam String userId) {
+    public ResponseEntity<String> getAuthorizationUrl(@RequestParam String userId, jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) {
+        requireCurrentUser(userId);
         try {
             String authUrl = googleCalendarService.getAuthorizationUrl(userId);
+            String state = org.springframework.web.util.UriComponentsBuilder.fromUriString(authUrl).build().getQueryParams().getFirst("state");
+            flows.bind(state, "google", request, response);
             return ResponseEntity.ok(authUrl);
-        } catch (RuntimeException e) {
+        } catch (IOException e) {
             // Handle missing credentials gracefully
             return ResponseEntity.badRequest().body("Google Calendar integration not configured: " + e.getMessage());
         }
@@ -39,16 +47,18 @@ public class GoogleCalendarController {
     public void handleCallback(
             @RequestParam String code,
             @RequestParam String state,
+            jakarta.servlet.http.HttpServletRequest request,
             HttpServletResponse response) throws IOException {
         
         try {
-            String userId = state; // The state parameter contains the user ID
+            flows.consume(state, "google", request, response);
+            String userId = jwtService.verifyOAuthState(state, "google");
             googleCalendarService.authorize(code, userId);
             
             // Redirect to frontend success page
-            response.sendRedirect("http://localhost:3000/dashboard?google_auth=success");
+            response.sendRedirect(frontendUrl + "/settings?google=connected");
         } catch (Exception e) {
-            response.sendRedirect("http://localhost:3000/dashboard?google_auth=error");
+            response.sendRedirect(frontendUrl + "/settings?google=error");
         }
     }
 
@@ -57,6 +67,7 @@ public class GoogleCalendarController {
     public ResponseEntity<List<Event>> getUpcomingEvents(
             @RequestParam String userId,
             @RequestParam(defaultValue = "10") int maxResults) {
+        requireCurrentUser(userId);
         
         try {
             List<Event> events = googleCalendarService.getUpcomingEvents(userId, maxResults);
@@ -68,40 +79,22 @@ public class GoogleCalendarController {
 
     @GetMapping("/events")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
-    public ResponseEntity<?> getEvents(
-            @RequestParam String userId,
-            @RequestParam(defaultValue = "30") int days) {
-        
-        try {
-            // Check if user is authorized for Google Calendar first
-            boolean isAuthorized = googleCalendarService.isUserAuthorized(userId);
-            if (!isAuthorized) {
-                // User not authorized - return empty list so UI doesn't break
-                return ResponseEntity.ok().body(Collections.emptyList());
-            }
-            
-            // Convert days to maxResults for consistency with existing service
-            int maxResults = Math.min(days * 3, 50); // Assume ~3 events per day max, cap at 50
-            List<Event> events = googleCalendarService.getUpcomingEvents(userId, maxResults);
-            return ResponseEntity.ok(events);
-        } catch (IOException e) {
-            // I/O error - return empty list to prevent UI breaking
-            System.err.println("IOException fetching Google Calendar events: " + e.getMessage());
-            return ResponseEntity.ok().body(Collections.emptyList());
-        } catch (RuntimeException e) {
-            // Google Calendar not configured or other runtime error
-            System.err.println("RuntimeException fetching Google Calendar events: " + e.getMessage());
-            return ResponseEntity.ok().body(Collections.emptyList());
-        } catch (Exception e) {
-            // Any other error - return empty list to prevent UI breaking
-            System.err.println("Unexpected error fetching Google Calendar events: " + e.getMessage());
-            return ResponseEntity.ok().body(Collections.emptyList());
-        }
+    public ResponseEntity<List<Event>> getEvents(@RequestParam String userId, @RequestParam String from,
+            @RequestParam String to) throws IOException {
+        requireCurrentUser(userId);
+        if (!googleCalendarService.isUserAuthorized(userId))
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Connect Google Workspace in Settings first");
+        Instant start = Instant.parse(from);
+        Instant end = Instant.parse(to);
+        if (!end.isAfter(start) || end.isAfter(start.plus(java.time.Duration.ofDays(62))))
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Choose a date range within 62 days");
+        return ResponseEntity.ok(googleCalendarService.getEvents(userId, new DateTime(start.toEpochMilli()), new DateTime(end.toEpochMilli())));
     }
 
     @GetMapping("/calendars")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<List<CalendarListEntry>> getUserCalendars(@RequestParam String userId) {
+        requireCurrentUser(userId);
         try {
             List<CalendarListEntry> calendars = googleCalendarService.getUserCalendars(userId);
             return ResponseEntity.ok(calendars);
@@ -113,6 +106,7 @@ public class GoogleCalendarController {
     @GetMapping("/auth/status")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<Boolean> checkAuthStatus(@RequestParam String userId) {
+        requireCurrentUser(userId);
         try {
             boolean isAuthorized = googleCalendarService.isUserAuthorized(userId);
             return ResponseEntity.ok(isAuthorized);
@@ -131,6 +125,7 @@ public class GoogleCalendarController {
     @GetMapping("/debug")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<String> debugEndpoint(@RequestParam String userId) {
+        requireCurrentUser(userId);
         try {
             boolean isAuthorized = googleCalendarService.isUserAuthorized(userId);
             return ResponseEntity.ok("User " + userId + " is authorized: " + isAuthorized);
@@ -142,11 +137,18 @@ public class GoogleCalendarController {
     @PostMapping("/auth/revoke")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<String> revokeAuthorization(@RequestParam String userId) {
+        requireCurrentUser(userId);
         try {
             googleCalendarService.revokeAuthorization(userId);
             return ResponseEntity.ok("Authorization revoked successfully");
         } catch (IOException e) {
             return ResponseEntity.badRequest().body("Failed to revoke authorization");
+        }
+    }
+    private void requireCurrentUser(String userId) {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !userId.equals(auth.getName())) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN);
         }
     }
 }
