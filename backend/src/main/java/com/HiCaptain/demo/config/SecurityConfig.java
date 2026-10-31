@@ -54,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/google-calendar/auth/callback").permitAll()
                         .requestMatchers("/api/auth/github/callback").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/github/webhook").permitAll()
+                        .requestMatchers("/internal/agents/**").permitAll() // Deployment secret plus per-run leases validated in AgentWorkerController.
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll() // Allow Swagger UI and OpenAPI docs
                         .requestMatchers("/client/data").hasAnyAuthority("Admin", "Client") // Client + Admin access
                         .requestMatchers("/admin/data").hasAnyAuthority("Admin")  // Admin access

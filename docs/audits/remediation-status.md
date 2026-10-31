@@ -23,8 +23,25 @@ The original audit examined `work` at `e9d78bb`. Remediation targets the existin
 | Webhooks | Fixed | Bounded public receiver verifies HMAC before persistence; content-based deduplication, idempotent commit/PR/issue persistence, and stale-event protection. Creation restricts destinations to this backend callback and hides signing secrets. |
 | Fabricated fallback data | Fixed | Feedback and notifications show visible retry errors instead of fake records. Notification caches are scoped to organization/user and cleared on sign-out; recipients must belong to the active organization. |
 | Product/settings/docs | Resolved on revamped | Real profile/password endpoints; removed fake preference controls and obsolete analytics/invoice/payment surfaces. Current backend guide replaces stale claims; SMTP/rate-limit settings forwarded in Docker. MIT license added. |
-| Missing agent delivery | Pending | Earlier uncommitted agent implementation was not present on the remote branch; it must be restored and verified before this gap is closed. |
+| Missing agent delivery | Implemented and verified | Project planners/researchers using OpenAI or Ollama, encrypted BYOK settings, current project/role checks, expiring worker leases, conservative token reservations, LangGraph/Mongo checkpoints, approved shared memory, follow-up context, and resumable human approval into Kanban. Real local HTTP/model-fixture flow and desktop/mobile browser flow pass. See the agent-worker guide for scope and setup. |
 
 ## Quality gates
 
 Oxlint enforces correctness, React/Next/TypeScript rules and associated form labels. React Compiler recommendations and existing non-blocking interaction advisories remain warnings because the compiler is not enabled; they are not silently disabled. TypeScript, cache-isolation tests, production build, and a full npm advisory check run in CI.
+
+## Final verification on revamped
+
+- Java 17 / Spring Boot 3.5.16: **56 backend tests, zero failures/errors/skips**, against a dedicated local MongoDB database.
+- Frontend: lint (existing non-blocking advisories remain), TypeScript, session/cache tests and production build pass. Full npm audit: **zero reported vulnerabilities**.
+- Worker: four tests cover both provider protocols, invalid/truncated output, bounded context and recovery without another model call. PyPI advisory scan of all **50 pinned runtime packages**: zero known vulnerabilities and no skipped packages; raw result is `2026-10-31-python-after.json`.
+- Live integration: real backend HTTP calls, local Ollama-compatible fixture, LangGraph execution, durable Mongo checkpoints, approval into one task and memory entry, idempotent repeated approval, and changed follow-up requirements retaining the original goal. No paid provider calls were made.
+- Chromium desktop/mobile: Settings provider creation, project teammate creation, assignment, worker execution, approval, Kanban refresh and task-context selection pass. No runtime errors or mobile horizontal overflow observed.
+- Docker Compose: private MongoDB, separate application account, optional worker's matching database/secret and restricted container configuration verified.
+
+## Actions outside repository access
+
+1. **Rotate the exposed Google OAuth client secret** in the Google project and update deployment secrets. Removal from the current source/artifact does not revoke copies in history. See `credential-rotation.md`.
+2. **Migrate existing MongoDB volumes** to the database-scoped application user before deploying the new Compose configuration; initializer scripts only run on empty volumes. Keep the existing encryption key stable. See the backend deployment guide.
+3. **Repeat Java dependency advisory scanning** in an environment with access to an advisory service. Maven compilation/tests pass, but this environment's OSV requests were blocked; no zero-CVE Java claim is made.
+
+Changes are prepared on `revamped`; production deployment and merging into `main` are separate from this remediation task.

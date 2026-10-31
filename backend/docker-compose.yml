@@ -60,6 +60,8 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       SMTP_AUTH: ${SMTP_AUTH:-true}
       SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      AGENT_WORKER_SECRET: ${AGENT_WORKER_SECRET:-}
+      AGENT_OLLAMA_ALLOWED_ORIGINS: ${AGENT_OLLAMA_ALLOWED_ORIGINS:-http://ollama:11434,http://host.docker.internal:11434}
       AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-120}
       AUTH_RATE_LIMIT_WINDOW_SECONDS: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:-60}
 
@@ -77,6 +79,28 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  agent-worker:
+    profiles: [agents]
+    build:
+      context: ../agent-worker
+    restart: unless-stopped
+    environment:
+      HICAPTAIN_API_URL: http://backend:8080
+      AGENT_WORKER_SECRET: ${AGENT_WORKER_SECRET:-}
+      MONGODB_URI: mongodb://${MONGO_APP_USERNAME:-hicaptain}:${MONGO_APP_PASSWORD:?Set a separate application database password}@mongodb:27017/${MONGODB_DATABASE:-hicaptain}?authSource=${MONGODB_DATABASE:-hicaptain}
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-hicaptain}
+      LANGSMITH_TRACING: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    cap_drop: [ALL]
+    tmpfs: [/tmp]
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - hicaptain-network
 
 volumes:
   mongodb_data:

@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { CalendarDays, GripVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Bot, CalendarDays, GripVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authService } from '@/services/auth';
 import { taskService } from '@/services/task';
@@ -16,7 +16,7 @@ const emptyForm = (projectId: string, status = 'pending'): TaskRequest => ({ tit
 const normalize = (task: Task): Task => ({ ...task, status: ['completed', 'done'].includes(task.status?.toLowerCase()) ? 'completed' : ['in-progress', 'in_progress'].includes(task.status?.toLowerCase()) ? 'in-progress' : 'pending', priority: task.priority?.toLowerCase() || 'medium', deadline: Array.isArray(task.deadline) ? (task.deadline as unknown as number[]).map((part, index) => index ? String(part).padStart(2, '0') : part).join('-') : task.deadline || '', assignedDeveloperIds: task.assignedDeveloperIds || [] });
 const date = (value: string) => value ? new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
 
-export default function ProjectKanban({ project }: { project: Project }) {
+export default function ProjectKanban({ project, onAskAgent }: { project: Project; onAskAgent?: (taskId: string) => void }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [developers, setDevelopers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,7 +88,7 @@ export default function ProjectKanban({ project }: { project: Project }) {
       <div className={styles.columnHeading}><span className={`${styles.dot} ${styles[column.id.replace('-', '')]}`} /><h3>{column.name}</h3><span className={styles.count}>{tasks.filter(task => task.status === column.id).length}</span></div>
       <div className={styles.cardList}>{tasks.filter(task => task.status === column.id).map(task => <article key={task.id} className={styles.task} draggable={canEdit} onDragStart={event => event.dataTransfer.setData('text/plain', task.id)}>
         <div className={styles.taskTop}><span className={`${styles.priority} ${styles[task.priority] || ''}`}>{task.priority}</span><div className={styles.taskActions}>{canEdit && <button type="button" onClick={() => openEdit(task)} aria-label={`Edit ${task.title}`}><Pencil size={15} /></button>}{canManage && <button type="button" onClick={() => remove(task)} aria-label={`Delete ${task.title}`}><Trash2 size={15} /></button>}{canEdit && <GripVertical size={15} aria-hidden="true" />}</div></div>
-        <h4>{task.title}</h4>{task.description && <p>{task.description}</p>}
+        <h4>{task.title}</h4>{canEdit && onAskAgent && <button type="button" className={styles.googleTask} onClick={() => onAskAgent(task.id)}><Bot size={13} /> Ask AI teammate</button>}{task.description && <p>{task.description}</p>}
         <div className={styles.taskFooter}><span>{task.deadline && <><CalendarDays size={14} /> {date(task.deadline)}</>}</span><div className={styles.avatars}>{task.assignedDeveloperIds?.slice(0, 3).map(id => <span key={id} title={developers.find(user => user.id === id)?.name || 'Team member'}>{developers.find(user => user.id === id)?.name?.charAt(0).toUpperCase() || '?'}</span>)}</div></div>
         <button type="button" className={styles.googleTask} disabled={linkedTasks.includes(task.id) || copyingTask === task.id} onClick={() => copyToGoogle(task)}>{linkedTasks.includes(task.id) ? 'In Google Tasks' : copyingTask === task.id ? 'Copying…' : 'Add to Google Tasks'}</button>
       </article>)}{!tasks.some(task => task.status === column.id) && <div className={styles.empty}>No tasks here yet</div>}</div>

@@ -46,7 +46,7 @@ public class ProjectService {
         return projectRepo.findById(id).filter(p -> canAccess(p, orgId, userId, roles));
     }
 
-    private boolean canAccess(Project project, String orgId, String userId, Set<Role> roles) {
+    public boolean canAccess(Project project, String orgId, String userId, Set<Role> roles) {
         if (project == null || !orgId.equals(project.getOrganizationId())) return false;
         return roles.contains(Role.Admin)
                 || roles.contains(Role.ProjectManager) && userId.equals(project.getProjectManagerId())

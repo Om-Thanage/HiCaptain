@@ -10,6 +10,7 @@ HiCaptain is a project workspace for teams. The current interface follows a ligh
 - **Schedule and meetings:** See project deadlines, meetings, and Google Calendar events together. Connect Google Workspace to create calendar meetings with Google Meet links.
 - **Project files:** Choose a folder from a connected Google Drive for each project, share that folder with the project team, and manage files from HiCaptain. This works with a personal Google account; a Workspace shared drive is not required.
 - **GitHub:** Connect your GitHub account from a project details page, link repositories to that project, and review recent commits and open pull requests there. GitHub activity is no longer a separate sidebar destination.
+- **AI teammates:** Add project planners and researchers backed by OpenAI or Ollama. Bring your own API key or local hardware; assign work from the project or Kanban, refine proposals, and approve tasks and shared memory. Current project access is checked throughout execution. Token allowances, usage estimates, activity history, and persistent LangGraph checkpoints keep work reviewable. See [agent setup](agent-worker/README.md).
 - **Team communication:** Use feedback and notifications alongside project work. The profile menu contains account settings and sign out.
 
 Analytics and invoicing are not part of the current product.
@@ -21,6 +22,7 @@ Analytics and invoicing are not part of the current product.
 | Frontend | Next.js 16, React 19, TypeScript, CSS modules, Lucide icons |
 | Backend | Java 17, Spring Boot, Spring Security, JWT, Maven |
 | Data | MongoDB |
+| Agent worker (optional) | Python 3.12, LangGraph, MongoDB checkpoints; OpenAI or Ollama |
 | Integrations | Google OAuth, Calendar, Meet, Drive, Tasks; GitHub OAuth and API; SMTP invitations |
 
 ## Local development

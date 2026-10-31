@@ -11,6 +11,7 @@ import { Project } from '@/types';
 import toast from 'react-hot-toast';
 import ProjectKanban from './kanban/ProjectKanban';
 import ProjectGit from './ProjectGit';
+import ProjectAgents from '@/components/agents/ProjectAgents';
 import styles from './detail.module.css';
 
 const date = (value?: string) => value ? new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set';
@@ -19,6 +20,8 @@ export default function ProjectDetailPage() {
   const id = useParams().id as string;
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [agentTask, setAgentTask] = useState<{ id: string }>();
+  const [taskVersion, setTaskVersion] = useState(0);
   const user = authService.getUserFromToken();
 
   useEffect(() => {
@@ -37,7 +40,8 @@ export default function ProjectDetailPage() {
         <div><CalendarDays size={20} /><span><small>PROJECT TIMELINE</small><strong>{date(project.startDate)} – {date(project.endDate)}</strong></span></div>
         <div><UsersRound size={20} /><span><small>PROJECT TEAM</small><strong>{project.developerIds?.length || 0} developers</strong></span>{canManageAccess && <Link href={`/projects/${id}/access`}>Manage team <ArrowUpRight size={15} /></Link>}</div>
       </div>
-      <ProjectKanban project={project} />
+      <ProjectKanban key={taskVersion} project={project} onAskAgent={taskId => { setAgentTask({ id: taskId }); document.getElementById('project-agents')?.scrollIntoView({ behavior: 'smooth' }); }} />
+      <ProjectAgents projectId={id} canManage={!!canManageAccess} taskSelection={agentTask} onApproved={() => setTaskVersion(value => value + 1)} />
       {(user?.roles || (user?.role ? [user.role] : [])).some(role => role === 'Admin' || role === 'ProjectManager' || role === 'Developer') && <ProjectGit projectId={id} />}
     </>}
   </div></DashboardLayout>;

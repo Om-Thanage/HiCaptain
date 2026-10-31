@@ -10,6 +10,7 @@ import { Organization, organizationService } from '@/services/organization';
 import api from '@/lib/api';
 import type { User } from '@/types';
 import { useAuthStore } from '@/store/auth';
+import AgentProviders from '@/components/agents/AgentProviders';
 import styles from './settings.module.css';
 
 type Connection = { connected: boolean; detail?: string } | null;
@@ -119,6 +120,7 @@ export default function SettingsPage() {
       </div>
       {user?.roles?.some(role => role === 'Admin' || role === 'ProjectManager') && <Link href="/storage" className={styles.textLink}>Choose project folders in My Drive <ArrowUpRight size={15} /></Link>}
     </section>
+    {user?.roles?.includes('Admin') && <AgentProviders />}
     <form className={styles.profileForm} onSubmit={changePassword}><h2>Change password</h2><p>Changing your password signs out your other sessions.</p><label>Current password<input type="password" required autoComplete="current-password" value={passwords.current} onChange={event => setPasswords({ ...passwords, current: event.target.value })} /></label><label>New password<input type="password" required minLength={8} maxLength={72} autoComplete="new-password" value={passwords.next} onChange={event => setPasswords({ ...passwords, next: event.target.value })} /></label><label>Confirm new password<input type="password" required autoComplete="new-password" value={passwords.confirm} onChange={event => setPasswords({ ...passwords, confirm: event.target.value })} /></label><button disabled={!!busy}>{busy === 'password' ? 'Changing…' : 'Change password'}</button></form>
     <section className={styles.session}><div><span className={styles.kicker}>SECURITY</span><h2>Account session</h2><p>Sign out of HiCaptain on this device.</p></div><button type="button" onClick={() => authService.logout()}><LogOut size={17} /> Log out</button></section>
   </div></DashboardLayout>;
