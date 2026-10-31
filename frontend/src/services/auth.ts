@@ -53,6 +53,7 @@ export const authService = {
     Cookies.remove('token');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    Object.keys(localStorage).filter(key => key.startsWith('cached_notifications')).forEach(key => localStorage.removeItem(key));
   },
 
   // DERIVED USER (decode from JWT)

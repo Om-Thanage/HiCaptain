@@ -37,6 +37,7 @@ public class NotificationService {
             String projectId,
             String priority) {
 
+        organizations.membership(organizations.currentOrgId(), userId);
         // Get username
         String username = userRepository.findById(userId)
             .map(user -> user.getName())

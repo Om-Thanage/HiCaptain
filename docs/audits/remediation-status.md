@@ -20,4 +20,5 @@ The original audit examined `work` at `e9d78bb`. Remediation targets the existin
 | A14 identity / abuse controls | Fixed | Unique normalized email plus bounded registration/password inputs, UTF-8 BCrypt byte limits, and bounded per-peer authentication throttling. Callback requests are excluded; spoofed forwarded headers cannot bypass the filter. |
 | A15 browser session lifecycle | Under verification | Expiry-aware cookies and auth routes exist. |
 | Webhooks | Fixed | Bounded public receiver verifies HMAC before persistence; content-based deduplication, idempotent commit/PR/issue persistence, and stale-event protection. Creation restricts destinations to this backend callback and hides signing secrets. |
+| Fabricated fallback data | Fixed | Feedback and notifications show visible retry errors instead of fake records. Notification caches are scoped to organization/user and cleared on sign-out; recipients must belong to the active organization. |
 | Completion gaps | Pending | Verify settings, integrations, notification claims, tests, licensing, and missing agent delivery. |

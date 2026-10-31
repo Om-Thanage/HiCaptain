@@ -1,4 +1,10 @@
 import api from '@/lib/api';
+import { authService } from './auth';
+
+function cacheKey() {
+  const user = authService.getUserFromToken();
+  return user ? `cached_notifications:${user.organizationId}:${user.id}` : null;
+}
 
 export interface NotificationData {
   id: string;
@@ -172,7 +178,7 @@ export const notificationService = {
   // Local storage helpers for offline functionality
   cacheNotifications: (notifications: NotificationData[]) => {
     try {
-      localStorage.setItem('cached_notifications', JSON.stringify(notifications));
+      const key = cacheKey(); if (key) localStorage.setItem(key, JSON.stringify(notifications));
     } catch (error) {
       console.error('Error caching notifications:', error);
     }
@@ -180,7 +186,7 @@ export const notificationService = {
 
   getCachedNotifications: (): NotificationData[] => {
     try {
-      const cached = localStorage.getItem('cached_notifications');
+      const key = cacheKey(); const cached = key ? localStorage.getItem(key) : null;
       return cached ? JSON.parse(cached) : [];
     } catch (error) {
       console.error('Error getting cached notifications:', error);
@@ -190,6 +196,7 @@ export const notificationService = {
 
   clearCache: () => {
     try {
+      const key = cacheKey(); if (key) localStorage.removeItem(key);
       localStorage.removeItem('cached_notifications');
     } catch (error) {
       console.error('Error clearing notification cache:', error);
