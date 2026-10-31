@@ -49,27 +49,16 @@ public class TaskService {
     public Task create(Task t) {
         log.debug("Creating task: {} for project: {}", t.getTitle(), t.getProjectId());
         requireProject(t.getProjectId());
-        validateDevelopers(t.getAssignedDeveloperIds());
+        validateDevelopers(t.getProjectId(), t.getAssignedDeveloperIds());
         t.setId(null);
+        t.setCreatedBy(organizations.currentUserId());
+        t.setAssigneeId(t.getAssignedDeveloperIds() == null || t.getAssignedDeveloperIds().isEmpty() ? null : t.getAssignedDeveloperIds().get(0));
         // Set timestamps
         t.setCreatedAt(java.time.LocalDateTime.now());
         t.setUpdatedAt(java.time.LocalDateTime.now());
         
         Task savedTask = taskRepo.save(t);
         log.debug("Task saved with ID: {}", savedTask.getId());
-
-        // Auto-update Project.developerIds from Task.assignedDeveloperIds (no taskIds maintenance)
-        projectRepo.findById(t.getProjectId()).ifPresent(project -> {
-            if (t.getAssignedDeveloperIds() != null && !t.getAssignedDeveloperIds().isEmpty()) {
-                List<String> projectDevs = project.getDeveloperIds();
-                java.util.Set<String> merged = new java.util.HashSet<>();
-                if (projectDevs != null) merged.addAll(projectDevs);
-                merged.addAll(t.getAssignedDeveloperIds());
-                project.setDeveloperIds(new java.util.ArrayList<>(merged));
-                projectRepo.save(project);
-                log.debug("Updated project {} with {} developers", project.getId(), merged.size());
-            }
-        });
 
         // Auto-update all Developers
         if (t.getAssignedDeveloperIds() != null) {
@@ -104,10 +93,9 @@ public class TaskService {
         if (t.getStatus() != null) existing.setStatus(t.getStatus());
         if (t.getPriority() != null) existing.setPriority(t.getPriority());
         if (t.getDeadline() != null) existing.setDeadline(t.getDeadline());
-        if (t.getProjectId() != null) { requireProject(t.getProjectId()); existing.setProjectId(t.getProjectId()); }
-        if (t.getAssignedDeveloperIds() != null) { validateDevelopers(t.getAssignedDeveloperIds()); existing.setAssignedDeveloperIds(t.getAssignedDeveloperIds()); }
-        if (t.getAssigneeId() != null) existing.setAssigneeId(t.getAssigneeId());
-        if (t.getCreatedBy() != null) existing.setCreatedBy(t.getCreatedBy());
+        if (t.getProjectId() != null && !t.getProjectId().equals(existing.getProjectId())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tasks cannot be moved between projects through an edit");
+        if (t.getAssignedDeveloperIds() != null) { validateDevelopers(existing.getProjectId(), t.getAssignedDeveloperIds()); existing.setAssignedDeveloperIds(t.getAssignedDeveloperIds()); }
+        existing.setAssigneeId(existing.getAssignedDeveloperIds() == null || existing.getAssignedDeveloperIds().isEmpty() ? null : existing.getAssignedDeveloperIds().get(0));
         if (t.getCategory() != null) existing.setCategory(t.getCategory());
         if (t.getEstimatedHours() > 0) existing.setEstimatedHours(t.getEstimatedHours());
         if (t.getActualHours() > 0) existing.setActualHours(t.getActualHours());
@@ -119,22 +107,6 @@ public class TaskService {
         log.debug("Merged task: {} (status: {})", existing.getTitle(), existing.getStatus());
         
         Task saved = taskRepo.save(existing);
-        String newProjectId = existing.getProjectId();
-
-        // No Project.taskIds maintenance; only ensure developers are merged into the new project's developerIds
-        if (newProjectId != null) {
-            projectRepo.findById(newProjectId).ifPresent(project -> {
-                if (existing.getAssignedDeveloperIds() != null && !existing.getAssignedDeveloperIds().isEmpty()) {
-                    List<String> projectDevs = project.getDeveloperIds();
-                    java.util.Set<String> merged = new java.util.HashSet<>();
-                    if (projectDevs != null) merged.addAll(projectDevs);
-                    merged.addAll(existing.getAssignedDeveloperIds());
-                    project.setDeveloperIds(new java.util.ArrayList<>(merged));
-                    projectRepo.save(project);
-                }
-            });
-        }
-
         log.info("Task updated successfully: {} (ID: {})", saved.getTitle(), saved.getId());
         return saved;
     }
@@ -167,7 +139,12 @@ public class TaskService {
         projects.getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
     }
 
-    private void validateDevelopers(List<String> ids) {
-        if (ids != null) ids.forEach(id -> organizations.membership(organizations.currentOrgId(), id));
+    private void validateDevelopers(String projectId, List<String> ids) {
+        Project project = projects.getById(projectId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (ids != null) for (String id : ids) {
+            if (project.getDeveloperIds() == null || !project.getDeveloperIds().contains(id)
+                    || !organizations.membership(organizations.currentOrgId(), id).getRoles().contains(com.HiCaptain.demo.util.Role.Developer))
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Assign only existing project developers; manage project access separately");
+        }
     }
 }

@@ -52,6 +52,11 @@ public class TimeLogService {
         TimeLog existing = getById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "TimeLog not found"));
 
+        var roles = organizations.membership(organizations.currentOrgId(), organizations.currentUserId()).getRoles();
+        if (!roles.contains(com.HiCaptain.demo.util.Role.Admin) && !roles.contains(com.HiCaptain.demo.util.Role.ProjectManager)
+                && !organizations.currentUserId().equals(existing.getUserId()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Edit only your own time logs");
+        t.setUserId(existing.getUserId());
         String oldProjectId = existing.getProjectId();
         String newProjectId = t.getProjectId();
         requireProject(newProjectId);
