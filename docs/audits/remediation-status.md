@@ -12,7 +12,7 @@ The original audit examined `work` at `e9d78bb`. Remediation targets the existin
 | A06 object authorization | Under verification | Project-scoped services exist; inspect all remaining endpoints. |
 | A07 OAuth callback state | Pending verification | Signed state exists; verify expiry, replay and initiation binding. |
 | A08 calendar user identity | Under verification | Principal checks and encrypted durable Google credentials exist. |
-| A09 deployment-wide GitHub authority | Pending | Replace shared token access with authorized user connections. |
+| A09 deployment-wide GitHub authority | Fixed | Removed global GitHub credential clients. API reads/webhooks require a linked visible project and the caller's OAuth connection; repository sync uses that caller's token. HTTP fixture verifies credential selection. |
 | A10 plaintext GitHub credentials | Fixed | AES-GCM credentials, startup/on-use legacy migration, hidden credential serialization, and clearing credentials on disconnect. Configure the stable provider encryption key before restarting existing installations. |
 | A11 session revocation | Partial | Current roles and account existence checked; password-change revocation remains. |
 | A12 database deployment defaults | Pending | Remove public/default-admin access. |

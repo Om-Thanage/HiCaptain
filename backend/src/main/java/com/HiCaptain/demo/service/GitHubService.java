@@ -24,17 +24,20 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GitHubService {
 
-    private final GitHub gitHub;
-    private final WebClient gitHubWebClient;
+    private final GitHubOAuthService oauth;
+    private final OrganizationService organizations;
+    @org.springframework.beans.factory.annotation.Value("${github.api.base-url:https://api.github.com}")
+    private String apiBase;
     private final GitHubRepositoryRepository gitHubRepositoryRepository;
     private final ProjectService projects;
 
     public Mono<GitHubRepository> syncRepository(String owner, String repoName, String projectId) {
         projects.getById(projectId).orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Project not found"));
+        String userToken = oauth.accessToken(organizations.currentUserId());
         return Mono.fromCallable(() -> {
             try {
                 log.debug("Syncing repository: {}/{}", owner, repoName);
-                GHRepository ghRepo = gitHub.getRepository(owner + "/" + repoName);
+                GHRepository ghRepo = new org.kohsuke.github.GitHubBuilder().withEndpoint(apiBase).withOAuthToken(userToken).build().getRepository(owner + "/" + repoName);
                 
                 GitHubRepository repository = new GitHubRepository();
                 repository.setGithubRepoId(String.valueOf(ghRepo.getId()));
@@ -87,7 +90,7 @@ public class GitHubService {
     }
 
     public Flux<GitHubCommit> getCommits(String owner, String repoName, String branch, int limit) {
-        return gitHubWebClient
+        return repositoryClient(owner, repoName)
             .get()
             .uri("/repos/{owner}/{repo}/commits?sha={branch}&per_page={limit}", owner, repoName, branch, limit)
             .retrieve()
@@ -96,7 +99,7 @@ public class GitHubService {
     }
 
     public Flux<GitHubPullRequest> getPullRequests(String owner, String repoName, String state) {
-        return gitHubWebClient
+        return repositoryClient(owner, repoName)
             .get()
             .uri("/repos/{owner}/{repo}/pulls?state={state}&per_page=50", owner, repoName, state)
             .retrieve()
@@ -105,7 +108,7 @@ public class GitHubService {
     }
 
     public Mono<JsonNode> getRepositoryStats(String owner, String repoName) {
-        return gitHubWebClient
+        return repositoryClient(owner, repoName)
             .get()
             .uri("/repos/{owner}/{repo}/stats/contributors", owner, repoName)
             .retrieve()
@@ -113,7 +116,7 @@ public class GitHubService {
     }
 
     public Mono<JsonNode> getLanguagesStats(String owner, String repoName) {
-        return gitHubWebClient
+        return repositoryClient(owner, repoName)
             .get()
             .uri("/repos/{owner}/{repo}/languages", owner, repoName)
             .retrieve()
@@ -121,7 +124,7 @@ public class GitHubService {
     }
 
     public Flux<JsonNode> getIssues(String owner, String repoName, String state) {
-        return gitHubWebClient
+        return repositoryClient(owner, repoName)
             .get()
             .uri("/repos/{owner}/{repo}/issues?state={state}&per_page=50", owner, repoName, state)
             .retrieve()
@@ -129,7 +132,7 @@ public class GitHubService {
     }
 
     public Flux<JsonNode> getBranches(String owner, String repoName) {
-        return gitHubWebClient
+        return repositoryClient(owner, repoName)
             .get()
             .uri("/repos/{owner}/{repo}/branches", owner, repoName)
             .retrieve()
@@ -137,19 +140,15 @@ public class GitHubService {
     }
 
     public Mono<JsonNode> createWebhook(String owner, String repoName, String webhookUrl) {
-        String requestBody = String.format("""
-            {
-                "name": "web",
-                "active": true,
-                "events": ["push", "pull_request", "issues", "commit_comment"],
-                "config": {
-                    "url": "%s",
-                    "content_type": "json"
-                }
-            }
-            """, webhookUrl);
+        java.net.URI destination;
+        try { destination = java.net.URI.create(webhookUrl); }
+        catch (IllegalArgumentException error) { throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Invalid webhook URL"); }
+        if (!"https".equals(destination.getScheme()) || destination.getHost() == null || destination.getUserInfo() != null)
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Webhooks require an HTTPS destination");
+        var requestBody = java.util.Map.of("name", "web", "active", true, "events", java.util.List.of("push", "pull_request", "issues"),
+                "config", java.util.Map.of("url", webhookUrl, "content_type", "json"));
 
-        return gitHubWebClient
+        return repositoryClient(owner, repoName)
             .post()
             .uri("/repos/{owner}/{repo}/hooks", owner, repoName)
             .bodyValue(requestBody)
@@ -237,6 +236,13 @@ public class GitHubService {
     public void deleteRepository(String repositoryId) {
         if (getRepositoryById(repositoryId) == null) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
         gitHubRepositoryRepository.deleteById(repositoryId);
+    }
+
+    private WebClient repositoryClient(String owner, String repoName) {
+        requireCurrentRepository(owner, repoName);
+        String userToken = oauth.accessToken(organizations.currentUserId());
+        return WebClient.builder().baseUrl(apiBase).defaultHeader("Authorization", "Bearer " + userToken)
+                .defaultHeader("Accept", "application/vnd.github+json").build();
     }
 
     public void requireCurrentRepository(String owner, String repoName) {
