@@ -31,6 +31,7 @@ public class GitHubOAuthController {
 
     @Autowired
     private SocialAuthController socialAuthController;
+    @Autowired private com.HiCaptain.demo.service.OAuthFlowService flows;
 
     @Value("${app.frontend-url:http://localhost:3000}")
     private String frontendUrl;
@@ -42,7 +43,7 @@ public class GitHubOAuthController {
     @PostMapping("/connect")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Developer')")
     public ResponseEntity<Map<String, String>> initiateGitHubOAuth(
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("Authorization") String authHeader, HttpServletRequest request, HttpServletResponse servletResponse) {
         
         try {
             // Extract user ID from JWT token
@@ -54,6 +55,7 @@ public class GitHubOAuthController {
             
             // Get GitHub OAuth authorization URL
             String authUrl = oauthService.getAuthorizationUrl(userId, state);
+            flows.bind(state, "github", request, servletResponse);
             
             Map<String, String> response = new HashMap<>();
             response.put("authUrl", authUrl);
@@ -97,6 +99,7 @@ public class GitHubOAuthController {
         if (socialSignIn) return socialAuthController.callback("github", code, state, error, request, response);
         
         try {
+            flows.consume(state, "github", request, response);
             if (error != null) {
                 // User denied access or other error occurred
                 return new RedirectView(frontendUrl + "/git?error=" + encode(error) +

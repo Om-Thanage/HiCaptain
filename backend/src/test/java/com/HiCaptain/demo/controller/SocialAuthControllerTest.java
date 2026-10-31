@@ -17,6 +17,7 @@ class SocialAuthControllerTest {
         var social = mock(SocialAuthService.class);
         var jwt = mock(JwtService.class);
         var controller = new SocialAuthController(social, jwt, mock(OrganizationService.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "flows", mock(com.HiCaptain.demo.service.OAuthFlowService.class));
         when(jwt.generateOAuthState(anyString(), eq("social-github"))).thenReturn("signed-state");
         when(social.authorizationUrl("github", "signed-state")).thenReturn("https://github.com/login/oauth/authorize");
         var request = new MockHttpServletRequest("GET", "/auth/oauth/github/start");

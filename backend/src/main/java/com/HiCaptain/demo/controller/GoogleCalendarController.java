@@ -25,14 +25,17 @@ public class GoogleCalendarController {
     @Autowired
     private GoogleCalendarService googleCalendarService;
     @Autowired private com.HiCaptain.demo.service.JwtService jwtService;
+    @Autowired private com.HiCaptain.demo.service.OAuthFlowService flows;
     @Value("${app.frontend-url:http://localhost:3000}") private String frontendUrl;
 
     @GetMapping("/auth/url")
     @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
-    public ResponseEntity<String> getAuthorizationUrl(@RequestParam String userId) {
+    public ResponseEntity<String> getAuthorizationUrl(@RequestParam String userId, jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) {
         requireCurrentUser(userId);
         try {
             String authUrl = googleCalendarService.getAuthorizationUrl(userId);
+            String state = org.springframework.web.util.UriComponentsBuilder.fromUriString(authUrl).build().getQueryParams().getFirst("state");
+            flows.bind(state, "google", request, response);
             return ResponseEntity.ok(authUrl);
         } catch (IOException e) {
             // Handle missing credentials gracefully
@@ -44,9 +47,11 @@ public class GoogleCalendarController {
     public void handleCallback(
             @RequestParam String code,
             @RequestParam String state,
+            jakarta.servlet.http.HttpServletRequest request,
             HttpServletResponse response) throws IOException {
         
         try {
+            flows.consume(state, "google", request, response);
             String userId = jwtService.verifyOAuthState(state, "google");
             googleCalendarService.authorize(code, userId);
             

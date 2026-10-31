@@ -27,6 +27,7 @@ public class SocialAuthController {
     private final SocialAuthService social;
     private final JwtService jwt;
     private final OrganizationService organizations;
+    @org.springframework.beans.factory.annotation.Autowired private com.HiCaptain.demo.service.OAuthFlowService flows;
     @Value("${app.frontend-url:http://localhost:3000}") private String frontendUrl;
 
     public SocialAuthController(SocialAuthService social, JwtService jwt, OrganizationService organizations) {
@@ -41,6 +42,7 @@ public class SocialAuthController {
         if (invitation != null && !invitation.isBlank()) organizations.preview(invitation);
         String state = jwt.generateOAuthState(UUID.randomUUID().toString(), "social-" + provider);
         String url = social.authorizationUrl(provider, state);
+        flows.bind(state, "social-" + provider, request, response);
         String cookiePath = provider.equals("github") ? "/api/auth/github" : "/auth/oauth";
         response.addHeader("Set-Cookie", cookie("hc_social_state", state, request, 600, cookiePath));
         response.addHeader("Set-Cookie", cookie("hc_social_invite",
@@ -65,6 +67,7 @@ public class SocialAuthController {
                 state.getBytes(StandardCharsets.UTF_8), cookieState.getBytes(StandardCharsets.UTF_8)))
             return failure("Sign-in session expired. Please try again.");
         try {
+            flows.consume(state, "social-" + provider, request, response);
             jwt.verifyOAuthState(state, "social-" + provider);
             if (error != null || code == null || code.isBlank()) return failure("Sign-in was cancelled or denied.");
             String ticket = social.issueTicket(provider, code, invitation);

@@ -65,7 +65,7 @@ public class JwtService {
     }
 
     public String generateOAuthState(String userId, String provider) {
-        return Jwts.builder().setSubject(userId).claim("purpose", "oauth:" + provider)
+        return Jwts.builder().setId(java.util.UUID.randomUUID().toString()).setSubject(userId).claim("purpose", "oauth:" + provider)
                 .setIssuedAt(new Date()).setExpiration(new Date(System.currentTimeMillis() + 10 * 60 * 1000))
                 .signWith(getSignKey(), SignatureAlgorithm.HS256).compact();
     }
