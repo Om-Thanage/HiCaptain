@@ -46,6 +46,8 @@ public class GoogleCalendarService {
     private final String clientSecret;
     private final String tokenKey;
     private final String redirectUri;
+    @Value("${google.workspace.revocation-uri:https://oauth2.googleapis.com/revoke}")
+    private String revocationUri = "https://oauth2.googleapis.com/revoke";
 
     public GoogleCalendarService(GoogleWorkspaceConnectionRepository connections, JwtService jwtService,
             @Value("${google.workspace.client-id:}") String clientId,
@@ -315,15 +317,16 @@ public class GoogleCalendarService {
 
     public void revokeAuthorization(String userId) throws IOException {
         var saved = connections.findById(userId);
-        connections.deleteById(userId);
         if (saved.isEmpty()) return;
         String token = decrypt(saved.get().encryptedRefreshToken());
         try {
-            HttpRequest request = HttpRequest.newBuilder(URI.create("https://oauth2.googleapis.com/revoke"))
+            HttpRequest request = HttpRequest.newBuilder(URI.create(revocationUri)).timeout(java.time.Duration.ofSeconds(15))
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .POST(HttpRequest.BodyPublishers.ofString("token=" + java.net.URLEncoder.encode(token, java.nio.charset.StandardCharsets.UTF_8)))
                     .build();
-            HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.discarding());
+            var response = HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(5)).build().send(request, HttpResponse.BodyHandlers.discarding());
+            if (response.statusCode() / 100 != 2) throw new IOException("Google did not confirm revocation. Reconnect or retry disconnecting.");
+            connections.deleteById(userId);
         } catch (InterruptedException error) {
             Thread.currentThread().interrupt();
             throw new IOException("Google revocation was interrupted", error);
