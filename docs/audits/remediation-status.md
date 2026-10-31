@@ -19,4 +19,5 @@ The original audit examined `work` at `e9d78bb`. Remediation targets the existin
 | A13 payment trust | Resolved by removal | Billing APIs and UI removed on revamped. |
 | A14 identity / abuse controls | Fixed | Unique normalized email plus bounded registration/password inputs, UTF-8 BCrypt byte limits, and bounded per-peer authentication throttling. Callback requests are excluded; spoofed forwarded headers cannot bypass the filter. |
 | A15 browser session lifecycle | Under verification | Expiry-aware cookies and auth routes exist. |
-| Completion gaps | Pending | Verify settings, integrations, webhooks, notification claims, tests, licensing, and missing agent delivery. |
+| Webhooks | Fixed | Bounded public receiver verifies HMAC before persistence; content-based deduplication, idempotent commit/PR/issue persistence, and stale-event protection. Creation restricts destinations to this backend callback and hides signing secrets. |
+| Completion gaps | Pending | Verify settings, integrations, notification claims, tests, licensing, and missing agent delivery. |

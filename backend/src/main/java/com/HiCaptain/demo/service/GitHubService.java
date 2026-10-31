@@ -28,6 +28,8 @@ public class GitHubService {
     private final OrganizationService organizations;
     @org.springframework.beans.factory.annotation.Value("${github.api.base-url:https://api.github.com}")
     private String apiBase;
+    @org.springframework.beans.factory.annotation.Value("${github.webhook.secret:}") private String webhookSecret;
+    @org.springframework.beans.factory.annotation.Value("${github.webhook.callback-url:}") private String webhookCallback;
     private final GitHubRepositoryRepository gitHubRepositoryRepository;
     private final ProjectService projects;
 
@@ -140,20 +142,25 @@ public class GitHubService {
     }
 
     public Mono<JsonNode> createWebhook(String owner, String repoName, String webhookUrl) {
+        if (webhookSecret == null || webhookSecret.length() < 32 || !webhookUrl.equals(webhookCallback))
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Configure the webhook secret and use this backend's registered callback");
         java.net.URI destination;
         try { destination = java.net.URI.create(webhookUrl); }
         catch (IllegalArgumentException error) { throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Invalid webhook URL"); }
         if (!"https".equals(destination.getScheme()) || destination.getHost() == null || destination.getUserInfo() != null)
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Webhooks require an HTTPS destination");
         var requestBody = java.util.Map.of("name", "web", "active", true, "events", java.util.List.of("push", "pull_request", "issues"),
-                "config", java.util.Map.of("url", webhookUrl, "content_type", "json"));
+                "config", java.util.Map.of("url", webhookUrl, "content_type", "json", "secret", webhookSecret));
 
         return repositoryClient(owner, repoName)
             .post()
             .uri("/repos/{owner}/{repo}/hooks", owner, repoName)
             .bodyValue(requestBody)
             .retrieve()
-            .bodyToMono(JsonNode.class);
+            .bodyToMono(JsonNode.class).map(node -> {
+                if (node.path("config") instanceof com.fasterxml.jackson.databind.node.ObjectNode config) config.remove("secret");
+                return node;
+            });
     }
 
     private GitHubCommit mapToGitHubCommit(JsonNode commitNode) {

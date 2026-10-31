@@ -76,6 +76,8 @@ Use HTTPS frontend and backend URLs in production, register those exact backend 
 
 ## Repository layout
 
+Optional GitHub webhooks require a random `GITHUB_WEBHOOK_SECRET` of at least 32 characters. Set the same secret in GitHub and register the public HTTPS callback `<BACKEND_URL>/api/github/webhook`. The receiver verifies raw-body HMAC signatures, deduplicates deliveries, and persists linked-project commits, pull requests, and issues. Invalid signatures are rejected before parsing or persistence. API-created hooks are restricted to this backend's callback.
+
 Existing Docker installations must provision the new database-scoped application account before restarting the backend. MongoDB is private to the Docker network and no longer exposes a host port. See [database migration instructions](backend/docker/README.md); do not delete an existing volume to apply this change.
 
 - [`frontend/`](frontend/) — Next.js app and user interface

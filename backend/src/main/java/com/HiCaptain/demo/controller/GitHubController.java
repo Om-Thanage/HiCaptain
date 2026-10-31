@@ -135,59 +135,14 @@ public class GitHubController {
                 .map(ResponseEntity::ok);
     }
 
+    @Autowired private com.HiCaptain.demo.service.GitHubWebhookService webhooks;
     @PostMapping("/webhook")
-    public ResponseEntity<String> handleWebhook(
-            @RequestHeader("X-GitHub-Event") String eventType,
-            @RequestBody JsonNode payload) {
-        
-        // Handle GitHub webhook events
-        try {
-            switch (eventType) {
-                case "push":
-                    handlePushEvent(payload);
-                    break;
-                case "pull_request":
-                    handlePullRequestEvent(payload);
-                    break;
-                case "issues":
-                    handleIssueEvent(payload);
-                    break;
-                default:
-                    System.out.println("Unhandled event type: " + eventType);
-            }
-            return ResponseEntity.ok("Webhook processed successfully");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error processing webhook: " + e.getMessage());
-        }
-    }
-
-    private void handlePushEvent(JsonNode payload) {
-        // Process push event - update commits in database
-        String repositoryName = payload.get("repository").get("full_name").asText();
-        System.out.println("Processing push event for repository: " + repositoryName);
-        
-        // TODO: Sync commits to database
-    }
-
-    private void handlePullRequestEvent(JsonNode payload) {
-        // Process pull request event
-        String action = payload.get("action").asText();
-        String repositoryName = payload.get("repository").get("full_name").asText();
-        int prNumber = payload.get("pull_request").get("number").asInt();
-        
-        System.out.println("Processing PR " + action + " event for repository: " + repositoryName + ", PR #" + prNumber);
-        
-        // TODO: Sync PR data to database
-    }
-
-    private void handleIssueEvent(JsonNode payload) {
-        // Process issue event
-        String action = payload.get("action").asText();
-        String repositoryName = payload.get("repository").get("full_name").asText();
-        int issueNumber = payload.get("issue").get("number").asInt();
-        
-        System.out.println("Processing issue " + action + " event for repository: " + repositoryName + ", Issue #" + issueNumber);
-        
-        // TODO: Sync issue data to database if needed
+    public ResponseEntity<String> handleWebhook(jakarta.servlet.http.HttpServletRequest request,
+            @RequestHeader(value="X-Hub-Signature-256", defaultValue="") String signature,
+            @RequestHeader(value="X-GitHub-Event", defaultValue="") String event) throws java.io.IOException {
+        byte[] body = request.getInputStream().readNBytes(2_000_001);
+        if (body.length > 2_000_000) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE);
+        webhooks.receive(event, signature, body);
+        return ResponseEntity.ok("Webhook accepted");
     }
 }
