@@ -33,3 +33,6 @@ build/
 .vscode/
 
 .env.production
+
+# OAuth credentials are supplied through the environment, never bundled.
+src/main/resources/credentials.json
