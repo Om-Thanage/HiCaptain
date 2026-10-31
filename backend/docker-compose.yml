@@ -1,19 +1,18 @@
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:7.0
     container_name: hicaptain-mongodb
     restart: unless-stopped
-    ports:
-    - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-password}
-      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-hicaptain}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Set a strong MongoDB root password}
+      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE:-hicaptain}
+      MONGO_APP_USERNAME: ${MONGO_APP_USERNAME:-hicaptain}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?Set a separate application database password}
     volumes:
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/10-app-user.js:ro
     networks:
       - hicaptain-network
     healthcheck:
@@ -35,10 +34,11 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
     
     # MongoDB connection
-      SPRING_DATA_MONGODB_URI:  mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-password}@mongodb:27017/${MONGO_DATABASE:-hicaptain}?authSource=admin
+      SPRING_DATA_MONGODB_URI:  mongodb://${MONGO_APP_USERNAME:-hicaptain}:${MONGO_APP_PASSWORD:?Set a separate application database password}@mongodb:27017/${MONGODB_DATABASE:-hicaptain}?authSource=${MONGODB_DATABASE:-hicaptain}
     
     # JWT Secret
-      JWT_SECRET: ${JWT_SECRET}
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-hicaptain}
+      JWT_SECRET: ${JWT_SECRET:?Set a strong JWT signing secret}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
 
     # Public callback origin must match the OAuth provider's registered URLs.
@@ -50,6 +50,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_TOKEN_ENCRYPTION_KEY: ${GOOGLE_TOKEN_ENCRYPTION_KEY:-}
+      PROVIDER_TOKEN_ENCRYPTION_KEY: ${PROVIDER_TOKEN_ENCRYPTION_KEY:-${GOOGLE_TOKEN_ENCRYPTION_KEY:-}}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
 
     # Application settings

@@ -74,6 +74,8 @@ Use HTTPS frontend and backend URLs in production, register those exact backend 
 
 ## Repository layout
 
+Existing Docker installations must provision the new database-scoped application account before restarting the backend. MongoDB is private to the Docker network and no longer exposes a host port. See [database migration instructions](backend/docker/README.md); do not delete an existing volume to apply this change.
+
 - [`frontend/`](frontend/) — Next.js app and user interface
 - [`backend/`](backend/) — Spring Boot API, integrations, and persistence
 - [Frontend setup](frontend/README.md) and [backend documentation](backend/README.md) — more component details
