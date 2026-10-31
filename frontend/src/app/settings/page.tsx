@@ -21,6 +21,7 @@ export default function SettingsPage() {
   const [calendar, setCalendar] = useState<Connection>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState('');
+  const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
   const setToken = useAuthStore(state => state.setToken);
 
   useEffect(() => {
@@ -60,6 +61,19 @@ export default function SettingsPage() {
       if (!response.data.authUrl) throw new Error('No authorization URL returned');
       window.location.assign(response.data.authUrl);
     } catch { toast.error('GitHub connection is unavailable. Check OAuth configuration.'); setBusy(null); }
+  }
+
+  async function changePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (passwords.next !== passwords.confirm) { toast.error('Passwords do not match'); return; }
+    setBusy('password');
+    try {
+      const session = await authService.changePassword(passwords.current, passwords.next);
+      authService.setToken(session.token); setToken(session.token);
+      setPasswords({ current: '', next: '', confirm: '' });
+      toast.success('Password changed. Other sessions have been signed out.');
+    } catch { toast.error('Could not change password. Check your current password.'); }
+    finally { setBusy(null); }
   }
   async function disconnectGithub() {
     setBusy('github');
@@ -105,6 +119,7 @@ export default function SettingsPage() {
       </div>
       {user?.roles?.some(role => role === 'Admin' || role === 'ProjectManager') && <Link href="/storage" className={styles.textLink}>Choose project folders in My Drive <ArrowUpRight size={15} /></Link>}
     </section>
+    <form className={styles.profileForm} onSubmit={changePassword}><h2>Change password</h2><p>Changing your password signs out your other sessions.</p><label>Current password<input type="password" required autoComplete="current-password" value={passwords.current} onChange={event => setPasswords({ ...passwords, current: event.target.value })} /></label><label>New password<input type="password" required minLength={8} maxLength={72} autoComplete="new-password" value={passwords.next} onChange={event => setPasswords({ ...passwords, next: event.target.value })} /></label><label>Confirm new password<input type="password" required autoComplete="new-password" value={passwords.confirm} onChange={event => setPasswords({ ...passwords, confirm: event.target.value })} /></label><button disabled={!!busy}>{busy === 'password' ? 'Changing…' : 'Change password'}</button></form>
     <section className={styles.session}><div><span className={styles.kicker}>SECURITY</span><h2>Account session</h2><p>Sign out of HiCaptain on this device.</p></div><button type="button" onClick={() => authService.logout()}><LogOut size={17} /> Log out</button></section>
   </div></DashboardLayout>;
 }

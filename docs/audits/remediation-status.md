@@ -14,7 +14,7 @@ The original audit examined `work` at `e9d78bb`. Remediation targets the existin
 | A08 calendar user identity | Under verification | Principal checks and encrypted durable Google credentials exist. |
 | A09 deployment-wide GitHub authority | Fixed | Removed global GitHub credential clients. API reads/webhooks require a linked visible project and the caller's OAuth connection; repository sync uses that caller's token. HTTP fixture verifies credential selection. |
 | A10 plaintext GitHub credentials | Fixed | AES-GCM credentials, startup/on-use legacy migration, hidden credential serialization, and clearing credentials on disconnect. Configure the stable provider encryption key before restarting existing installations. |
-| A11 session revocation | Partial | Current roles and account existence checked; password-change revocation remains. |
+| A11 session revocation | Fixed | Current account and membership checks plus per-user session versions. Password change verifies the old password and atomically invalidates previous sessions; Settings uses the real endpoint. |
 | A12 database deployment defaults | Pending | Remove public/default-admin access. |
 | A13 payment trust | Resolved by removal | Billing APIs and UI removed on revamped. |
 | A14 identity / abuse controls | Partial | Unique normalized email exists; throttling remains. |

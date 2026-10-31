@@ -28,6 +28,9 @@ export const authService = {
   async updateProfile(name: string): Promise<AuthResponse> {
     return (await api.patch('/users/me/profile', { name })).data;
   },
+  async changePassword(currentPassword: string, newPassword: string): Promise<AuthResponse> {
+    return (await api.post('/users/me/password', { currentPassword, newPassword })).data;
+  },
 
   setToken(token: string) {
     const expiry = this.getClaims<{ exp: number }>(token).exp;

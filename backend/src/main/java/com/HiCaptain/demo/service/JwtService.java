@@ -31,6 +31,7 @@ public class JwtService {
                 .claim("organizationId", membership.getOrganizationId())
                 .claim("userId", user.getId())
                 .claim("email", user.getEmail())
+                .claim("sessionVersion", user.getSessionVersion())
                 .setSubject(user.getName())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))
@@ -56,6 +57,11 @@ public class JwtService {
 
     public String extractOrganizationId(String token) {
         return extractClaims(token).get("organizationId", String.class);
+    }
+
+    public long extractSessionVersion(String token) {
+        Object version = extractClaims(token).get("sessionVersion");
+        return version instanceof Number number ? number.longValue() : 0L;
     }
 
     public String generateOAuthState(String userId, String provider) {

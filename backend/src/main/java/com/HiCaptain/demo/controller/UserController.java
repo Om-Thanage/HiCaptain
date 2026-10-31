@@ -18,6 +18,7 @@ public class UserController {
     private final OrganizationService organizations;
     private final UserRepository users;
     private final AuthController auth;
+    @org.springframework.beans.factory.annotation.Autowired private com.HiCaptain.demo.service.AccountSecurityService security;
     public UserController(OrganizationService organizations, UserRepository users, AuthController auth) {
         this.organizations = organizations;
         this.users = users;
@@ -25,6 +26,14 @@ public class UserController {
     }
 
     public record ProfileRequest(@NotBlank @Size(max = 80) String name) {}
+    public record PasswordRequest(@NotBlank @Size(max=200) String currentPassword, @NotBlank @Size(min=8, max=72) String newPassword) {}
+
+    @PostMapping("/me/password")
+    public AuthController.Session changePassword(@Valid @RequestBody PasswordRequest request) {
+        String id = organizations.currentUserId();
+        var user = security.changePassword(id, request.currentPassword(), request.newPassword());
+        return auth.session(user, organizations.membership(organizations.currentOrgId(), id));
+    }
 
     @PatchMapping("/me/profile")
     public AuthController.Session updateProfile(@Valid @RequestBody ProfileRequest request) {

@@ -37,6 +37,8 @@ public class User {
     @Size(min = 6, message = "Password must be at least 6 characters")
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private long sessionVersion;
     
     private Role role;
     // Newly added: list of project IDs this user is associated with (client/PM/developer)

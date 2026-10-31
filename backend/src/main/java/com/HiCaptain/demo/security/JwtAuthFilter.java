@@ -51,7 +51,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 if (username != null && userId != null && organizationId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     var membership = organizationService.membership(organizationId, userId);
-                    if (userService.getById(userId).isEmpty()) throw new IllegalArgumentException("User no longer exists");
+                    var user = userService.getById(userId).orElseThrow(() -> new IllegalArgumentException("User no longer exists"));
+                    if (user.getSessionVersion() != jwtService.extractSessionVersion(token)) throw new IllegalArgumentException("Session revoked");
                     // Create a custom UserDetails that includes the userId
                     UserDetails userDetails = new org.springframework.security.core.userdetails.User(
                             userId, // Use userId as the principal instead of username

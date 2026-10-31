@@ -53,4 +53,18 @@ class JwtAuthFilterTest {
         filter.doFilter(request, response, (req, res) -> fail("Request reached controller"));
         assertEquals(401, response.getStatus());
     }
+
+    @Test void passwordChangeRejectsPreviouslyIssuedTokens() throws Exception {
+        var request = new MockHttpServletRequest("GET", "/projects"); request.addHeader("Authorization", "Bearer signed");
+        var response = new MockHttpServletResponse();
+        when(jwt.extractUserName("signed")).thenReturn("Alice"); when(jwt.extractUserId("signed")).thenReturn("user-1");
+        when(jwt.extractOrganizationId("signed")).thenReturn("org-1");
+        Membership membership = new Membership(); membership.setRoles(Set.of(Role.Developer));
+        when(organizations.membership("org-1", "user-1")).thenReturn(membership);
+        User user = new User(); user.setSessionVersion(1L);
+        when(users.getById("user-1")).thenReturn(Optional.of(user));
+        when(jwt.extractSessionVersion("signed")).thenReturn(0L);
+        filter.doFilter(request, response, (req, res) -> fail("Revoked session reached controller"));
+        assertEquals(401, response.getStatus());
+    }
 }
