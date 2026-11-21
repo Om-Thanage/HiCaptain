@@ -16,9 +16,11 @@ class DataInitializerTest {
         var users = mock(UserRepository.class); var projects = mock(ProjectRepository.class);
         var tasks = mock(TaskRepository.class); var orgs = mock(OrganizationRepository.class);
         var memberships = mock(MembershipRepository.class);
-        var initializer = new DataInitializer(users, projects, tasks, mock(PasswordEncoder.class), orgs, memberships);
+        var mongo = mock(org.springframework.data.mongodb.core.MongoTemplate.class);
+        var activity = mock(DemoActivitySeeder.class);
+        var initializer = new DataInitializer(users, projects, tasks, mock(PasswordEncoder.class), orgs, memberships, mongo, activity);
         ReflectionTestUtils.setField(initializer, "database", "hicaptain");
         assertThrows(IllegalStateException.class, () -> initializer.initializeData().run());
-        verifyNoInteractions(users, projects, tasks, orgs, memberships);
+        verifyNoInteractions(users, projects, tasks, orgs, memberships, mongo, activity);
     }
 }

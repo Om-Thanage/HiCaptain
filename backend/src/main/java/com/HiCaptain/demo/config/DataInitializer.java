@@ -36,7 +36,17 @@ public class DataInitializer {
     private final PasswordEncoder passwordEncoder;
     private final OrganizationRepository organizationRepository;
     private final MembershipRepository membershipRepository;
+    private final org.springframework.data.mongodb.core.MongoTemplate mongo;
+    private final DemoActivitySeeder demoActivity;
     private String demoOrganizationId;
+
+    // Seed dates were written around 15 April 2024; shift them so "today" falls mid-project.
+    private static final long SHIFT_DAYS =
+            java.time.temporal.ChronoUnit.DAYS.between(LocalDate.of(2024, 4, 15), LocalDate.now());
+
+    private static LocalDate shifted(int year, int month, int day) {
+        return LocalDate.of(year, month, day).plusDays(SHIFT_DAYS);
+    }
     @org.springframework.beans.factory.annotation.Value("${spring.data.mongodb.database:hicaptain}")
     private String database;
 
@@ -45,13 +55,11 @@ public class DataInitializer {
     public CommandLineRunner initializeData() {
         return args -> {
             if (!database.endsWith("_demo")) throw new IllegalStateException("Demo initialization requires a dedicated database ending in _demo");
-            // Clear existing data
+            // Empty every collection but keep its indexes (unique emails, TTLs, agent queues).
             log.info("Clearing existing data...");
-            taskRepository.deleteAll();
-            projectRepository.deleteAll();
-            userRepository.deleteAll();
-            membershipRepository.deleteAll();
-            organizationRepository.deleteAll();
+            for (String collection : mongo.getCollectionNames())
+                if (!collection.startsWith("system."))
+                    mongo.getCollection(collection).deleteMany(new org.bson.Document());
             log.info("Database cleared.");
 
             // Create users with realistic data
@@ -130,9 +138,9 @@ public class DataInitializer {
             Project project1 = createProject(
                 "E-Commerce Platform Redesign",
                 "Complete overhaul of the customer-facing e-commerce platform with focus on mobile responsiveness and checkout optimization. Includes payment gateway integration and inventory management system.",
-                "In Progress",
-                LocalDate.of(2024, 1, 15),
-                LocalDate.of(2024, 6, 30),
+                "in-progress",
+                shifted(2024, 1, 15),
+                shifted(2024, 6, 30),
                 client1.getId(),
                 pm.getId(),
                 "Admin : Sarah Mitchell",
@@ -143,9 +151,9 @@ public class DataInitializer {
             Project project2 = createProject(
                 "Mobile Banking App",
                 "Native iOS and Android mobile application for personal banking services including account management, fund transfers, bill payments, and investment tracking.",
-                "In Progress",
-                LocalDate.of(2024, 2, 1),
-                LocalDate.of(2024, 8, 31),
+                "in-progress",
+                shifted(2024, 2, 1),
+                shifted(2024, 8, 31),
                 client2.getId(),
                 pm.getId(),
                 "Admin : Sarah Mitchell",
@@ -156,9 +164,9 @@ public class DataInitializer {
             Project project3 = createProject(
                 "HR Management System",
                 "Internal HRMS for employee onboarding, attendance tracking, leave management, performance reviews, and payroll integration. Cloud-based solution with role-based access control.",
-                "Planning",
-                LocalDate.of(2024, 3, 1),
-                LocalDate.of(2024, 12, 31),
+                "planning",
+                shifted(2024, 3, 1),
+                shifted(2024, 12, 31),
                 client1.getId(),
                 pm.getId(),
                 "Admin : Sarah Mitchell",
@@ -174,9 +182,9 @@ public class DataInitializer {
                 createTask(
                     "Implement OAuth 2.0 Authentication",
                     "Set up OAuth 2.0 authentication flow with support for Google and Facebook login. Include JWT token generation and refresh token mechanism.",
-                    "In Progress",
-                    "High",
-                    LocalDate.of(2024, 4, 15),
+                    "in-progress",
+                    "high",
+                    shifted(2024, 4, 15),
                     project1.getId(),
                     dev1.getId(),
                     Arrays.asList(dev1.getId()),
@@ -188,9 +196,9 @@ public class DataInitializer {
                 createTask(
                     "Design Checkout Flow UI/UX",
                     "Create wireframes and high-fidelity mockups for the new 3-step checkout process. Focus on reducing cart abandonment with progress indicators and guest checkout option.",
-                    "Completed",
-                    "High",
-                    LocalDate.of(2024, 3, 30),
+                    "completed",
+                    "high",
+                    shifted(2024, 3, 30),
                     project1.getId(),
                     dev2.getId(),
                     Arrays.asList(dev2.getId()),
@@ -202,9 +210,9 @@ public class DataInitializer {
                 createTask(
                     "Integrate Stripe Payment Gateway",
                     "Complete integration of Stripe API for credit card processing, including support for saved payment methods and subscription handling.",
-                    "In Progress",
-                    "Critical",
-                    LocalDate.of(2024, 5, 1),
+                    "in-progress",
+                    "high",
+                    shifted(2024, 5, 1),
                     project1.getId(),
                     dev1.getId(),
                     Arrays.asList(dev1.getId(), dev2.getId()),
@@ -216,9 +224,9 @@ public class DataInitializer {
                 createTask(
                     "Optimize Product Search Performance",
                     "Implement Elasticsearch for product catalog search with autocomplete, filters, and faceted search. Target <200ms response time for search queries.",
-                    "To Do",
-                    "Medium",
-                    LocalDate.of(2024, 5, 15),
+                    "pending",
+                    "medium",
+                    shifted(2024, 5, 15),
                     project1.getId(),
                     dev2.getId(),
                     Arrays.asList(dev2.getId()),
@@ -230,9 +238,9 @@ public class DataInitializer {
                 createTask(
                     "Mobile Responsive Testing",
                     "Comprehensive testing across iOS Safari, Chrome Android, and Samsung Internet. Fix responsive layout issues and touch target sizing.",
-                    "To Do",
-                    "Medium",
-                    LocalDate.of(2024, 6, 15),
+                    "pending",
+                    "medium",
+                    shifted(2024, 6, 15),
                     project1.getId(),
                     dev2.getId(),
                     Arrays.asList(dev2.getId()),
@@ -248,9 +256,9 @@ public class DataInitializer {
                 createTask(
                     "Implement Biometric Authentication",
                     "Add Face ID and Touch ID support for iOS, and fingerprint authentication for Android. Implement secure enclave storage for sensitive data.",
-                    "In Progress",
-                    "Critical",
-                    LocalDate.of(2024, 4, 30),
+                    "in-progress",
+                    "high",
+                    shifted(2024, 4, 30),
                     project2.getId(),
                     dev3.getId(),
                     Arrays.asList(dev3.getId()),
@@ -262,9 +270,9 @@ public class DataInitializer {
                 createTask(
                     "Build Transaction History Screen",
                     "Create transaction list view with filters (date range, category, amount), search functionality, and export to PDF feature.",
-                    "Completed",
-                    "High",
-                    LocalDate.of(2024, 3, 15),
+                    "completed",
+                    "high",
+                    shifted(2024, 3, 15),
                     project2.getId(),
                     dev2.getId(),
                     Arrays.asList(dev2.getId()),
@@ -276,9 +284,9 @@ public class DataInitializer {
                 createTask(
                     "Integrate Push Notifications",
                     "Set up Firebase Cloud Messaging for transaction alerts, bill payment reminders, and account activity notifications with deep linking support.",
-                    "To Do",
-                    "High",
-                    LocalDate.of(2024, 5, 30),
+                    "pending",
+                    "high",
+                    shifted(2024, 5, 30),
                     project2.getId(),
                     dev3.getId(),
                     Arrays.asList(dev3.getId()),
@@ -290,9 +298,9 @@ public class DataInitializer {
                 createTask(
                     "API Performance Optimization",
                     "Reduce API response times by implementing Redis caching, database query optimization, and API response compression.",
-                    "In Progress",
-                    "Medium",
-                    LocalDate.of(2024, 5, 15),
+                    "in-progress",
+                    "medium",
+                    shifted(2024, 5, 15),
                     project2.getId(),
                     dev2.getId(),
                     Arrays.asList(dev2.getId()),
@@ -308,9 +316,9 @@ public class DataInitializer {
                 createTask(
                     "Design Database Schema",
                     "Create comprehensive ER diagram and database schema for employee records, attendance, leave management, and payroll modules.",
-                    "Completed",
-                    "Critical",
-                    LocalDate.of(2024, 3, 20),
+                    "completed",
+                    "high",
+                    shifted(2024, 3, 20),
                     project3.getId(),
                     dev1.getId(),
                     Arrays.asList(dev1.getId()),
@@ -322,9 +330,9 @@ public class DataInitializer {
                 createTask(
                     "Implement Role-Based Access Control",
                     "Set up RBAC system with roles for HR Admin, Manager, and Employee. Define permissions for each module and implement authorization middleware.",
-                    "In Progress",
-                    "Critical",
-                    LocalDate.of(2024, 4, 30),
+                    "in-progress",
+                    "high",
+                    shifted(2024, 4, 30),
                     project3.getId(),
                     dev1.getId(),
                     Arrays.asList(dev1.getId(), dev3.getId()),
@@ -336,9 +344,9 @@ public class DataInitializer {
                 createTask(
                     "Create Employee Onboarding Workflow",
                     "Build multi-step onboarding process including document upload, policy acknowledgment, and account provisioning automation.",
-                    "To Do",
-                    "High",
-                    LocalDate.of(2024, 6, 30),
+                    "pending",
+                    "high",
+                    shifted(2024, 6, 30),
                     project3.getId(),
                     dev3.getId(),
                     Arrays.asList(dev3.getId()),
@@ -354,6 +362,8 @@ public class DataInitializer {
             taskRepository.saveAll(project3Tasks);
 
             log.info("Created {} tasks", project1Tasks.size() + project2Tasks.size() + project3Tasks.size());
+            demoActivity.seed(demoOrganizationId, admin, pm, List.of(dev1, dev2, dev3),
+                    List.of(client1, client2), List.of(project1, project2, project3));
             log.info("=== Data initialization completed successfully ===");
             log.info("Login credentials:");
             log.info("  Admin: sarah.mitchell@hicaptain.com / admin123");
