@@ -114,7 +114,7 @@ function WorkspaceChrome({ children }: { children: React.ReactNode }) {
         <header className="hc-topbar">
           <div className="hc-topbar-context">
             {backHref && <Link href={backHref} className="hc-topbar-back" aria-label="Go back"><ArrowLeft size={17} /></Link>}
-            <nav className="hc-breadcrumb" aria-label="Breadcrumb">{crumbs.map((crumb, index) => <span key={crumb.href}>{index > 0 && <ChevronRight size={14} />}{index === crumbs.length - 1 ? <strong aria-current="page">{crumb.label}</strong> : <Link href={crumb.href}>{crumb.label}</Link>}</span>)}</nav>
+            <nav className="hc-breadcrumb" aria-label="Breadcrumb">{crumbs.map((crumb, index) => <span key={`${index}:${crumb.href}`}>{index > 0 && <ChevronRight size={14} />}{index === crumbs.length - 1 ? <strong aria-current="page">{crumb.label}</strong> : <Link href={crumb.href}>{crumb.label}</Link>}</span>)}</nav>
           </div>
           <div className="hc-topbar-actions" ref={menusRef}>
             <div className="hc-menu-root hc-org-root">
