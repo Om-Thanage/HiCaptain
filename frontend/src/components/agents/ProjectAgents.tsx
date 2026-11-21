@@ -8,6 +8,8 @@ import {
   agentError,
   type Agent,
   type Choice,
+  type ContextMethod,
+  type Evaluation,
   type Run,
   type Memory,
 } from "@/services/agents";
@@ -22,7 +24,47 @@ const initial = {
   enabled: true,
   maxInputTokens: 10000,
   maxOutputTokens: 2000,
+  workerProviderId: "",
+  maxWorkers: 3,
+  contextMethod: "engine" as ContextMethod,
 };
+const specialties = [
+  ["planner", "Planner"],
+  ["researcher", "Researcher"],
+  ["orchestrator", "Orchestrator (delegates to specialists)"],
+  ["frontend", "Frontend specialist"],
+  ["backend", "Backend specialist"],
+  ["testing", "Testing specialist"],
+  ["deployment", "Deployment specialist"],
+] as const;
+const methodLabels: Record<ContextMethod, string> = {
+  truncation: "Truncation (most recent records)",
+  engine: "Context engine (hybrid retrieval)",
+  planned: "Planned retrieval (orchestrator chooses lookups)",
+};
+function toForm(agent: Agent): typeof initial {
+  return {
+    ...initial,
+    ...agent,
+    workerProviderId: agent.workerProviderId ?? "",
+    maxWorkers: agent.maxWorkers ?? initial.maxWorkers,
+    contextMethod: agent.contextMethod ?? "engine",
+  };
+}
+function payload(form: typeof initial) {
+  const orchestrator = form.specialty === "orchestrator";
+  return {
+    ...form,
+    workerProviderId: orchestrator ? form.workerProviderId : null,
+    maxWorkers: orchestrator ? form.maxWorkers : null,
+    contextMethod:
+      !orchestrator && form.contextMethod === "planned"
+        ? "engine"
+        : form.contextMethod,
+  };
+}
+const percent = (value: number | null) =>
+  value === null ? "—" : `${Math.round(value * 100)}%`;
 export default function ProjectAgents({
   projectId,
   canManage,
@@ -38,6 +80,7 @@ export default function ProjectAgents({
   const [runs, setRuns] = useState<Run[]>([]);
   const [memory, setMemory] = useState<Memory[]>([]);
   const [choices, setChoices] = useState<Choice[]>([]);
+  const [evaluation, setEvaluation] = useState<Evaluation[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
@@ -52,16 +95,18 @@ export default function ProjectAgents({
   const [note, setNote] = useState("");
   const user = authService.getUserFromToken();
   const reload = useCallback(async () => {
-    const [a, r, m, c] = await Promise.all([
+    const [a, r, m, c, e] = await Promise.all([
       agentsApi.agents(projectId),
       agentsApi.runs(projectId),
       agentsApi.memory(projectId),
       agentsApi.choices(projectId),
+      agentsApi.evaluation(projectId),
     ]);
     setAgents(a);
     setRuns(r);
     setMemory(m);
     setChoices(c);
+    setEvaluation(e);
     setError("");
   }, [projectId]);
   useEffect(() => {
@@ -103,7 +148,7 @@ export default function ProjectAgents({
   function save(event: FormEvent) {
     event.preventDefault();
     void act(async () => {
-      await agentsApi.saveAgent(projectId, form, editing?.id);
+      await agentsApi.saveAgent(projectId, payload(form), editing?.id);
       setOpen(false);
     }, "AI teammate saved");
   }
@@ -137,8 +182,9 @@ export default function ProjectAgents({
             Project teammates <Bot size={23} />
           </h2>
           <p>
-            Delegate planning and research with shared project context. A
-            manager reviews every proposed change.
+            Delegate planning and research with shared project context, or let
+            an orchestrator split work across specialists. A manager reviews
+            every proposed change.
           </p>
         </div>
         {canManage && (
@@ -175,6 +221,14 @@ export default function ProjectAgents({
             <p>
               {agent.specialty} · {agent.enabled ? "Available" : "Paused"}
             </p>
+            <p className={styles.muted}>
+              {methodLabels[agent.contextMethod ?? "engine"]}
+              {agent.specialty === "orchestrator" &&
+                ` · up to ${agent.maxWorkers} specialists on ${
+                  choices.find((c) => c.id === agent.workerProviderId)?.name ??
+                  "the worker provider"
+                }`}
+            </p>
             <p>{agent.instructions}</p>
             <p className={styles.muted}>
               Can assign: {agent.allowedRoles.join(", ")} ·{" "}
@@ -186,7 +240,7 @@ export default function ProjectAgents({
                 className={styles.secondary}
                 onClick={() => {
                   setEditing(agent);
-                  setForm(agent);
+                  setForm(toForm(agent));
                   setOpen(true);
                 }}
               >
@@ -199,7 +253,7 @@ export default function ProjectAgents({
       {!agents.length && (
         <p className={styles.empty}>
           {canManage
-            ? "Connect a provider in Settings, then add a planning or research teammate here."
+            ? "Connect a provider in Settings, then add a teammate or an orchestrator here."
             : "Your project manager can add AI teammates here."}
         </p>
       )}
@@ -221,11 +275,51 @@ export default function ProjectAgents({
               <select
                 value={form.specialty}
                 onChange={(e) =>
-                  setForm({ ...form, specialty: e.target.value })
+                  setForm({
+                    ...form,
+                    specialty: e.target.value,
+                    // Plans and merged proposals are long, and thinking models spend
+                    // part of the output limit on reasoning.
+                    maxOutputTokens:
+                      e.target.value === "orchestrator"
+                        ? Math.max(form.maxOutputTokens, 8000)
+                        : form.maxOutputTokens,
+                    contextMethod:
+                      e.target.value !== "orchestrator" &&
+                      form.contextMethod === "planned"
+                        ? "engine"
+                        : form.contextMethod,
+                  })
                 }
               >
-                <option value="planner">Planner</option>
-                <option value="researcher">Researcher</option>
+                {specialties.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Context method
+              <select
+                value={form.contextMethod}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    contextMethod: e.target.value as ContextMethod,
+                  })
+                }
+              >
+                {(Object.keys(methodLabels) as ContextMethod[])
+                  .filter(
+                    (method) =>
+                      method !== "planned" || form.specialty === "orchestrator",
+                  )
+                  .map((method) => (
+                    <option key={method} value={method}>
+                      {methodLabels[method]}
+                    </option>
+                  ))}
               </select>
             </label>
             <label>
@@ -245,7 +339,49 @@ export default function ProjectAgents({
                 ))}
               </select>
             </label>
+            {form.specialty === "orchestrator" && (
+              <>
+                <label>
+                  Specialist provider
+                  <select
+                    required
+                    value={form.workerProviderId}
+                    onChange={(e) =>
+                      setForm({ ...form, workerProviderId: e.target.value })
+                    }
+                  >
+                    <option value="">Select a provider</option>
+                    {choices.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} · {c.model}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Maximum specialists per run
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    max={4}
+                    value={form.maxWorkers}
+                    onChange={(e) =>
+                      setForm({ ...form, maxWorkers: Number(e.target.value) })
+                    }
+                  />
+                </label>
+              </>
+            )}
           </div>
+          {form.specialty === "orchestrator" && (
+            <p className={styles.muted}>
+              The provider above plans the work and merges results; specialists
+              run on the specialist provider. Each run reserves two calls on the
+              orchestrator provider and one per specialist on the specialist
+              provider, and returns what is unused.
+            </p>
+          )}
           <label>
             Instructions
             <textarea
@@ -445,9 +581,22 @@ export default function ProjectAgents({
                 )}
               </div>
             )}
+            {run.contextTrace && (
+              <p className={styles.muted}>
+                {methodLabels[run.contextTrace.method]} · used{" "}
+                {run.contextTrace.selected} of {run.contextTrace.candidates}{" "}
+                project records
+                {run.contextTrace.workers.length > 0 &&
+                  ` · specialists: ${run.contextTrace.workers.join(", ")}`}
+              </p>
+            )}
             <p className={styles.muted}>
               {run.inputTokens + run.outputTokens || run.accountedTokens || 0}{" "}
-              tokens{run.usageEstimated ? " (estimated)" : ""}
+              tokens
+              {run.workerInputTokens || run.workerOutputTokens
+                ? ` (${(run.workerInputTokens ?? 0) + (run.workerOutputTokens ?? 0)} by specialists)`
+                : ""}
+              {run.usageEstimated ? " (estimated)" : ""}
               {run.costAvailable
                 ? ` · ~$${run.estimatedCost.toFixed(5)}`
                 : " · cost unavailable"}
@@ -537,6 +686,56 @@ export default function ProjectAgents({
         <p className={styles.empty}>
           Assignments and review history will appear here.
         </p>
+      )}
+      {evaluation.length > 0 && (
+        <>
+          <h3>Context method comparison</h3>
+          <p className={styles.muted}>
+            Human review is the score: approval rate, cost and records used for
+            each context method on this project. Rows can mix teammates and
+            models, so compare methods on the same teammate for a fair test.
+          </p>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th scope="col">Method</th>
+                  <th scope="col">Workflow</th>
+                  <th scope="col">Runs</th>
+                  <th scope="col">Approved</th>
+                  <th scope="col">Rejected</th>
+                  <th scope="col">Approval rate</th>
+                  <th scope="col">Avg. tokens</th>
+                  <th scope="col">Avg. records used</th>
+                  <th scope="col">Avg. cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {evaluation.map((row) => (
+                  <tr key={`${row.method}-${row.workflow}`}>
+                    <th scope="row">{methodLabels[row.method]}</th>
+                    <td>
+                      {row.workflow === "orchestrator"
+                        ? "Orchestrator"
+                        : "Single teammate"}
+                    </td>
+                    <td>{row.runs}</td>
+                    <td>{row.approved}</td>
+                    <td>{row.rejected}</td>
+                    <td>{percent(row.approvalRate)}</td>
+                    <td>
+                      {Math.round(
+                        row.averageInputTokens + row.averageOutputTokens,
+                      ).toLocaleString()}
+                    </td>
+                    <td>{row.averageSelected.toFixed(1)}</td>
+                    <td>${row.averageCost.toFixed(5)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
       <h3>
         <Brain size={18} /> Shared project memory

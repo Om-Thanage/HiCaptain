@@ -1,5 +1,6 @@
 package com.HiCaptain.demo.agent;
 
+import com.HiCaptain.demo.agent.AgentModels.ContextTrace;
 import com.HiCaptain.demo.agent.AgentModels.Output;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -62,7 +63,10 @@ public class AgentWorkerController {
       @Valid @NotNull Output output,
       @Min(0) int inputTokens,
       @Min(0) int outputTokens,
-      boolean usageEstimated) {}
+      @Min(0) int workerInputTokens,
+      @Min(0) int workerOutputTokens,
+      boolean usageEstimated,
+      @Valid ContextTrace trace) {}
 
   @PostMapping("/{id}/complete")
   public void complete(
@@ -70,7 +74,16 @@ public class AgentWorkerController {
       @RequestHeader("X-Agent-Run-Token") String token,
       @Valid @RequestBody Completion in) {
     agents.complete(
-        id, token, in.output(), in.inputTokens(), in.outputTokens(), in.usageEstimated());
+        id,
+        token,
+        in.output(),
+        new AgentService.Usage(
+            in.inputTokens(),
+            in.outputTokens(),
+            in.workerInputTokens(),
+            in.workerOutputTokens()),
+        in.usageEstimated(),
+        in.trace());
   }
 
   @PostMapping("/{id}/failed")

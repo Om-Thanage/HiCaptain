@@ -12,7 +12,7 @@ The website is the planned production frontend. The backend URL is the existing 
 - **Project planning:** Set a team, description, start date, and tentative end date. New projects default to today and 30 days later. Manage tasks through Kanban with priorities, deadlines, and developer assignments. Admins manage organization roles; assigned project managers manage permitted developer access.
 - **Google Workspace:** View Calendar events, create meetings with Meet links, select a personal My Drive folder for project files, and refresh folder sharing. Copy tasks to your own Google Tasks list. This does not require a Workspace shared drive; task copying is not bidirectional synchronization.
 - **GitHub:** Connect your own account, link repositories to a project, and view development activity from project details. Optional signed webhooks persist supported repository events.
-- **AI teammates:** Configure OpenAI or Ollama planners/researchers with your own keys or hardware. Assign work from a project or Kanban task, refine proposals, and approve tasks and shared decisions. Runs check current access, retain bounded project context, and record token usage and estimated costs. [Worker setup and limits](agent-worker/README.md).
+- **AI teammates:** Configure Claude, OpenAI or Ollama teammates with your own keys or hardware. An orchestrator on a strong model can split work across frontend, backend, testing and deployment specialists on a cheaper model. A layered context engine with hybrid retrieval, budget split and edge ordering chooses what each prompt contains. The project page compares context methods by human approval rate and cost. Assign work from a project or Kanban task, refine proposals, and approve tasks and shared decisions. Runs check current access, retain bounded project context, and record token usage and estimated costs. [Worker setup and limits](agent-worker/README.md).
 - **Account and communication:** Edit your profile, change your password, sign out from the profile menu, and use project feedback and in-app notifications.
 
 AI teammates do not execute code or browse the web. Analytics, invoicing, and payments are not part of the current product.
@@ -23,7 +23,7 @@ AI teammates do not execute code or browse the web. Analytics, invoicing, and pa
 | --- | --- |
 | [`frontend/`](frontend/) | Next.js 16, React 19, TypeScript, CSS Modules/Tailwind, Lucide icons |
 | [`backend/`](backend/) | Java 17, Spring Boot 3.5, Spring Security/JWT, MongoDB, SMTP and integration clients |
-| [`agent-worker/`](agent-worker/) | Optional Python 3.12/LangGraph worker with MongoDB checkpoints; OpenAI or Ollama |
+| [`agent-worker/`](agent-worker/) | Optional Python 3.12/LangGraph worker with MongoDB checkpoints, context engine and orchestrator; Claude, OpenAI or Ollama |
 | [`.github/workflows/checks.yml`](.github/workflows/checks.yml) | Frontend, backend, worker tests and dependency checks; no automatic deployment job |
 
 ```mermaid
@@ -32,7 +32,7 @@ flowchart LR
     API <--> DB[(MongoDB)]
     API --> Tools[Google APIs / GitHub / SMTP]
     Worker[Optional LangGraph worker] <-->|Assignments and proposals| API
-    Worker --> Model[OpenAI or Ollama]
+    Worker --> Model[Claude, OpenAI or Ollama]
     Worker -->|Checkpoints| DB
 ```
 
@@ -155,7 +155,7 @@ Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM` 
 
 Deploy the Python worker separately to execute AI assignments. Set the same random `AGENT_WORKER_SECRET` in the backend and worker, point `HICAPTAIN_API_URL` at the backend, and connect the worker to the same MongoDB database for checkpoints. Without a worker, queued assignments will not execute. See [agent-worker/README.md](agent-worker/README.md) for setup, permissions, model support and usage accounting.
 
-A cloud worker cannot reach Ollama running on your personal computer through `localhost`. Use a deliberately reachable Ollama origin allowed by `AGENT_OLLAMA_ALLOWED_ORIGINS`, or use OpenAI with your own key.
+A cloud worker cannot reach Ollama running on your personal computer through `localhost`. Use a deliberately reachable Ollama origin allowed by `AGENT_OLLAMA_ALLOWED_ORIGINS`, or use Claude or OpenAI with your own key.
 
 For local/container hosting, configure `backend/.env` and run from `backend`:
 

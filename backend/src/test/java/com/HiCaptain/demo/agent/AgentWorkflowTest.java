@@ -305,6 +305,187 @@ class AgentWorkflowTest {
     worker(get("/internal/agents/" + run + "/context"), lease, null, 403);
   }
 
+  String claudeProvider() throws Exception {
+    var body = new HashMap<>(providerBody());
+    body.putAll(
+        Map.of(
+            "name", "Claude",
+            "kind", "anthropic",
+            "model", "claude-opus-5-5",
+            "apiKey", "synthetic-claude-key",
+            "remainingTokens", 100000,
+            "inputPrice", 4,
+            "outputPrice", 20));
+    body.remove("baseUrl");
+    return request(post("/api/agents/providers"), admin, body, 200).path("id").asText();
+  }
+
+  Map<String, Object> orchestratorBody(String brain, String workerProvider, String method) {
+    var body = new HashMap<String, Object>();
+    body.put("name", "Captain");
+    body.put("specialty", "orchestrator");
+    body.put("instructions", "Delegate to specialists and merge their proposals");
+    body.put("providerId", brain);
+    body.put("allowedRoles", List.of("Admin", "Developer"));
+    body.put("enabled", true);
+    body.put("maxInputTokens", 10000);
+    body.put("maxOutputTokens", 2000);
+    if (workerProvider != null) body.put("workerProviderId", workerProvider);
+    body.put("maxWorkers", 2);
+    body.put("contextMethod", method);
+    return body;
+  }
+
+  Map<String, Object> trace(String method) {
+    return Map.of(
+        "method", method,
+        "candidates", 12,
+        "selected", 4,
+        "promptBytes", 9000,
+        "selectedIds", List.of("feedback-a", "t1"),
+        "workers", List.of("backend", "testing"));
+  }
+
+  @Test
+  void orchestratorReservesBothProvidersAndSettlesEachWithActualUsage() throws Exception {
+    String brain = claudeProvider();
+    agent =
+        request(post(path("")), admin, orchestratorBody(brain, provider, "planned"), 200)
+            .path("id")
+            .asText();
+    Feedback feedback = new Feedback();
+    feedback.setProjectId(project);
+    feedback.setMessage("Checkout payment times out after 30 seconds");
+    feedback.setStatus("open");
+    feedback.setDateIssued(LocalDate.now());
+    mongo.insert(feedback);
+
+    String id = assign(dev, "Fix checkout timeouts", null).path("id").asText();
+    // Brain: plan + merge calls. Worker: one call per specialist (maxWorkers = 2).
+    assertEquals(100000 - 24000, mongo.findById(brain, Provider.class).getRemainingTokens());
+    assertEquals(50000 - 24000, mongo.findById(provider, Provider.class).getRemainingTokens());
+
+    JsonNode job = claim();
+    assertEquals("orchestrator", job.path("specialty").asText());
+    String lease = job.path("token").asText();
+    JsonNode context = worker(get("/internal/agents/" + id + "/context"), lease, null, 200);
+    assertEquals("anthropic", context.path("provider").path("kind").asText());
+    assertEquals("synthetic-claude-key", context.path("provider").path("apiKey").asText());
+    assertEquals("ollama", context.path("workerProvider").path("kind").asText());
+    assertEquals(2, context.path("maxWorkers").asInt());
+    assertEquals("planned", context.path("contextMethod").asText());
+    JsonNode evidence = context.path("context").path("evidence");
+    assertEquals("feedback", evidence.get(0).path("kind").asText());
+    assertTrue(evidence.get(0).path("text").asText().contains("times out"));
+    worker(
+        post("/internal/agents/" + id + "/begin"),
+        lease,
+        Map.of("contextHash", context.path("contextHash").asText()),
+        200);
+
+    // New activity is evidence, not part of the fingerprint: the run can still publish.
+    Feedback later = new Feedback();
+    later.setProjectId(project);
+    later.setMessage("Also slow on mobile");
+    later.setDateIssued(LocalDate.now());
+    mongo.insert(later);
+
+    var tooMuchWorker = new HashMap<String, Object>();
+    tooMuchWorker.putAll(
+        Map.of(
+            "output", output(),
+            "inputTokens", 30000,
+            "outputTokens", 1000,
+            "workerInputTokens", 25000,
+            "workerOutputTokens", 600,
+            "usageEstimated", false,
+            "trace", trace("planned")));
+    worker(post("/internal/agents/" + id + "/complete"), lease, tooMuchWorker, 400);
+    var wrongMethod = new HashMap<>(tooMuchWorker);
+    wrongMethod.putAll(
+        Map.of(
+            "inputTokens", 5000,
+            "workerInputTokens", 3000,
+            "trace", trace("engine")));
+    worker(post("/internal/agents/" + id + "/complete"), lease, wrongMethod, 400);
+    var valid = new HashMap<>(wrongMethod);
+    valid.put("trace", trace("planned"));
+    worker(post("/internal/agents/" + id + "/complete"), lease, valid, 200);
+
+    Run ready = mongo.findById(id, Run.class);
+    assertEquals("READY", ready.getStatus());
+    assertEquals(List.of("backend", "testing"), ready.getContextTrace().workers());
+    // Brain used (5000 + 1000) - (3000 + 600) = 2400 tokens: 2000 in at $4, 400 out at $20.
+    assertEquals((2000 * 4 + 400 * 20) / 1_000_000d, ready.getEstimatedCost(), 1e-12);
+    Provider brainAfter = mongo.findById(brain, Provider.class);
+    Provider workerAfter = mongo.findById(provider, Provider.class);
+    assertEquals(100000 - 2400, brainAfter.getRemainingTokens());
+    assertEquals(50000 - 3600, workerAfter.getRemainingTokens());
+    assertTrue(brainAfter.getReservations().isEmpty());
+    assertTrue(workerAfter.getReservations().isEmpty());
+
+    request(post(path("/runs/" + id + "/review")), admin, Map.of("accept", false), 200);
+    JsonNode rows = request(get(path("/evaluation")), dev, null, 200);
+    assertEquals(1, rows.size());
+    assertEquals("planned", rows.get(0).path("method").asText());
+    assertEquals(1, rows.get(0).path("rejected").asInt());
+    assertEquals(0.0, rows.get(0).path("approvalRate").asDouble());
+    mongo.remove(Query.query(Criteria.where("projectId").is(project)), Feedback.class);
+  }
+
+  @Test
+  void orchestratorOnOneProviderHoldsOneReservationAndRefundsTheRest() throws Exception {
+    agent =
+        request(post(path("")), admin, orchestratorBody(provider, provider, "engine"), 200)
+            .path("id")
+            .asText();
+    String id = assign(dev, "Plan the release", null).path("id").asText();
+    // Two orchestrator calls plus two specialist calls, all on the same provider.
+    Provider reserved = mongo.findById(provider, Provider.class);
+    assertEquals(50000 - 48000, reserved.getRemainingTokens());
+    assertEquals(Map.of(id, 48000), reserved.getReservations());
+    JsonNode job = claim();
+    String lease = job.path("token").asText();
+    String hash =
+        worker(get("/internal/agents/" + id + "/context"), lease, null, 200)
+            .path("contextHash")
+            .asText();
+    worker(post("/internal/agents/" + id + "/begin"), lease, Map.of("contextHash", hash), 200);
+    var body = new HashMap<String, Object>();
+    body.putAll(
+        Map.of(
+            "output", output(),
+            "inputTokens", 7000,
+            "outputTokens", 1500,
+            "workerInputTokens", 4000,
+            "workerOutputTokens", 700,
+            "usageEstimated", false,
+            "trace", trace("engine")));
+    worker(post("/internal/agents/" + id + "/complete"), lease, body, 200);
+    Provider settled = mongo.findById(provider, Provider.class);
+    assertEquals(50000 - 8500, settled.getRemainingTokens());
+    assertEquals(8500, settled.getUsedTokens());
+    assertTrue(settled.getReservations().isEmpty());
+  }
+
+  @Test
+  void orchestratorSettingsAndClaudeKeysAreValidated() throws Exception {
+    var noKey = new HashMap<>(providerBody());
+    noKey.put("kind", "anthropic");
+    request(post("/api/agents/providers"), admin, noKey, 400);
+    String brain = claudeProvider();
+    request(post(path("")), admin, orchestratorBody(brain, null, "engine"), 400);
+    var plannedSingle = orchestratorBody(brain, null, "planned");
+    plannedSingle.put("specialty", "backend");
+    plannedSingle.remove("maxWorkers");
+    request(post(path("")), admin, plannedSingle, 400);
+    var delegatingSingle = orchestratorBody(brain, provider, "engine");
+    delegatingSingle.put("specialty", "testing");
+    request(post(path("")), admin, delegatingSingle, 400);
+    plannedSingle.put("contextMethod", "truncation");
+    request(post(path("")), admin, plannedSingle, 200);
+  }
+
   @Test
   void budgetAndLeasesPreventDuplicatePaidCallsAndRefundUnstartedWork() throws Exception {
     JsonNode run = assign(dev, "Plan", null);

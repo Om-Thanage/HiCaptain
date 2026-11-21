@@ -15,6 +15,11 @@ const initial = {
   inputPrice: 0,
   outputPrice: 0,
 };
+// Starting points only; any model ID the provider accepts can be entered.
+const suggestedModel: Record<string, string> = {
+  ollama: "qwen3:8b",
+  anthropic: "claude-opus-5-5",
+};
 export default function AgentProviders() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [editing, setEditing] = useState<Provider | null>(null);
@@ -51,8 +56,8 @@ export default function AgentProviders() {
           <span className={styles.kicker}>YOUR MODELS, YOUR KEYS</span>
           <h2>Agent providers</h2>
           <p>
-            Connect OpenAI or a local Ollama model. Only organization admins can
-            change credentials and allowances.
+            Connect Claude, OpenAI or a local Ollama model with your own key.
+            Only organization admins can change credentials and allowances.
           </p>
         </div>
         <button
@@ -121,11 +126,17 @@ export default function AgentProviders() {
               <select
                 value={form.kind}
                 onChange={(e) =>
-                  setForm({ ...form, kind: e.target.value, apiKey: "" })
+                  setForm({
+                    ...form,
+                    kind: e.target.value,
+                    apiKey: "",
+                    model: suggestedModel[e.target.value] ?? form.model,
+                  })
                 }
               >
                 <option value="ollama">Ollama</option>
                 <option value="openai">OpenAI</option>
+                <option value="anthropic">Claude (Anthropic)</option>
               </select>
             </label>
             <label>
@@ -221,7 +232,9 @@ export default function AgentProviders() {
             Token allowances reserve the maximum per run. Unknown usage is
             accounted conservatively. Prices are estimates you supply; Ollama
             uses your own hardware. The deployment must allow the selected
-            Ollama origin.
+            Ollama origin. Claude and OpenAI use an API key from your own
+            account console; on Claude models, maximum output tokens also
+            cover the model&apos;s thinking.
           </p>
           <div className={styles.row}>
             <button disabled={busy}>Save provider</button>

@@ -23,6 +23,31 @@ export type Agent = {
   enabled: boolean;
   maxInputTokens: number;
   maxOutputTokens: number;
+  workerProviderId?: string | null;
+  maxWorkers?: number | null;
+  contextMethod?: ContextMethod | null;
+};
+export type ContextMethod = "truncation" | "engine" | "planned";
+export type ContextTrace = {
+  method: ContextMethod;
+  candidates: number;
+  selected: number;
+  promptBytes: number;
+  selectedIds: string[];
+  workers: string[];
+};
+export type Evaluation = {
+  method: ContextMethod;
+  workflow: "single" | "orchestrator";
+  runs: number;
+  approved: number;
+  rejected: number;
+  approvalRate: number | null;
+  averageInputTokens: number;
+  averageOutputTokens: number;
+  averagePromptBytes: number;
+  averageSelected: number;
+  averageCost: number;
 };
 export type Proposal = {
   title: string;
@@ -47,6 +72,11 @@ export type Run = {
   usageEstimated: boolean;
   costAvailable: boolean;
   estimatedCost: number;
+  specialty?: string;
+  contextMethod?: ContextMethod;
+  workerInputTokens?: number;
+  workerOutputTokens?: number;
+  contextTrace?: ContextTrace | null;
   events: { at: string; actor: string; message: string }[];
   output?: {
     summary: string;
@@ -85,6 +115,8 @@ export const agentsApi = {
     ).data,
   runs: async (project: string): Promise<Run[]> =>
     (await api.get(`${base(project)}/runs`)).data,
+  evaluation: async (project: string): Promise<Evaluation[]> =>
+    (await api.get(`${base(project)}/evaluation`)).data,
   assign: async (project: string, data: unknown) =>
     (await api.post(`${base(project)}/runs`, data)).data,
   review: async (project: string, id: string, accept: boolean) =>

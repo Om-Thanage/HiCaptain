@@ -60,6 +60,11 @@ public class AgentController {
     return agents.runs(project);
   }
 
+  @GetMapping("/projects/{project}/evaluation")
+  public List<Map<String, Object>> evaluation(@PathVariable String project) {
+    return agents.evaluation(project);
+  }
+
   @PostMapping("/projects/{project}/runs")
   public Run assign(@PathVariable String project, @Valid @RequestBody AgentService.Assignment in) {
     return agents.assign(project, in);

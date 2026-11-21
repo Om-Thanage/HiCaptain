@@ -37,7 +37,21 @@ public final class AgentModels {
     private Set<Role> allowedRoles;
     private boolean enabled;
     private int maxInputTokens, maxOutputTokens;
+    // Orchestrators delegate subtasks to specialist workers on a (usually cheaper) provider.
+    private String workerProviderId;
+    private Integer maxWorkers;
+    // truncation | engine | planned; null means engine.
+    private String contextMethod;
   }
+
+  /** What the context engine selected for a run; recorded for method comparison. */
+  public record ContextTrace(
+      @NotNull @Pattern(regexp = "truncation|engine|planned") String method,
+      @Min(0) int candidates,
+      @Min(0) int selected,
+      @Min(0) int promptBytes,
+      @NotNull @Size(max = 200) List<@NotBlank @Size(max = 200) String> selectedIds,
+      @NotNull @Size(max = 4) List<@NotBlank @Size(max = 40) String> workers) {}
 
   public record Proposal(
       @NotBlank @Size(max = 120) String title,
@@ -77,6 +91,10 @@ public final class AgentModels {
     private Output output;
     private List<String> createdTaskIds;
     private int reservedTokens, accountedTokens, inputTokens, outputTokens;
+    // Orchestrator runs: worker usage is a subset of inputTokens/outputTokens.
+    private String specialty, contextMethod, workerProviderId;
+    private int workerReservedTokens, workerInputTokens, workerOutputTokens;
+    private ContextTrace contextTrace;
     private boolean usageEstimated, costAvailable;
     private double estimatedCost;
     @JsonIgnore private String leaseHash, contextHash, configHash;
