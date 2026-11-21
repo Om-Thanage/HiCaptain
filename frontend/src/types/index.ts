@@ -71,13 +71,15 @@ export interface TaskRequest {
   assignedDeveloperIds: string[];
 }
 
+export type FeedbackStatus = 'open' | 'in-progress' | 'resolved';
+
 export interface Feedback {
   id: string;
-  content: string;
-  rating: number;
+  message: string;
+  status: FeedbackStatus;
+  dateIssued: string;
   projectId: string;
-  clientId: string;
-  createdAt: string;
+  userId: string;
 }
 
 export interface Meeting {

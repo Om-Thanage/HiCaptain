@@ -7,10 +7,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class FeedbackService {
@@ -28,11 +30,17 @@ public class FeedbackService {
 
     public Optional<Feedback> getById(String id) { return repo.findById(id).filter(item -> projects.getById(item.getProjectId()).isPresent()); }
 
+    private static final Set<String> STATUSES = Set.of("open", "in-progress", "resolved");
+
     public Feedback create(Feedback f) {
         requireProject(f.getProjectId());
         f.setUserId(organizations.currentUserId());
         requireMember(f.getUserId());
         f.setId(null);
+        // The server sets the author, date and initial status; clients only send project and text.
+        f.setMessage(validMessage(f.getMessage()));
+        f.setDateIssued(LocalDate.now());
+        f.setStatus("open");
         Feedback saved = repo.save(f);
         if (saved.getProjectId() != null) {
             projectRepo.findById(saved.getProjectId()).ifPresent(p -> {
@@ -53,11 +61,17 @@ public class FeedbackService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Feedback not found"));
 
         String oldProjectId = existing.getProjectId();
-        String newProjectId = f.getProjectId();
+        String newProjectId = f.getProjectId() == null ? oldProjectId : f.getProjectId();
         requireProject(newProjectId);
-        requireMember(f.getUserId());
+        if (f.getStatus() == null || !STATUSES.contains(f.getStatus()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status must be open, in-progress or resolved");
 
+        // Triage changes the status, text or project; the author and date never change.
         f.setId(id);
+        f.setProjectId(newProjectId);
+        f.setMessage(validMessage(f.getMessage()));
+        f.setUserId(existing.getUserId());
+        f.setDateIssued(existing.getDateIssued());
         Feedback saved = repo.save(f);
 
         if (!Objects.equals(oldProjectId, newProjectId)) {
@@ -101,6 +115,13 @@ public class FeedbackService {
                 }
             });
         }
+    }
+
+    private static String validMessage(String message) {
+        String text = message == null ? "" : message.trim();
+        if (text.isEmpty() || text.length() > 5000)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Feedback must be between 1 and 5000 characters");
+        return text;
     }
 
     private void requireProject(String id) {

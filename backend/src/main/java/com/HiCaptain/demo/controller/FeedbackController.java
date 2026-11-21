@@ -16,14 +16,15 @@ public class FeedbackController {
 
     public FeedbackController(FeedbackService svc) { this.svc = svc; }
 
+    // Reads are scoped to projects the caller can access; developers see their projects' feedback.
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('Admin','Client','ProjectManager')")
+    @PreAuthorize("hasAnyAuthority('Admin','Client','ProjectManager','Developer')")
     public ResponseEntity<List<Feedback>> getAll() {
         return ResponseEntity.ok(svc.getAll());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('Admin','Client')")
+    @PreAuthorize("hasAnyAuthority('Admin','Client','ProjectManager','Developer')")
     public ResponseEntity<Feedback> getById(@PathVariable String id) {
         return svc.getById(id).map(ResponseEntity::ok)
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
@@ -36,13 +37,13 @@ public class FeedbackController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('Admin')")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager')")
     public ResponseEntity<Feedback> update(@PathVariable String id, @RequestBody Feedback f) {
         return ResponseEntity.ok(svc.update(id, f));
     }
 
     @GetMapping("/project/{projectId}")
-    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client')")
+    @PreAuthorize("hasAnyAuthority('Admin','ProjectManager','Client','Developer')")
     public ResponseEntity<List<Feedback>> getByProjectId(@PathVariable String projectId) {
         List<Feedback> feedbacks = svc.getAll().stream()
             .filter(feedback -> projectId.equals(feedback.getProjectId()))

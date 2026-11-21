@@ -17,12 +17,12 @@ export const feedbackService = {
     return response.data;
   },
 
-  async create(feedback: Omit<Feedback, 'id' | 'createdAt'>): Promise<Feedback> {
+  async create(feedback: Pick<Feedback, 'projectId' | 'message'>): Promise<Feedback> {
     const response = await api.post('/feedback', feedback);
     return response.data;
   },
 
-  async update(id: string, feedback: Partial<Feedback>): Promise<Feedback> {
+  async update(id: string, feedback: Pick<Feedback, 'projectId' | 'message' | 'status'>): Promise<Feedback> {
     const response = await api.put(`/feedback/${id}`, feedback);
     return response.data;
   },
