@@ -174,6 +174,12 @@ def invoke_model(provider, messages, maximum_input, maximum_output, client=None,
                 headers={'Authorization': 'Bearer ' + provider['apiKey']},
                 json={'model': provider['model'], 'messages': messages, 'max_completion_tokens': maximum_output,
                       'response_format': {'type': 'json_object'}})
+        elif provider['kind'] == 'compatible':
+            # OpenAI-compatible services differ in JSON-mode support, so the schema is enforced
+            # by the prompt and validated here instead of relying on response_format.
+            response = client.post(provider['baseUrl'] + '/chat/completions',
+                headers={'Authorization': 'Bearer ' + provider['apiKey']},
+                json={'model': provider['model'], 'messages': messages, 'max_tokens': maximum_output})
         else:
             response = client.post(provider['baseUrl'] + '/api/chat',
                 headers={'Authorization': 'Bearer ' + provider['apiKey']} if provider['apiKey'] else {},
@@ -183,12 +189,14 @@ def invoke_model(provider, messages, maximum_input, maximum_output, client=None,
         if len(response.content) > 1_000_000:
             raise ValueError('Model response too large')
         data = response.json()
-        if provider['kind'] == 'openai':
+        if provider['kind'] in ('openai', 'compatible'):
             choice = data['choices'][0]
-            if choice.get('finish_reason') != 'stop':
+            if str(choice.get('finish_reason', '')).lower() != 'stop':
                 raise ValueError('Incomplete output')
             raw = choice['message']['content']
-            usage = data.get('usage', {})
+            if provider['kind'] == 'compatible':
+                raw = json_object_text(raw)
+            usage = data.get('usage') or {}
             incoming, outgoing = usage.get('prompt_tokens'), usage.get('completion_tokens')
         else:
             if not data.get('done') or data.get('done_reason') == 'length':
@@ -200,6 +208,16 @@ def invoke_model(provider, messages, maximum_input, maximum_output, client=None,
     finally:
         if own_client:
             client.close()
+
+
+def json_object_text(raw):
+    """The JSON object in a reply that may wrap it in a code fence or a sentence."""
+    if not isinstance(raw, str):
+        raise ValueError('Model returned no text')
+    start, end = raw.find('{'), raw.rfind('}')
+    if start < 0 or end < start:
+        raise ValueError('Model returned no JSON object')
+    return raw[start:end + 1]
 
 
 def _checked(output, incoming, outgoing, maximum_input, maximum_output, schema):

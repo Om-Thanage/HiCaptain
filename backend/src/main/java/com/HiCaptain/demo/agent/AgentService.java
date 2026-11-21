@@ -37,6 +37,7 @@ public class AgentService {
   private final ProviderTokenCipher cipher;
   private final ObjectMapper json;
   private final Set<String> origins;
+  private final Set<String> compatibleOrigins;
 
   public AgentService(
       MongoTemplate mongo,
@@ -49,7 +50,12 @@ public class AgentService {
       ObjectMapper json,
       @Value(
               "${AGENT_OLLAMA_ALLOWED_ORIGINS:http://localhost:11434,http://ollama:11434,http://host.docker.internal:11434}")
-          String origins) {
+          String origins,
+      // The worker sends the decrypted key to this address, so only listed HTTPS origins are allowed.
+      @Value(
+              "${AGENT_COMPATIBLE_ALLOWED_ORIGINS:https://generativelanguage.googleapis.com,https://api.groq.com,https://openrouter.ai}")
+          String compatibleOrigins) {
+    this.compatibleOrigins = Set.copyOf(Arrays.asList(compatibleOrigins.split(",")));
     this.mongo = mongo;
     this.organizations = organizations;
     this.projects = projects;
@@ -63,7 +69,7 @@ public class AgentService {
 
   public record ProviderInput(
       @NotBlank @Size(max = 80) String name,
-      @NotNull @Pattern(regexp = "openai|anthropic|ollama") String kind,
+      @NotNull @Pattern(regexp = "openai|anthropic|compatible|ollama") String kind,
       @NotBlank @Size(max = 120) String model,
       @Size(max = 500) String baseUrl,
       @Size(max = 500) String apiKey,
@@ -125,10 +131,28 @@ public class AgentService {
         throw bad("Ollama origin is not allowed by the deployment");
       }
     }
+    if (in.kind().equals("compatible")) {
+      url = Objects.toString(in.baseUrl(), "").trim().replaceAll("/+$", "");
+      try {
+        URI uri = URI.create(url);
+        if (!"https".equals(uri.getScheme())
+            || uri.getHost() == null
+            || uri.getPort() != -1
+            || uri.getUserInfo() != null
+            || uri.getQuery() != null
+            || uri.getFragment() != null
+            || !compatibleOrigins.contains("https://" + uri.getHost())) throw new IllegalArgumentException();
+      } catch (IllegalArgumentException invalid) {
+        throw bad("This provider address is not allowed by the deployment");
+      }
+    }
     if (!Double.isFinite(in.inputPrice()) || !Double.isFinite(in.outputPrice()))
       throw bad("Invalid token prices");
+    // A saved key is kept only for the same kind and address; it is never sent to a new host.
     String encrypted =
-        old == null || !old.getKind().equals(in.kind()) ? null : old.getEncryptedKey();
+        old == null || !old.getKind().equals(in.kind()) || !url.equals(old.getBaseUrl())
+            ? null
+            : old.getEncryptedKey();
     if (in.apiKey() != null && !in.apiKey().isBlank())
       encrypted = cipher.encrypt(in.apiKey().trim());
     if (!in.kind().equals("ollama") && encrypted == null) throw bad("An API key is required");

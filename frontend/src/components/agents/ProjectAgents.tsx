@@ -523,8 +523,9 @@ export default function ProjectAgents({
             </p>
           )}
           <p>
-            Project data is sent to the selected model provider. AI output
-            remains a proposal until approved.
+            Runs use your organization&apos;s provider, so you don&apos;t need
+            your own AI subscription or key. Project data is sent to that
+            provider. AI output remains a proposal until approved.
           </p>
           <div>
             <button disabled={busy}>Assign work</button>

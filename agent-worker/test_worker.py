@@ -33,6 +33,26 @@ class WorkerTests(unittest.TestCase):
         self.assertEqual(result['outputTokens'], 60)
         self.assertFalse(result['usageEstimated'])
 
+    def test_openai_compatible_services_get_schema_by_prompt_and_fenced_json_is_accepted(self):
+        provider = {**PROVIDER, 'kind': 'compatible', 'baseUrl': 'https://api.groq.com/openai/v1'}
+        seen = []
+        def inspect(request):
+            data = json.loads(request.content)
+            seen.append(str(request.url))
+            self.assertEqual(data['max_tokens'], 2000)
+            self.assertNotIn('response_format', data)
+            self.assertEqual(request.headers['authorization'], 'Bearer ' + PROVIDER['apiKey'])
+        fenced = 'Here is the plan:\n```json\n' + json.dumps(OUTPUT) + '\n```'
+        reply = {'choices': [{'finish_reason': 'stop', 'message': {'content': fenced}}], 'usage': {'prompt_tokens': 90, 'completion_tokens': 40}}
+        result = worker.invoke_model(provider, [], 10000, 2000, self.client(reply, inspect))
+        self.assertEqual(seen, ['https://api.groq.com/openai/v1/chat/completions'])
+        self.assertEqual(result['output'], OUTPUT)
+        self.assertEqual((result['inputTokens'], result['outputTokens']), (90, 40))
+        for content in ['No JSON here', '{"summary": "missing fields"}']:
+            bad = {'choices': [{'finish_reason': 'stop', 'message': {'content': content}}]}
+            with self.assertRaises(ValueError):
+                worker.invoke_model(provider, [], 10000, 2000, self.client(bad))
+
     def test_invalid_or_truncated_model_output_is_not_applied(self):
         for choice in [{'finish_reason': 'length', 'message': {'content': json.dumps(OUTPUT)}}, {'finish_reason': 'stop', 'message': {'content': '{"summary":"bad"}'}}]:
             with self.assertRaises(ValueError):

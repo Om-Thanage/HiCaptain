@@ -469,6 +469,41 @@ class AgentWorkflowTest {
   }
 
   @Test
+  void compatibleProvidersOnlyUseListedHttpsAddressesAndKeysNeverMoveHosts() throws Exception {
+    var body = new HashMap<>(providerBody());
+    body.putAll(
+        Map.of(
+            "name", "Groq",
+            "kind", "compatible",
+            "model", "openai/gpt-oss-20b",
+            "baseUrl", "https://api.groq.com/openai/v1/",
+            "apiKey", "synthetic-compatible-key"));
+    JsonNode saved = request(post("/api/agents/providers"), admin, body, 200);
+    assertEquals("https://api.groq.com/openai/v1", saved.path("baseUrl").asText());
+    for (String address :
+        List.of(
+            "http://api.groq.com/openai/v1",
+            "https://attacker.example/openai/v1",
+            "https://api.groq.com:8443/openai/v1",
+            "https://user@api.groq.com/openai/v1")) {
+      var invalid = new HashMap<>(body);
+      invalid.put("baseUrl", address);
+      request(post("/api/agents/providers"), admin, invalid, 400);
+    }
+    // Moving a saved provider to another allowed host requires entering the key again.
+    var moved = new HashMap<>(body);
+    moved.put("baseUrl", "https://openrouter.ai/api/v1");
+    moved.put("apiKey", "");
+    moved.put("revision", saved.path("revision").asLong());
+    String id = saved.path("id").asText();
+    request(put("/api/agents/providers/" + id), admin, moved, 400);
+    var unchanged = new HashMap<>(body);
+    unchanged.put("apiKey", "");
+    unchanged.put("revision", saved.path("revision").asLong());
+    request(put("/api/agents/providers/" + id), admin, unchanged, 200);
+  }
+
+  @Test
   void orchestratorSettingsAndClaudeKeysAreValidated() throws Exception {
     var noKey = new HashMap<>(providerBody());
     noKey.put("kind", "anthropic");

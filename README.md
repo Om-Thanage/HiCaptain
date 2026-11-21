@@ -155,7 +155,7 @@ Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM` 
 
 Deploy the Python worker separately to execute AI assignments. Set the same random `AGENT_WORKER_SECRET` in the backend and worker, point `HICAPTAIN_API_URL` at the backend, and connect the worker to the same MongoDB database for checkpoints. Without a worker, queued assignments will not execute. See [agent-worker/README.md](agent-worker/README.md) for setup, permissions, model support and usage accounting.
 
-A cloud worker cannot reach Ollama running on your personal computer through `localhost`. Use a deliberately reachable Ollama origin allowed by `AGENT_OLLAMA_ALLOWED_ORIGINS`, or use Claude or OpenAI with your own key.
+A cloud worker cannot reach Ollama running on your personal computer through `localhost`. Use a deliberately reachable Ollama origin allowed by `AGENT_OLLAMA_ALLOWED_ORIGINS`, or use Claude, OpenAI or an OpenAI-compatible service (Gemini, Groq, OpenRouter; hosts allowed by `AGENT_COMPATIBLE_ALLOWED_ORIGINS`) with an organization key. One organization key serves every member, so members with only a chat subscription such as Claude Pro or ChatGPT Plus need nothing extra.
 
 For local/container hosting, configure `backend/.env` and run from `backend`:
 

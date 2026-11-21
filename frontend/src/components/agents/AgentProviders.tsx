@@ -20,6 +20,17 @@ const suggestedModel: Record<string, string> = {
   ollama: "qwen3:8b",
   anthropic: "claude-opus-5-5",
 };
+// OpenAI-compatible endpoints the default deployment allows (AGENT_COMPATIBLE_ALLOWED_ORIGINS).
+const compatibleServices = [
+  ["https://generativelanguage.googleapis.com/v1beta/openai", "Google Gemini"],
+  ["https://api.groq.com/openai/v1", "Groq"],
+  ["https://openrouter.ai/api/v1", "OpenRouter"],
+] as const;
+// Defaults for a new teammate: 10,000 input and 2,000 output tokens per model call.
+const perRun = (provider: { inputPrice: number; outputPrice: number }) =>
+  (10000 * provider.inputPrice + 2000 * provider.outputPrice) / 1_000_000;
+const money = (value: number) =>
+  value === 0 ? "$0" : value < 0.01 ? `$${value.toFixed(4)}` : `$${value.toFixed(2)}`;
 export default function AgentProviders() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [editing, setEditing] = useState<Provider | null>(null);
@@ -56,8 +67,10 @@ export default function AgentProviders() {
           <span className={styles.kicker}>YOUR MODELS, YOUR KEYS</span>
           <h2>Agent providers</h2>
           <p>
-            Connect Claude, OpenAI or a local Ollama model with your own key.
-            Only organization admins can change credentials and allowances.
+            Connect Claude, OpenAI, an OpenAI-compatible service or a local
+            Ollama model. One provider serves the whole organization, so
+            members don&apos;t need their own AI subscription or API key. Only
+            organization admins can change credentials and allowances.
           </p>
         </div>
         <button
@@ -89,6 +102,9 @@ export default function AgentProviders() {
             <p>
               {provider.remainingTokens.toLocaleString()} tokens available ·{" "}
               {provider.usedTokens.toLocaleString()} accounted
+            </p>
+            <p className={styles.muted}>
+              Up to {money(perRun(provider))} per model call at default limits
             </p>
             <button
               className={styles.secondary}
@@ -131,12 +147,21 @@ export default function AgentProviders() {
                     kind: e.target.value,
                     apiKey: "",
                     model: suggestedModel[e.target.value] ?? form.model,
+                    baseUrl:
+                      e.target.value === "ollama"
+                        ? initial.baseUrl
+                        : e.target.value === "compatible"
+                          ? compatibleServices[0][0]
+                          : form.baseUrl,
                   })
                 }
               >
                 <option value="ollama">Ollama</option>
                 <option value="openai">OpenAI</option>
                 <option value="anthropic">Claude (Anthropic)</option>
+                <option value="compatible">
+                  OpenAI-compatible (Gemini, Groq, OpenRouter)
+                </option>
               </select>
             </label>
             <label>
@@ -148,6 +173,28 @@ export default function AgentProviders() {
                 onChange={(e) => setForm({ ...form, model: e.target.value })}
               />
             </label>
+            {form.kind === "compatible" && (
+              <label>
+                Service address
+                <input
+                  required
+                  type="url"
+                  list="compatible-services"
+                  placeholder="https://…/v1"
+                  value={form.baseUrl}
+                  onChange={(e) =>
+                    setForm({ ...form, baseUrl: e.target.value })
+                  }
+                />
+                <datalist id="compatible-services">
+                  {compatibleServices.map(([url, label]) => (
+                    <option key={url} value={url}>
+                      {label}
+                    </option>
+                  ))}
+                </datalist>
+              </label>
+            )}
             {form.kind === "ollama" ? (
               <label>
                 Ollama origin
@@ -166,7 +213,12 @@ export default function AgentProviders() {
                 <input
                   type="password"
                   autoComplete="new-password"
-                  required={!editing || editing.kind !== form.kind}
+                  required={
+                    !editing ||
+                    editing.kind !== form.kind ||
+                    (form.kind === "compatible" &&
+                      editing.baseUrl !== form.baseUrl.replace(/\/+$/, ""))
+                  }
                   placeholder={
                     editing
                       ? "Leave blank to keep the saved key"
@@ -228,13 +280,23 @@ export default function AgentProviders() {
             />
             Enabled
           </label>
+          <p className={styles.muted}>
+            At these prices, one model call at the default limits (10,000
+            input, 2,000 output tokens) costs at most{" "}
+            {money(perRun(form))}. An orchestrator run makes two calls on its
+            own provider plus one per specialist.
+          </p>
           <p>
             Token allowances reserve the maximum per run. Unknown usage is
             accounted conservatively. Prices are estimates you supply; Ollama
             uses your own hardware. The deployment must allow the selected
-            Ollama origin. Claude and OpenAI use an API key from your own
-            account console; on Claude models, maximum output tokens also
-            cover the model&apos;s thinking.
+            Ollama origin or service address. Claude, OpenAI and
+            OpenAI-compatible services use an organization API key from the
+            provider&apos;s developer console; chat subscriptions such as Claude
+            Pro or ChatGPT Plus don&apos;t include API access. Some
+            OpenAI-compatible services offer free usage; check their current
+            limits. On Claude models, maximum output tokens also cover the
+            model&apos;s thinking.
           </p>
           <div className={styles.row}>
             <button disabled={busy}>Save provider</button>
