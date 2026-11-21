@@ -17,7 +17,7 @@ interface RegisterForm {
   organizationName: string;
 }
 
-export default function RegisterPage() {
+export default function RegisterPage({ onSignIn }: { onSignIn: () => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -182,7 +182,8 @@ export default function RegisterPage() {
           >
             Already have an account?{' '}
             <button
-              onClick={() => router.push('/auth?mode=login')}
+              type="button"
+              onClick={onSignIn}
               className="text-blue-400 hover:text-blue-300 underline"
             >
               Sign In

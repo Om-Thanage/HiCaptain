@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import SocialSignIn from './SocialSignIn';
 
-export default function Login() {
+export default function Login({ onRegister }: { onRegister: () => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -104,7 +104,8 @@ export default function Login() {
       <p className="mt-6 text-center text-sm text-slate-400">
         Don't have an account?{' '}
         <button
-          onClick={() => router.push('/auth?mode=register')}
+          type="button"
+          onClick={onRegister}
           className="text-blue-400 hover:text-blue-300 underline"
         >
           Create one

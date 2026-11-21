@@ -50,7 +50,7 @@ function WorkspaceChrome({ children }: { children: React.ReactNode }) {
     if (!workspaceRoute) return;
     const token = authService.getToken();
     if (!token) {
-      router.push('/auth?mode=login');
+      router.push('/auth');
       return;
     }
     setToken(token);

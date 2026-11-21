@@ -41,12 +41,12 @@ export default function Home() {
       <header className="hc-public-nav hc-container">
         <Link href="/" aria-label="HiCaptain home"><Brand /></Link>
         <nav aria-label="Site navigation"><a href="#features">Features</a><a href="#how-it-works">How it works</a><a href="#about">About</a></nav>
-        <Link href="/auth?mode=login" className="hc-pill-button dark">Open workspace <ArrowRight size={15} /></Link>
+        <Link href="/auth" className="hc-pill-button dark">Open workspace <ArrowRight size={15} /></Link>
       </header>
 
       <main>
         <section className="hc-hero hc-container">
-          <div className="hc-hero-copy"><span className="hc-eyebrow"><Sparkles size={13} /> YOUR TEAM, IN SYNC</span><h1>Make room for your <em>best work.</em></h1><p>Projects, people, and progress finally feel connected. One calm workspace for everything your team needs to move forward.</p><div className="hc-hero-actions"><Link href="/auth?mode=register" className="hc-pill-button yellow">Get started <ArrowRight size={17} /></Link><Link href="/auth?mode=login" className="hc-pill-button outline">Sign in</Link></div><div className="hc-hero-proof"><span className="hc-avatar-stack"><i>S</i><i>M</i><i>A</i></span><span>Built for teams that make things happen</span></div></div>
+          <div className="hc-hero-copy"><span className="hc-eyebrow"><Sparkles size={13} /> YOUR TEAM, IN SYNC</span><h1>Make room for your <em>best work.</em></h1><p>Projects, people, and progress finally feel connected. One calm workspace for everything your team needs to move forward.</p><div className="hc-hero-actions"><Link href="/auth?mode=register" className="hc-pill-button yellow">Get started <ArrowRight size={17} /></Link><Link href="/auth" className="hc-pill-button outline">Sign in</Link></div><div className="hc-hero-proof"><span className="hc-avatar-stack"><i>S</i><i>M</i><i>A</i></span><span>Built for teams that make things happen</span></div></div>
           <DashboardPreview />
           <div className="hc-hero-orbit hc-orbit-one" /><div className="hc-hero-orbit hc-orbit-two" />
         </section>
@@ -60,7 +60,7 @@ export default function Home() {
         <section id="about" className="hc-cta hc-container"><div><span className="hc-kicker">READY WHEN YOU ARE</span><h2>Good work starts<br />with a clear plan.</h2><p>Bring your team, projects, and next great idea together in HiCaptain.</p><Link href="/auth?mode=register" className="hc-pill-button dark">Get started <ArrowRight size={16} /></Link></div><div className="hc-cta-art"><span><Zap size={32} /></span><strong>Let’s make<br />it happen.</strong><div className="hc-cta-check"><CheckCircle2 size={17} /> Your next chapter starts here</div></div></section>
       </main>
 
-      <footer className="hc-footer"><div className="hc-container"><div><Brand /><p>A better way to make progress, together.</p></div><div><Link href="/auth?mode=login">Sign in</Link><Link href="/auth?mode=register">Get started</Link><a href="#features">Features</a></div><small>© {new Date().getFullYear()} HiCaptain</small></div></footer>
+      <footer className="hc-footer"><div className="hc-container"><div><Brand /><p>A better way to make progress, together.</p></div><div><Link href="/auth">Sign in</Link><Link href="/auth?mode=register">Get started</Link><a href="#features">Features</a></div><small>© {new Date().getFullYear()} HiCaptain</small></div></footer>
     </div>
   );
 }
